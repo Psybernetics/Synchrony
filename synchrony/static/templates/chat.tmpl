@@ -1,0 +1,27 @@
+<div class="chat-container">
+  <div class="chat">
+    {{#chat_available}}
+<!--
+    <i class="material-icons md-18 chat-settings chat-settings-hidden" on-click="chat_settings">settings</i>
+    <div class="chat-settings-panel" style="display:none;">
+          <div class="paper-toggle">
+              <input type="checkbox" id="private" name="appear_offline" class="switch" checked="{{appearing_offline}}" on-click="chat_appear_offline" />
+              <label for="private">{{ appearing_offline ? 'Offline' : 'Online'}}</label>
+          </div>
+
+    </div>
+-->
+    {{/chat_available}}
+
+    <div class="chat-messages"></div>
+    <div class="chat-input">
+        {{^chat_available}}
+        <h5 class="chat-error">{{chat_error}}</h5>
+        {{/chat_available}}
+        {{#chat_available}}
+        <form on-submit="privmsg" on-keydown="doskeys"><input id="chat-input" value="{{message}}" autocomplete="off"></input></form>
+        {{/chat_available}}
+    </div>
+  </div>
+</div>
+

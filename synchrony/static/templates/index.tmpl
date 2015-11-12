@@ -1,0 +1,22 @@
+{{#user}}
+<div class="main_inner">
+    <span class="title">Hello {{user.username}}.</span>
+    It's good to see you.<br />
+    <input class="main_addressbar" on-keydown="request" value="{{url}}" spellcheck="false" placeholder="URL"/>
+</div>
+{{/user.username}}
+
+{{^user.username}}
+<span class="title">Hello. <button class="button pull-right" onclick="window.location.href='/#login'">Log in</button></span>
+<br />
+Synchrony is a collaborative hyperdocument editor for decentralising the web.<br /><br />
+<!--
+<ol>
+	<li>A backend database.</li>
+	<li>A peer-to-peer network.</li>
+</ol>
+-->
+Enjoy playing with existing web pages with your friends and family, decentralising the web in the process.
+<br /><br />
+Made with love by <a href="http://psybernetics.org">Psybernetics</a>.
+{{/user.username}}

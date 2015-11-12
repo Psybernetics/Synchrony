@@ -1,0 +1,23 @@
+<%inherit file="base.html"/>\
+<%def name="title()">Sites</%def>
+<%def name="header()"></%def>
+<!-- Begin page content -->
+<div class="container original">
+	<div class="row">
+		<div class="page-header">
+			<h1>Synchrony</h1>
+		</div>
+		<p class="lead">A collaborative hyperdocument editor with distributed version control.</p>
+		<div class="panel panel-default">
+			<!-- Default panel contents -->
+			<div class="panel-heading text-center">The most recent documents.</div>
+			<div class="panel-body">
+				<p>This application is a work-in-progress.</p>
+			</div>
+			% if 'text' in context['ctx']:
+				<div class="alert alert-warning" role="alert">${context['ctx']['text']}</div>
+			% endif
+		</div>
+		<div id="event"></div>
+	</div>
+</div>

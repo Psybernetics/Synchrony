@@ -1,0 +1,26 @@
+{
+  "name": "Synchrony",
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "homepage": "https://github.com/jmz-b/Synchrony",
+  "moduleType": [],
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.1.4",
+    "socket.io-client": "~0.9.6",
+    "jquery-ui": "~1.11.4",
+    "backbone": "~1.1.2",
+    "underscore": "~1.8.3",
+    "ractive": "~0.6.1",
+    "ractive-load": "~0.4.0",
+    "moment": "~2.10.6"
+  }
+}

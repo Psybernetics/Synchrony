@@ -1,0 +1,16 @@
+miniupnpc
+filemagic==1.6
+flask-sqlalchemy
+flask-restful
+flask-mako
+flask-classy
+pycrypto
+bcrypt
+requests
+BeautifulSoup
+gevent-socketio
+gevent>=1.0
+setproctitle
+lxml
+cssselect
+pygments

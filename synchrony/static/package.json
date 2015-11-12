@@ -1,0 +1,15 @@
+{
+  "name": "Synchrony",
+  "version": "0.0.1",
+  "devDependencies": {
+    "bower": "^1.6.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LukeB42/Synchrony"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/LukeB42/Synchrony/issues"
+  }
+}

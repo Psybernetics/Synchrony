@@ -1,0 +1,22 @@
+<img src="/static/img/synchrony.png" onmouseover="javascript:toggle_synchrony();"/>
+<div class="control_panel" style="display: none;"> 
+
+<span class="synchrony_buttons">
+    <a href="/#"><button class="button big_button">Home</button></a><br />
+	<button class="button big_button" on-click="chat">Chat</button><br />
+	<button class="button big_button" on-click="edit">{{edit_button}}</button><br />
+	<button class="button big_button show-hide" on-click="show_hide">Hide</button><br />
+	<button class="button big_button" on-click="logout"><a href="/logout/">Log out</a></button><br />
+</span>
+<span>
+	<a class="profile_link" href="/#user/{{Config.user.username}}">{{Config.user.username}}</a><br />
+    {{peers}} DHT peers.<br />
+    {{domains}} domains.<br />
+	<br />
+</span>
+
+<form><input class="addressbar" on-keydown="request" value="{{url}}" size="25" placeholder="url" spellcheck="false"></input></form>
+
+</div>
+
+
