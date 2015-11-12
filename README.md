@@ -2,7 +2,7 @@
 #####A peer-to-peer caching proxy that enables collaboration on hyperdocuments.
 Installation:
 <pre>
-sudo python setup.py install
+sudo python2 setup.py install
 synchrony --help
 synchrony --debug
 </pre>
