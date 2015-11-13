@@ -973,7 +973,6 @@ Ractive.load({
 		adaptor: ['Backbone'],
 	});
 /*
- *
  * The current strategy revolves around subscribing to a channel named "public"
  * though this could just as well be a User UID to follow them through their
  * use of the proxy.
