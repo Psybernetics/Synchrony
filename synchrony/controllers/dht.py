@@ -527,8 +527,10 @@ class SynchronyProtocol(object):
     def rpc_ping(self, addr):
         # "addr" may be an (addr, port) tuple
         data = transmit(self.router, addr, {"rpc_ping":True})
+        # Remove peer
         if not data:
-            # Remove peer
+            if isinstance(addr, Node):
+                self.router.remove_node(addr)
             return
         node = Node(*data['node'], pubkey=data['pubkey'])
         self.router.add_contact(node)
@@ -1006,6 +1008,8 @@ class KBucket(object):
         # NOTE: We don't remove peers if they've earned themselves a negative
         #       trust rating. That would enable peers to leave and rejoin to
         #       reset their rating.
+        if self.nodes[node.id].trust < 0:
+            return
 
         # delete the node, and see if we can add a replacement
         del self.nodes[node.id]
