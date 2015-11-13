@@ -2,7 +2,9 @@
 Implements a base class for all Synchrony test suites to quickly create peer nodes.
 """
 import pprint
+import random
 import unittest
+from synchrony import app
 from synchrony.models import Revision
 from synchrony.controllers import dht
 from synchrony.controllers.utils import exclude
@@ -33,7 +35,12 @@ class BaseSuite(unittest.TestCase):
 def create_peers(peer_amount, storage_method):
     peers = {}
     for x in range(peer_amount):
-        peers[x] = dht.RoutingTable(0,0,0)
+        peers[x] = dht.RoutingTable(
+                "127.0.0.1",
+                random.randint(0,99999),
+                app.key.publickey().exportKey(),
+                None,
+        )
         peers[x].buckets = [dht.KBucket(0,2**160,20)]
         rpcmethod = getattr(peers[x].protocol, storage_method, None)
         if not rpcmethod:
