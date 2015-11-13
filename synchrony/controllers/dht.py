@@ -15,10 +15,7 @@
  of days to really grok it, hopefully it won't take that long because you have
  this software.
 
- What the classes in this file do is allow you treat values stored on up to
- 1,461,501,637,330,902,918,203,684,832,716,283,019,655,932,542,976 computers
- per network as /one singular dictionary/. (I know.)
- They also make it as easy as possible to participate in multiple networks.
+ These modules make it as easy as possible to participate in multiple networks.
  Telling peers you have data and obtaining data from peers looks like this:
 
     app.routes._default[url] = revision
@@ -181,7 +178,8 @@ class RoutingTable(object):
 
     Every hour we check for dead nodes and republish keys we're storing values for.
     """
-    def __init__(self, options, httpd, upnp, ksize=20, alpha=3, id=None, nodes=[]):
+#    def __init__(self, options, httpd, upnp, ksize=20, alpha=3, id=None, nodes=[]):
+    def __init__(self, addr, port, pubkey, httpd, ksize=20, alpha=3, id=None, nodes=[], network=None):
         """
         The first three options can be set to None.
         This is useful for testing from a live interpreter session.
@@ -201,14 +199,9 @@ class RoutingTable(object):
         id may come from the database if we've previously been in the network before.
         nodes is a list of (address,port) tuples to bootstrap into the network with.
         """
-        if options:
-            port         = options.port
-            self.network = options.network or app.default_network
-        else:
-            self.network = "Test Suite"
-            port         = random.randint(1024, 9999)
-
-        self.options = options
+        if not network:
+            network = "Test Network"
+        self.network = network
         self.httpd   = httpd
         self.ksize   = ksize
         self.alpha   = alpha
@@ -216,14 +209,6 @@ class RoutingTable(object):
                              # we only accept peers who can also sign
                              # data using the same public key as ours.
 
-        if upnp and options and options.address == '0.0.0.0':
-            addr = upnp.externalipaddress()
-        elif options and options.address != '0.0.0.0':
-            addr = options.address
-        else:
-            addr = socket.gethostbyname(socket.gethostname())
-
-        pubkey  = app.key.publickey().exportKey()
         seed    = "%s:%i:%s" % (addr,port,pubkey)
 
         self.node = Node(id or utils.generate_node_id(seed),
