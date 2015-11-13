@@ -528,8 +528,9 @@ class SynchronyProtocol(object):
         # "addr" may be an (addr, port) tuple
         data = transmit(self.router, addr, {"rpc_ping":True})
         # Remove peer
-        if not data and isinstance(addr, Node):
-            self.router.remove_node(node)
+        if not data:
+            if isinstance(addr, Node):
+                self.router.remove_node(addr)
             return
         node = Node(*data['node'], pubkey=data['pubkey'])
         self.router.add_contact(node)
