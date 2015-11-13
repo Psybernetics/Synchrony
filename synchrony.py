@@ -186,7 +186,7 @@ if __name__ == "__main__":
             ex = sys.exc_info()[1]
             strerror = getattr(ex, 'strerror', None)
             if strerror is not None:
-                ex.strerror = strerror + ': ' + repr(options.address+':'+options.port)
+                ex.strerror = strerror + ': ' + repr(options.address+':'+str(options.port))
             raise
         sock.listen(50)
         sock.setblocking(0)
@@ -219,7 +219,22 @@ if __name__ == "__main__":
         app.routes              = dht.Routers()
         sys.exitfunc            = app.routes.leave_networks
 
-        router = dht.RoutingTable(options, httpd, upnp, nodes=app.bootstrap_nodes) 
+        if portmap_success and  options.address == '0.0.0.0':
+            addr = upnp.externalipaddress()
+        elif options and options.address != '0.0.0.0':
+            addr = options.address
+        else:
+            addr = _socket.gethostbyname(_socket.gethostname())
+
+        router = dht.RoutingTable(
+                addr,
+                options.port,
+                app.key.publickey().exportKey(),
+                httpd,
+                nodes=app.bootstrap_nodes,
+                network=app.default_network
+        )
+
         app.routes.append(router)
 
         # Write any specific revisions to disk now that we have some peers:
