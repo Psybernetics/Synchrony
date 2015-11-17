@@ -9,8 +9,8 @@
 	<button class="button big_button" on-click="logout"><a href="/logout/">Log out</a></button><br />
 </span>
 <span>
-	<a class="profile_link" href="/#user/{{Config.user.username}}">{{Config.user.username}}</a><br />
-    {{peers}} DHT peers.<br />
+	<a id="profile_link" href="/#user/{{Config.user.username}}">{{Config.user.username}}</a><br />
+    <a href="/#peers">{{peers}} DHT peers.</a><br />
     {{domains}} domains.<br />
 	<br />
 </span>
