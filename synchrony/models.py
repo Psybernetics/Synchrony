@@ -65,8 +65,14 @@ class Resource(db.Model):
     created       = db.Column(db.DateTime(), default=db.func.now())
     revisions     = db.relationship("Revision", backref="resource")
 
-    def jsonify(self):
-        return {}
+    def jsonify(self, with_revisions=False):
+        response = {}
+        response['path'] = self.path
+        response['count'] = len(self.revisions)
+        if with_revisions:
+            response['revisions'] = [r.jsonify() for r in self.revisions]
+        response['created'] = time.mktime(self.created.timetuple())
+        return response
 
     def __repr__(self):
         if self.domain:

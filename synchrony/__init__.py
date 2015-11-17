@@ -111,6 +111,7 @@ def init():
     api.add_resource(networks.NetworkCollection,          "/networks")
 
     api.add_resource(domains.DomainCollection,            "/domains")
+    api.add_resource(domains.DomainResource,              "/domains/<domain>")
     api.add_resource(domains.DomainCountResource,         "/domains/count")
 
     api.add_resource(revisions.RevisionCollection,        "/revisions")
