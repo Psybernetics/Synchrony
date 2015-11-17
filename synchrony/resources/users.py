@@ -94,16 +94,16 @@ class UserResource(restful.Resource):
         Account modification
         """
         parser = reqparse.RequestParser()
-        parser.add_argument("password",  type=str)
-        parser.add_argument("email",     type=str)
-        parser.add_argument("public",    type=bool, default=None)
-        parser.add_argument("active",    type=bool, default=None)
-        parser.add_argument("can_store", type=bool, default=None)
+        parser.add_argument("email",            type=str)
+        parser.add_argument("password",         type=str)
+        parser.add_argument("verify_password",  type=str)
+        parser.add_argument("public",           type=bool, default=None)
+        parser.add_argument("active",           type=bool, default=None)
         args = parser.parse_args()
 
         calling_user = auth(session, required=True)
 
-        if calling_user.username != username and not calling_user.admin:
+        if calling_user.username != username and not calling_user.can("reset_user_pw"):
             return {}, 403
 
         user = User.query.filter(User.username == username).first()
@@ -111,19 +111,23 @@ class UserResource(restful.Resource):
         if not user:
             return {}, 404
 
-        should_commit = False
+        if args.verify_password: # It's here to spare from getting in the logs.
+            return user.verify_password(args.verify_password)
 
         if args.password:
+            # must be at least six characters though
+            if len(args.password) < 6:
+                return "Must be at least six characters.", 304
             user.change_password(args.password)
-            should_commit = True
+            db.session.add(user)
+            db.session.commit()
+            return True
 
         if args.email:
             user.email = args.email
-            should_commit = True
 
         if args.public:
             user.public = args.public != None
-            should_commit = True
 
         if calling_user.can("deactivate") and args.active != None:
             user.active = args.active
@@ -135,16 +139,13 @@ class UserResource(restful.Resource):
                     (calling_user.username, user.username))
                 for s in user.sessions:
                     db.session.delete(s)
-            should_commit = True
 
-        if calling_user.admin and args.can_store != none:
-            user.can_store = args.can_store
-            should_commit = True
+#       Deprecated in favour of the RBAC system.
+#        if calling_user.admin and args.can_store != None:
+#            user.can_store = args.can_store
 
-        if should_commit:
-            db.session.add(user)
-            db.session.commit()
-
+        db.session.add(user)
+        db.session.commit()
         return user.jsonify()
 
     def delete(self, username):
@@ -153,7 +154,7 @@ class UserResource(restful.Resource):
         """
         user = auth(session, required=True)
 
-        if user.username != username and not user.admin:
+        if user.username != username and not user.can("delete_at_will"):
             return {}, 403
 
         user = User.query.filter(User.username == username).first()
@@ -228,3 +229,14 @@ class UserSessionsResource(restful.Resource):
         log("%s logged out." % user.username)
 
         return {}, 204
+
+
+class UserFriendsResource(restful.Resource):
+    def post(self):
+        user = auth(session, required=True)
+        parser = reqparse.RequestParser()
+        parser.add_argument("add", type=str)
+        parser.add_argument("remove", type=str)
+        args = parser.parse_args()
+
+

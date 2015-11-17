@@ -96,6 +96,7 @@ App.Router = Backbone.Router.extend({
 		'request/:resource':   'requestpage',
 		'history/:resource':   'resourcehistory',
 		'user/:username':      'userview',
+		'peers':               'peersview',
 		'settings':            'settingsview',
 		'sessions':            'sessionsview',
 		'account/objects':     'accountobjects',
@@ -116,6 +117,7 @@ App.Router = Backbone.Router.extend({
 	requestresource:    requestView,
 	resourcehistory:    resourceHistory,
 	userview:           userView,
+    peersview:          peersView,
 	settingsview:       settingsView,
 	sessionsview:       sessionsView,
 	accountobjects:     accountObjects,
@@ -335,6 +337,13 @@ function indexView(){
         if (!$('.main').hasClass('main_background')){
 		    $('.main').addClass("main_background");
         }
+
+        $.get('/v1/revisions', function(data){
+            console.log(data);
+            App.Views.index.set("revisions", data.data);
+        });
+
+
 		App.Views.index.on({
 			request: function(event){
     			if (event.original.keyCode == 13){
@@ -933,6 +942,25 @@ function accountObjects(params){
 	});
 }
 
+
+function peersView(){
+	document.title = "Peer Browser" + App.title;
+	Ractive.load({
+		peers: 'peers.tmpl',
+	}).then(function(components){
+		if (!App.Config.user) {
+			location.hash = "login";
+		}
+
+		App.Views['peers'] = new components.peers({
+			el: $('.main'),
+			data: App.Config,
+			adaptor: ['Backbone'],
+		});
+    });
+}
+
+
 // The profile page of a user
 function userView(username, params){
 	document.title = username + App.title;
@@ -945,7 +973,8 @@ function userView(username, params){
 			data: {profile: false},
 			adaptor: ['Backbone'],
 		});
-		if (App.Config.user){
+        /*
+        if (App.Config.user){
 			$.get('/v1/users/' + username + '?profile=1', function(data, status){
 				// Render the biography as a markdown document
 				if (data.bio){ data.bio = App.markdown.makeHtml(data.bio); }
@@ -953,13 +982,59 @@ function userView(username, params){
 			}).fail(function(){
 				App.Views.userpage.set({error:true})
 			});
-		}
-	});
+
+	    }
+        */
+
+        App.Views.userpage.on({
+	    	change_password: function(event){
+				event.original.preventDefault();
+                var current = App.Views.userpage.get("pass0");
+                var pass1   = App.Views.userpage.get("pass1");
+                var pass2   = App.Views.userpage.get("pass2");
+                // Bit of client-side validation.
+                if (pass1 != pass2) {
+                    App.Views.userpage.set("password_message", "Passwords were mismatched.");
+               } else {
+                   // Validate current password
+        			$.ajax({
+                        type:    "POST",
+                        url:     "/v1/users/" + username,
+                        data:    {verify_password: App.Views.userpage.get("pass0")},
+                        success: function(data){
+                            console.log(data);
+                            if (data != true) {
+                                App.Views.userpage.set("password_message", "Incorrect password.");
+                            } else {
+                                // POST new password
+                                $.ajax({
+                                    type: "POST",
+                                    url:  "/v1/users/" + username,
+                                    data: {password: App.Views.userpage.get("pass1")},
+                                    success: function(data, success, jq_obj){
+                                        if (jq_obj.status == 304){
+                                            App.Views.userpage.set("password_message", "Passwords must be at least six characters.");
+                                        } else {
+                                            App.Views.userpage.set("password_message", "Password successfully changed.");
+                                        }
+                                    }
+                                }).fail(function(){
+                                    App.Views.userpave.set({password_message: "Couldn't contact the server."});
+                                });
+                            }
+                        }
+                    }).fail(function(){
+		        		App.Views.userpage.set({password_message: "Couldn't contact the server."});
+        			});
+               }
+		    }
+        });
+    });
 }
 
 Ractive.load({
-	synchrony:    'synchrony.tmpl',
-	content:  'content.tmpl',
+	content:   'content.tmpl',
+	synchrony: 'synchrony.tmpl',
 
 }).then(function(components){
 
@@ -1109,8 +1184,15 @@ Ractive.load({
 				$.ajax({
 					type: "GET",
 					url: "/v1/request/" + url,
-					success: function(data, status){
+					success: function(data, status, jq_obj){
 						console.log(data);
+                        //
+                        // The Content-Hash and Overlay-Network headers are used
+                        // to keep a log of what came from who, which can then
+                        // be used in POST requests to /v1/revisions/downloads
+                        //
+                        console.log(jq_obj.getResponseHeader('Content-Hash'));
+                        console.log(jq_obj.getResponseHeader('Overlay-Network'));
 						iframe = $('.iframe');
 						iframe.contents().find('body').html(data.response);
 						App.document = data.response;

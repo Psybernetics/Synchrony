@@ -1,8 +1,21 @@
-{{#user}}
+{{#user.username}}
 <div class="main_inner">
     <span class="title">Hello {{user.username}}.</span>
     It's good to see you.<br />
     <input class="main_addressbar" on-keydown="request" value="{{url}}" spellcheck="false" placeholder="URL"/>
+</div>
+<div class="index_overview">
+    <table class="wide table">
+        <tbody>
+            {{#revisions}}
+            <tr>
+                <td><a href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
+                <td>{{mimetype}}</td>
+            </tr>
+            {{/revisions}}
+            {{^revisions}}No revisions.{{/revisions}}
+        </tbody>
+    </table>
 </div>
 {{/user.username}}
 

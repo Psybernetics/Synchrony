@@ -1,9 +1,15 @@
 <div class="view">
-<span class="title">Yo!</span>
-<hr />
-<h1>Settings.</h1>
-<h1>Sessions.</h1>
-<h1>Revisions.</h1>
-<h1>Friends.</h1>
-<h1>System Settings.</h1>
-</div>
+    <h1>Account Settings</h1>
+    <hr />
+    <h2>Sessions<button class="button big_button pull-right">Show</button></h2>
+    <h2>Revisions<button class="button big_button pull-right">Show</button></h2>
+    <h2>Friends<button class="button big_button pull-right">Show</button></h2>
+    <h2>Password</h2>
+    <form class="form-horizontal" name="create">
+          <input type="password" size="10" class="form-control" id="inputPassword" name="pass1" placeholder="Current Password" value="{{pass0}}">
+          <input type="password" class="form-control" id="inputPassword" name="pass1" placeholder="New Password" value="{{pass1}}">
+          <input type="password" class="form-control" id="inputPassword3" name="pass2" placeholder="Confirm" value="{{pass2}}">
+          <button type="submit" class="button" on-click="change_password">Change</button>
+    </form>
+    <div class="message">{{password_message}}</div>
+ </div>
