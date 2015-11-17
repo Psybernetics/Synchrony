@@ -1184,8 +1184,15 @@ Ractive.load({
 				$.ajax({
 					type: "GET",
 					url: "/v1/request/" + url,
-					success: function(data, status){
+					success: function(data, status, jq_obj){
 						console.log(data);
+                        //
+                        // The Content-Hash and Overlay-Network headers are used
+                        // to keep a log of what came from who, which can then
+                        // be used in POST requests to /v1/revisions/downloads
+                        //
+                        console.log(jq_obj.getResponseHeader('Content-Hash'));
+                        console.log(jq_obj.getResponseHeader('Overlay-Network'));
 						iframe = $('.iframe');
 						iframe.contents().find('body').html(data.response);
 						App.document = data.response;

@@ -657,7 +657,8 @@ button {
 }
 .main_inner {
     color: #D7D8D5;
-    margin-left: 26%;
+    margin: 0 auto;
+    width: 50%;
     margin-top: 5%;
     max-width: 680px;
 }
@@ -741,13 +742,15 @@ a {
 /* Index page links to revisions */
 .index_overview {
     position: absolute;
-    margin: 80px 0px;
-    width: 75%;
+    margin: 48px 0px;
+    width: 50%;
+    padding: 50px 0px;
+    background-color: rgba(255,255,255, 0.9);
     margin-left: 24%;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
 }
 
-/*
 .index_overview a {
-    color: #7DAABE;
+    color: #5D9FDB;
 }
-*/
