@@ -1,6 +1,6 @@
 """
 Defines a paginated view of overlay networks the application is configured to
-accept as legitimate.
+see as legitimate.
 """
 from synchrony import app
 from flask.ext import restful

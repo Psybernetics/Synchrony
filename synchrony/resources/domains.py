@@ -46,7 +46,7 @@ class DomainResource(restful.Resource):
 
 class DomainCountResource(restful.Resource):
     """
-    Return the total number of domains we're storing. Doesn't require auth.
+    Returns an integer.
     """
     def get(self):
         return Domain.query.count()

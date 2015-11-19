@@ -21,6 +21,8 @@ class DocumentStream(BaseNamespace, RoomsMixin, BroadcastMixin):
     socket_type = "document"
 
     def initialize(self):
+        # The general idea for when a user connects here is to make them aware
+        # of existing document streams.
         log("init document stream")
 #        self.user = None
         self.document = None

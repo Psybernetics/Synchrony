@@ -4,8 +4,8 @@
 # /v1/revisions/<hash>/content
 from synchrony import app, db
 from flask.ext import restful
-from synchrony.models import Revision
 from flask import request, session
+from synchrony.models import Revision
 from sqlalchemy import and_, or_, desc
 from synchrony.controllers.auth import auth
 from synchrony.controllers.utils import make_response
@@ -14,18 +14,16 @@ class RevisionCollection(restful.Resource):
     def get(self):
         user = auth(session, required=True)
 
-        per_page = 10
-
         parser = restful.reqparse.RequestParser()
         parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("content",type=bool, help="", required=False, default=None)
+        parser.add_argument("per_page",type=int, help="", required=False, default=10)
         args = parser.parse_args()  
 
         if user.can("see_all"):
-            query = Revision.query.order_by(desc(Revision.created)).paginate(args.page, per_page)
+            query = Revision.query.order_by(desc(Revision.created)).paginate(args.page, args.per_page)
         else:
             query = Revision.query.filter(or_(Revision.public == True, Revision.user == user))\
-                .order_by(desc(Revision.created)).paginate(args.page, per_page)
+                .order_by(desc(Revision.created)).paginate(args.page, args.per_page)
 
         return make_response(request.url, query)
 

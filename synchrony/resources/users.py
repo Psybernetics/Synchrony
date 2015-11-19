@@ -1,12 +1,12 @@
 # This file defines the API endpoints for users and sessions
-from synchrony import db, log
 from sqlalchemy import desc
+from synchrony import db, log
 from flask.ext import restful
 from flask import request, session
 from flask.ext.restful import reqparse
 from synchrony.controllers.auth import auth
 from synchrony.controllers.utils import make_response
-from synchrony.models import User, Session, UserGroup
+from synchrony.models import User, Session, Revision, Friend, UserGroup
 
 class UserCollection(restful.Resource):
     """
@@ -230,6 +230,22 @@ class UserSessionsResource(restful.Resource):
 
         return {}, 204
 
+
+class UserRevisionCollection(restful.Resource):
+    def get(self, username):
+        user = auth(session, required=True)
+
+        if user.username != username and not user.can("see_all"):
+            return {}, 403
+
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("page",type=int, help="", required=False, default=1)
+        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        args = parser.parse_args()  
+
+        query = Revision.query.filter(Revision.user == user)\
+            .order_by(desc(Revision.created)).paginate(args.page, args.per_page)
+        return make_response(request.url, query)
 
 class UserFriendsResource(restful.Resource):
     def post(self):
