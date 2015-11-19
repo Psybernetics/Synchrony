@@ -334,20 +334,56 @@ function indexView(){
 			data: App.Config,
 			adaptor: ['Backbone'],
 		});
+
         if (!$('.main').hasClass('main_background')){
 		    $('.main').addClass("main_background");
         }
 
-        $.get('/v1/revisions', function(data){
-            console.log(data);
-            App.Views.index.set("revisions", data.data);
-        });
+        // Get the initial set of visible revisions
+        function populate_revisions_table(url){
+            $.get(url, function(data){
+                console.log(data);
+                App.Views.index.set("revisions", data.data);
+                App.Views.index.revisions = data;
 
+                // back_available in index.tmpl
+                if (data.links.hasOwnProperty("self")) {
+                    var url = data.links.self.split('page=')[1];
+                    console.log(url);
+                    if (url != undefined) {
+                        if (url > 1) {
+                            App.Views.index.set("back_available", true);
+                        } else {
+                            App.Views.index.set("back_available", false);
+                        }
+                    } 
+                }
+
+                // forward_available in index.tmpl
+                if (data.links.hasOwnProperty("next")) {
+                    App.Views.index.set("forward_available", true);
+                }
+            });
+        }
+
+        populate_revisions_table('/v1/revisions');
 
 		App.Views.index.on({
-			request: function(event){
-    			if (event.original.keyCode == 13){
-	    			event.original.preventDefault();
+
+            forward: function(event){
+                var url = this.revisions.links.next;
+                populate_revisions_table(url);
+            },
+            back:    function(event){
+                var url = this.revisions.links.self.split('page=');
+                var page = url[1] - 1;
+                populate_revisions_table(url[0] + 'page=' + page);
+            },
+
+            // index template addressbar
+            request: function(event){
+                if (event.original.keyCode == 13){
+                    event.original.preventDefault();
 
 		    		var url = this.get("url");
     				if (url.indexOf("://") > -1){

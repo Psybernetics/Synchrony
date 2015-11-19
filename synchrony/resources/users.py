@@ -18,12 +18,10 @@ class UserCollection(restful.Resource):
         """
         user = auth(session, required=True)
         
-        per_page = 10
-
         parser = reqparse.RequestParser()
         parser.add_argument("me", type=bool, default=None)
         parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("content",type=bool, help="", required=False, default=None)
+        parser.add_argument("per_page",type=int, help="", required=False, default=10)
         args = parser.parse_args()
 
         if args.me:
@@ -32,7 +30,7 @@ class UserCollection(restful.Resource):
         if not user.can("see_all"):
             return {}, 403
 
-        query = User.query.order_by(desc(User.created)).paginate(args.page, per_page)
+        query = User.query.order_by(desc(User.created)).paginate(args.page, args.per_page)
         return make_response(request.url, query)
 
     def put(self):
@@ -139,10 +137,6 @@ class UserResource(restful.Resource):
                     (calling_user.username, user.username))
                 for s in user.sessions:
                     db.session.delete(s)
-
-#       Deprecated in favour of the RBAC system.
-#        if calling_user.admin and args.can_store != None:
-#            user.can_store = args.can_store
 
         db.session.add(user)
         db.session.commit()
