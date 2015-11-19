@@ -467,14 +467,26 @@ function userView(username, params){
             });
         }
 
+        // Populate the user address line
+        $.get('/v1/networks', function(data){
+            if (data.data.length > 0){
+                console.log(data.data);
+                var network = data.data[0].name;
+                var node_id = data.data[0].node_id;
+                App.Views.userpage.set("network", network);
+                App.Views.userpage.set("node_id", node_id);
+                App.Views.userpage.set("uid", App.Config.user.uid);
+            }
+        });
+
         // Determine whether this is a profile or settings page.
         if (App.Config.user.username != username) {
-            App.Views.userpage.set("show_profile", true);
-            populate_table("revisions", "/v1//user/" + username + "/revisions");
+//            populate_table("revisions", "/v1//user/" + username + "/revisions");
         } else {
-            App.Views.userpage.set("sessions_button",  "Show");
-            App.Views.userpage.set("revisions_button", "Show");
-            App.Views.userpage.set("friends_button",   "Show");
+            App.Views.userpage.set("show_settings",     true);
+            App.Views.userpage.set("sessions_button",   "Show");
+            App.Views.userpage.set("revisions_button",  "Show");
+            App.Views.userpage.set("friends_button",    "Show");
             App.Views.userpage.set("showing_sessions",  undefined);
             App.Views.userpage.set("showing_revisions", undefined);
             App.Views.userpage.set("showing_friends",   undefined);

@@ -109,6 +109,7 @@ def init():
     api.add_resource(request.RequestResource,             "/request/<path:url>")
 
     api.add_resource(networks.NetworkCollection,          "/networks")
+    api.add_resource(networks.NetworkResource,            "/networks/<string:network>")
 
     api.add_resource(domains.DomainCollection,            "/domains")
     api.add_resource(domains.DomainResource,              "/domains/<domain>")

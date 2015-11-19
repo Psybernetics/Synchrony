@@ -1,4 +1,5 @@
 <div class="view">
+    {{#show_settings}}
     <h1>Account Settings</h1>
     <hr />
     <h2>Sessions<button on-click="toggle:{{"sessions"}}" class="button big_button pull-right">{{sessions_button}}</button></h2>
@@ -37,8 +38,8 @@
                 <td><a href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
                 <td>{{mimetype}}</td>
                 <td>{{network}}</td>
-                <td>{{public}}</td>
                 <td>{{size}}</td>
+                <td>{{public}}</td>
             </tr>
             {{/revisions}}
             {{^revisions}}No revisions.{{/revisions}}
@@ -78,4 +79,6 @@
           <button type="submit" class="button" on-click="change_password">Change</button>
     </form>
     <div class="message">{{password_message}}</div>
- </div>
+    {{/show_settings}}
+    <div class="center">Address: {{network}}/{{node_id}}/{{uid}}</div>
+</div>
