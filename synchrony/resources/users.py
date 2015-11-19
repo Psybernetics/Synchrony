@@ -166,17 +166,24 @@ class UserSessionsResource(restful.Resource):
     Implements /v1/user/:username/sessions
     """
     def get(self, username):
-        "Permit administrators to view other users"
+        user = auth(session, required=True)
 
-        requesting_user = auth(session, required=True)
-        user = User.query.filter(User.username == username).first()
-        if not user:
-            return {}, 404
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("page",type=int, help="", required=False, default=1)
+        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        args = parser.parse_args()  
 
-        if requesting_user != user and not requesting_user.admin:
+        if user.username != username and not user.can("see_all"):
             return {}, 403
 
-        return user.jsonify(sessions=True)
+        if user.username != username:
+            user = User.query.filter(User.username == username).first()
+            if not user:
+                return {}, 404
+
+        query = Session.query.filter(Session.user == user)\
+            .order_by(desc(Session.created)).paginate(args.page, args.per_page)
+        return make_response(request.url, query)
 
     def put(self, username):
         "Add a session for a user and return the session cookie"
@@ -234,19 +241,42 @@ class UserRevisionCollection(restful.Resource):
 
         parser = restful.reqparse.RequestParser()
         parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        parser.add_argument("per_page",type=int, help="", required=False, default=20)
         args = parser.parse_args()  
 
         query = Revision.query.filter(Revision.user == user)\
             .order_by(desc(Revision.created)).paginate(args.page, args.per_page)
         return make_response(request.url, query)
 
-class UserFriendsResource(restful.Resource):
-    def post(self):
+class UserFriendsCollection(restful.Resource):
+    def get(self, username):
         user = auth(session, required=True)
+
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("page",type=int, help="", required=False, default=1)
+        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        args = parser.parse_args()  
+
+        if user.username != username and not user.can("see_all"):
+            return {}, 403
+
+        if user.username != username:
+            user = User.query.filter(User.username == username).first()
+            if not user:
+                return {}, 404
+
+        query = Friend.query.filter(Friend.user == user)\
+            .order_by(desc(Friend.created)).paginate(args.page, args.per_page)
+        return make_response(request.url, query)
+
+
+    def post(self, username):
+        user = auth(session, required=True)
+
         parser = reqparse.RequestParser()
         parser.add_argument("add", type=str)
         parser.add_argument("remove", type=str)
         args = parser.parse_args()
 
-
+        return {}
+        return {}, 201

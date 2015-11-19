@@ -1,9 +1,76 @@
 <div class="view">
+    {{#show_settings}}
     <h1>Account Settings</h1>
     <hr />
-    <h2>Sessions<button class="button big_button pull-right">Show</button></h2>
-    <h2>Revisions<button class="button big_button pull-right">Show</button></h2>
-    <h2>Friends<button class="button big_button pull-right">Show</button></h2>
+    <h2>Sessions<button on-click="toggle:{{"sessions"}}" class="button big_button pull-right">{{sessions_button}}</button></h2>
+    {{#showing_sessions}}
+    <table>
+        <tbody>
+            {{#sessions}}
+            <tr>
+                <td>{{ip}}</td>
+                <td>{{user_agent}}</td>
+            </tr>
+            {{/sessions}}
+            {{^sessions}}No sessions..{{/sessions}}
+        </tbody>
+    </table>
+    <div class="center">
+        {{#sessions_back_available}}
+        <a on-click="back:{{"revisions"}}">Back</a>
+            {{#sessions_forward_available}}
+            /
+            {{/sessions_forward_available}}
+        {{/sessions_back_available}}
+        {{#sessions_forward_available}}
+        <a on-click="forward:{{"revisions"}}">Forward</a>
+        {{/sessions_forward_available}}
+    </div>
+    {{#sessions_paging_error}}Server unavailable.{{/sessions_paging_error}}
+    {{/showing_sessions}}
+
+    <h2>Revisions<button on-click="toggle:{{"revisions"}}" class="button big_button pull-right">{{revisions_button}}</button></h2>
+    {{#showing_revisions}}
+    <table>
+       <tbody>
+            {{#revisions}}
+            <tr>
+                <td><a href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
+                <td>{{mimetype}}</td>
+                <td>{{network}}</td>
+                <td>{{size}}</td>
+                <td>{{public}}</td>
+            </tr>
+            {{/revisions}}
+            {{^revisions}}No revisions.{{/revisions}}
+        </tbody>
+    </table>
+    <div class="center">
+        {{#revisions_back_available}}
+        <a on-click="back:{{"revisions"}}">Back</a>
+            {{#revisions_forward_available}}
+            /
+            {{/revisions_forward_available}}
+        {{/revisions_back_available}}
+        {{#revisions_forward_available}}
+        <a on-click="forward:{{"revisions"}}">Forward</a>
+        {{/revisions_forward_available}}
+    </div>
+    {{#revisions_paging_error}}Server unavailable.{{/revisions_paging_error}}
+    {{/showing_revisions}}
+
+    <h2>Friends<button on-click="toggle:{{"friends"}}" class="button big_button pull-right">{{friends_button}}</button></h2>
+    {{#showing_friends}}
+    <table>
+        <tbody>
+            <tr>
+                <td>{{name}}</td>
+            </tr>
+        </tbody>
+    </table>
+    {{!Technically an address bar..}}
+    <input class="main_addressbar" on-keydown="add_friend" value="{{friend_addr}}" spellcheck="false" placeholder="Network / Node ID / User ID">
+    {{/showing_friends}}
     <h2>Password</h2>
     <form class="form-horizontal" name="create">
           <input type="password" size="10" class="form-control" id="inputPassword" name="pass1" placeholder="Current Password" value="{{pass0}}">
@@ -12,4 +79,6 @@
           <button type="submit" class="button" on-click="change_password">Change</button>
     </form>
     <div class="message">{{password_message}}</div>
- </div>
+    {{/show_settings}}
+    <div class="center">Address: {{network}}/{{node_id}}/{{uid}}</div>
+</div>

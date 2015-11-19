@@ -109,6 +109,7 @@ def init():
     api.add_resource(request.RequestResource,             "/request/<path:url>")
 
     api.add_resource(networks.NetworkCollection,          "/networks")
+    api.add_resource(networks.NetworkResource,            "/networks/<string:network>")
 
     api.add_resource(domains.DomainCollection,            "/domains")
     api.add_resource(domains.DomainResource,              "/domains/<domain>")
@@ -124,6 +125,7 @@ def init():
     api.add_resource(users.UserCollection,                "/users")
     api.add_resource(users.UserResource,                  "/users/<string:username>")
     api.add_resource(users.UserSessionsResource,          "/users/<string:username>/sessions")
+    api.add_resource(users.UserFriendsCollection,         "/users/<string:username>/friends")
     api.add_resource(users.UserRevisionCollection,        "/users/<string:username>/revisions")
 
     api.add_resource(peers.PeerCollection,                "/peers")

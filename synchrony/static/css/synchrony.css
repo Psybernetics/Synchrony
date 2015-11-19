@@ -669,13 +669,18 @@ button {
 
 }
 
+.view td {
+    padding: 0px 20px;
+}
+
 .dark_text {
     color: #222;
 }
 
 a {
 	text-decoration: none;
-	color: #96B8E4;
+	color: #2482C0;
+/*	color: #96B8E4; */
 }
 
 .synchrony {
