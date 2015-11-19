@@ -16,6 +16,18 @@
             {{^revisions}}No revisions.{{/revisions}}
         </tbody>
     </table>
+    <div class="center">
+        {{#back_available}}
+            <a on-click="back">Back</a>
+            {{#forward_available}}
+            /
+            {{/forward_available}}
+        {{/back_available}}
+        {{#forward_available}}
+            <a on-click="forward">Forward</a>
+        {{/forward_available}}
+    </div>
+    {{#paging_error}}Server unavailable.{{/paging_error}}
 </div>
 {{/user.username}}
 
