@@ -1,3 +1,7 @@
+"""
+Defines a paginated view of overlay networks the application is configured to
+see as legitimate.
+"""
 from synchrony import app
 from flask.ext import restful
 from flask import session, request
@@ -7,10 +11,6 @@ from synchrony.controllers.utils import Pagination, make_response
 class NetworkCollection(restful.Resource):
 
     def get(self):
-        """
-        Currently returns /all/ peers we know of,
-        but it should be a paginated resource.
-        """
         auth(session, required=True)
         parser = restful.reqparse.RequestParser()
         parser.add_argument("page",type=int, help="", required=False, default=1)

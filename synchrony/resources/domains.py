@@ -2,11 +2,12 @@
 This endpoint is mainly for populating the UI with an overview of how many
 sites have been cached.
 """
+from sqlalchemy import and_
 from flask.ext import restful
-from synchrony.models import Domain
 from flask import session, request
+from synchrony.models import Domain
 from synchrony.controllers.auth import auth
-from synchrony.controllers.utils import make_response
+from synchrony.controllers.utils import Pagination, make_response
 
 class DomainCollection(restful.Resource):
 
@@ -24,9 +25,28 @@ class DomainCollection(restful.Resource):
 
         return make_response(request.url, query)
 
+class DomainResource(restful.Resource):
+
+    def get(self, domain):
+        """
+
+        """
+        auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("page",type=int, help="", required=False, default=1)
+        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        args = parser.parse_args()
+
+        domain = Domain.query.filter(Domain.name == domain).first()
+        if not domain:
+            return {}, 404
+
+        pages = Pagination(domain.resources, args.page, args.per_page)
+        return make_response(request.url, pages)
+
 class DomainCountResource(restful.Resource):
     """
-    Return the total number of domains we're storing. Doesn't require auth.
+    Returns an integer.
     """
     def get(self):
         return Domain.query.count()
