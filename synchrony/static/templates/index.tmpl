@@ -23,10 +23,11 @@
             /
             {{/forward_available}}
         {{/back_available}}
-         {{#forward_available}}
+        {{#forward_available}}
             <a on-click="forward">Forward</a>
         {{/forward_available}}
     </div>
+    {{#paging_error}}{{paging_error}}{{/paging_error}}
 </div>
 {{/user.username}}
 

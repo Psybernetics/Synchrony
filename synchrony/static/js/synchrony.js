@@ -340,9 +340,9 @@ function indexView(){
         }
 
         // Get the initial set of visible revisions
-        function populate_revisions_table(url){
+        function populate_revision_table(url){
             $.get(url, function(data){
-                console.log(data);
+                App.Views.index.set("paging_error", undefined);
                 App.Views.index.set("revisions", data.data);
                 App.Views.index.revisions = data;
 
@@ -363,21 +363,23 @@ function indexView(){
                 if (data.links.hasOwnProperty("next")) {
                     App.Views.index.set("forward_available", true);
                 }
+            }).fail(function(){
+                App.Views.index.set("paging_error", "Server unavailable.");
             });
         }
 
-        populate_revisions_table('/v1/revisions');
+        populate_revision_table('/v1/revisions');
 
 		App.Views.index.on({
 
             forward: function(event){
                 var url = this.revisions.links.next;
-                populate_revisions_table(url);
+                populate_revision_table(url);
             },
             back:    function(event){
                 var url = this.revisions.links.self.split('page=');
                 var page = url[1] - 1;
-                populate_revisions_table(url[0] + 'page=' + page);
+                populate_revision_table(url[0] + 'page=' + page);
             },
 
             // index template addressbar
