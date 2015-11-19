@@ -124,6 +124,7 @@ def init():
     api.add_resource(users.UserCollection,                "/users")
     api.add_resource(users.UserResource,                  "/users/<string:username>")
     api.add_resource(users.UserSessionsResource,          "/users/<string:username>/sessions")
+    api.add_resource(users.UserFriendsCollection,         "/users/<string:username>/friends")
     api.add_resource(users.UserRevisionCollection,        "/users/<string:username>/revisions")
 
     api.add_resource(peers.PeerCollection,                "/peers")

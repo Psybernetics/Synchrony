@@ -92,9 +92,8 @@ App.Documents = Backbone.Collection.extend({
 App.Router = Backbone.Router.extend({
 	routes: {
 		'':                    'index',
-		'request':             'requestindex',
-		'request/:resource':   'requestpage',
-		'history/:resource':   'resourcehistory',
+//		'request':             'requestindex',
+//		'request/:resource':   'requestpage',
 		'user/:username':      'userview',
 		'peers':               'peersview',
 		'settings':            'settingsview',
@@ -113,9 +112,8 @@ App.Router = Backbone.Router.extend({
 
 //	Attributes -> functions in the environment
 	index:              indexView,
-	requestindex:       requestIndex,
-	requestresource:    requestView,
-	resourcehistory:    resourceHistory,
+//	requestindex:       requestIndex,
+//	requestresource:    requestView,
 	userview:           userView,
     peersview:          peersView,
 	settingsview:       settingsView,
@@ -229,96 +227,9 @@ function toggleMain(){
 }
 
 
-// Fetch the index documents in a paginated manner
-function fetchIndex(view){
-	App.indexDocuments = new App.Documents();
-	App.indexDocuments.fetch({
-		error: function(){
-			renderError("Couldn't contact the page server.");
-			return false;
-		},
-		success: function(){
-			// Pages are fetched after the template is placed in the DOM
-			console.log("Successfully fetched index pages.")
-			console.log(App.indexDocuments);
-			// loop through the links we're interested in showing in a table on the
-			// front page to translate their raw timestamps into human readable dates.
-			models = App.indexDocuments.models;
-				var index = 1;
-			var total = models.length;
-//			var docs =  upDate(models.paginate(index, 5));
-			
-			for (var i = 0; i < models.length; i++){
-				var ts = models[i].get('modified');
-				App.indexDocuments.models[i].set('modified', timeStamp(ts));
-			}
-
-			// Calculate pagination boundaries
-			App.indexDocuments.i = 1;
-			App.indexDocuments.per_page = 15;
-			App.indexDocuments.end = Math.floor(
-				App.indexDocuments.models.length / App.indexDocuments.per_page
-			);
-			// Partition the documents
-			var	docs = App.indexDocuments.paginate(
-				App.indexDocuments.per_page,
-				App.indexDocuments.i
-			);
-			console.log(docs);
-			if (docs.attributes){docs = docs.toJSON();}
-			App.indexDocuments.docs = docs;
-/*
-			App.indexDocuments.set({
-				docs:docs,
-				prev_available:false,
-				next_available:false,
-			});
-*/
-			console.log(App.indexDocuments);
-			if (App.Views.index){
-				App.Views.index.set({docs: docs});
-			}
- 		},
-	});
-}
-
-
 // Start the Backbone URL hash monitor
 new App.Router();
 Backbone.history.start();
-
-function requestIndex(page, params){
-	document.title = "Document Index" + App.title;
-	console.log("Wiki page init.")
-	if (!App.indexDocuments) {
-		App.indexDocuments = new App.Documents();
-		App.indexDocuments.fetch({
-			error: function(){
-				renderError("Couldn't contact the page server.");
-			},
-			success: function(){
-				// Pages are fetched after the template is placed in the DOM
-				// Paginate them, loop through the links we're interested in to
-				// translate their raw timestamps into human readable dates.
-				models = App.indexDocuments.models;
-				for (var i = 0; i < models.length; i++){
-					var ts = models[i].get('modified');
-					App.indexDocuments.models[i].set('modified', timeStamp(ts));
-				}
-	 		},
-		});
-	}
-	Ractive.load({
-		wikiindex: 'wikiindex.tmpl',
-	}).then(function(components){
-		App.doc = new App.Document({title:page});
-		App.Views['wikipage'] = new components.wikiindex({
-			el: $('.original'),
-			data: App.indexDocuments,
-			adaptor: ['Backbone'],
-		});
-	});
-}
 
 function indexView(){
 	document.title = "Welcome" + App.title;
@@ -349,7 +260,6 @@ function indexView(){
                 // back_available in index.tmpl
                 if (data.links.hasOwnProperty("self")) {
                     var url = data.links.self.split('page=')[1];
-                    console.log(url);
                     if (url != undefined) {
                         if (url > 1) {
                             App.Views.index.set("back_available", true);
@@ -412,489 +322,6 @@ function indexView(){
     				});
     			}
 			},
-		});
-	});
-}
-
-function requestView(page, params){
-	/*
-		This view initialises the editor found in Editor.js on edit.
-		This view has a socket that for document edits and events for things such as updating the last_modified attr
-		The Edit, Cancel, Save and Delete behaviors correspond to this controller right here.
-		and keep it readable.
-	*/
-	document.title = page + App.title;
-
-	console.log('Wiki page "' + page + '".');
-	Ractive.load({
-		wikipage: 'wikipage.tmpl',
-	}).then(function(components){
-		App.doc = new App.Document({title:page});
-		// Attach the template to the page
-		App.Views['wikipage'] = new components.wikipage({
-			el: $('.original'),
-			data: { page:page, user: App.Config.user },
-			adaptor: ['Backbone'],
-		});
-
-		function createSocket(){
-			// Subscribe to a socket pertaining to this view
-			var socket = io.connect('/wiki', {resource:"stream"});
-			socket.emit('subscribe', page);
-
-			socket.on('document', function(data){
-				renderTyping(linkUser(data.user) + ' is editing');
-				socket.last_edit = data.document
-//				Assume the user doesn't want to see edits being made until they've said so
-				if (App.Views.wikipage.realtime) {
-/*					The document is replaced whole.
-					Ideally we would diff what we currently have with what's been received
-					and edit the corresponding node directly.
-*/
-					$('.editor').html(data.document);
-				}
-
-			});
-			return socket;
-		}
-
-		function recreateSocket(){
-			var socket = createSocket();
-			if (socket.socket.connected) {
-				renderGlobal("Reconnecting");
-				App.Views.wikipage.socket = socket;	
-			}
-		}
-
-		App.Views.wikipage.socket = createSocket();
-
-		App.Views.wikipage.socket.on('disconnect', function(){
-			renderError("Lost connection to document stream");
-			if (!App.Views.wikipage.socket.socket.connected) { 
-				recreateSocket();
-			}
-		});
-
-		function saveSuccess(model, response){
-			renderGlobal("Saved");
-			console.log(response);
-			App.doc.new = false;
-		}
-
-		function saveError(model,response){
-			if (response.responseJSON && response.responseJSON.message) { 
-				renderError(response.responseJSON.message);
-			} else {
-				renderError("Couldn't save the document.");
-			}
-			console.log(response);
-		}
-
-		App.Views.wikipage.on({
-			/* The edit button should launch an Editor object
-               that handles network synchronisation
-               The other buttons are concerned with nothing more complicated
-               than ending the editor object or telling the server to delete the document.
-
-               If localStorage is permitted and we don't have a page we're visiting, save it.
-			*/
-
-			edit: function(event){
-				
-				App.edit("editor");
-				App.editor.on("keyup", function(){
-					App.Views.wikipage.socket.emit('edit', $('.editor').html());
-				});
-				$('.pen-menu').on("click", function(){
-					App.Views.wikipage.socket.emit('edit', $('.editor').html());
-				});
-				$('.editholder').hide();
-				$('.buttonholder').show();
-			},
-
-			save: function(event){
-
-				var content = App.export();
-				console.log(content);
-				App.doc.set('content', content);
-
-				if (App.doc.new) {
-					App.doc.set({title: App.doc.get('id')})
-					App.doc.set('id','')
-					App.doc.url = '/v1/pages';
-					App.doc.save(undefined,{
-						error:   saveError,
-						success: saveSuccess
-					});
-				} else {
-					App.doc.save(null, {
-						type: 'POST',
-						error: saveError,
-						success: saveSuccess
-					});
-				}
-
-				App.doc.fetch({error: function() {
-					renderError("Couldn't contact document server.");
-				}, success: function(){
-					console.log("Viewing fresh document.")
-
-					// Cache content as an attribute
-					App.doc.content = App.doc.get('content');
-					$('.editor').html(App.doc.content);
-					console.log(App.doc);
-					App.editor.destroy();
-					App.doc.set('content', App.markdown.makeHtml(App.doc.content));
-					App.Views.wikipage.set({doc: App.doc});
-					App.Views.sidebar.set({doc: App.doc});
-					$('.editholder').show();
-					$('.buttonholder').hide();
-				}});
-			},
-
-			cancel: function(event){
-//				Replace with original doc
-				$('.editor').html(
-					App.markdown.makeHtml(App.doc.content)
-				);
-//				Tx a cancel event
-
-				App.editor.destroy();
-				$('.editholder').show();
-				$('.buttonholder').hide();
-			},
-
-			del: function(event){
-				$.ajax({
-					url: '/v1/pages/' + page,
-					type: 'DELETE',
-					success: function(response) {
-						location.hash = '';
-						renderGlobal('Deleted ' + page + '.');
-					},
-					error: function(response) {
-						location.hash = '';
-						console.log(response)
-						renderError('Error deleting ' + page);
-					}
-				});
-				fetchIndex();
-			},
-
-			// This is called on keydown events in the rename box, revealed on mouseover-ing the document title
-			title: function(event){
-				if (event.original.keyCode == 13){
-					event.original.preventDefault();
-					var newTitle = this.get("title");
-					// Begin rename
-					var oldTitle = this.get("page");
-					this.set('page', newTitle);
-					// Send the request for rename to the document server
-					$.ajax({
-						type: "POST",
-						url: "/v1/pages/" + oldTitle,
-						data: {title: newTitle},
-						success: function(data, status){
-							App.doc.set({title:newTitle});
-							location.hash = "#wiki/" + newTitle;
-							var pageLink = linkPage(newTitle);
-							var userLink = linkUser(App.Config.user.username);
-							var msg =  userLink + ' renamed ' + oldTitle + ' to ' + pageLink;
-							renderGlobal(msg);
-						},
-						error: function(data, status){
-							renderError(data.responseJSON.message);
-						}
-					});
-
-
-
-					// End rename
-				}
-			},
-
-			// There's a callback in the wikipage template for a mouseover event on the title
-			// when it's triggered, one of these is called and we flip the title into or out of an edit box.
-			editing_title: function(event){
-				if (App.Config.user){
-					$(this.el).find('.document-title').hide();
-					$(this.el).find('.rename-document').css({visibility:"visible",display:"initial"});
-				}
-			},
-			not_editing_title: function(event){
-				if (App.Config.user){
-					$(this.el).find('.document-title').show();
-					$(this.el).find('.rename-document').css({visibility:"hidden",display:"none"});
-				}
-			},
-
-			realtime: function(event){
-				if (!App.Views.wikipage.realtime) {
-					if (App.Views.wikipage.socket.last_edit){
-						$('.editor').html(App.Views.wikipage.socket.last_edit);
-					} 
-					App.Views.wikipage.realtime = true;
-					$('#realtime-button').html('Stop');
-				} else {
-					App.Views.wikipage.realtime = false;
-					$('#realtime-button').html('Realtime');
-				}
-			},
-		});
-/*
-		App.Views.wikipage.observe('title', function(title){
-			console.log(title);
-		});
-*/
-
-		// Load the actual document from the server.
-		// Parse the url hash for revision id to define the request url
-		// we'll be using on the document server.
-		console.log(page);
-
-		function fetchSuccess() {
-			doc.new = false;
-			doc.content = doc.get('content');
-			doc.set('content', App.markdown.makeHtml(doc.content))
-			var ts = doc.get('modified')
-			doc.set('modified', timeStamp(ts));
-			App.Views.wikipage.set({doc: App.doc});
-			App.Views.sidebar.set("tab", {wikipage: true});
-			App.Views.sidebar.set({doc: App.doc});
-			// Mock up a new user object where instances have the doc available
-			
-			var newUser = App.Config.user;
-			newUser.doc = App.doc
-			App.Views.sidebar.set({user: newUser});
-			// Normalise formatting between render/edit
-			App.edit();
-			App.editor.destroy();
-		}
-		function fetchError() {
-			doc.new = true;
-			$(".editor").html("New document.");
-		}
-
-		var doc = new App.Document({id: page});
-		// If there's parameters in the url, IE a revision hash, tell Backbone
-		if (!params){
-			doc.fetch({ success: fetchSuccess, error: fetchError});
-		} else {
-			doc.fetch({ data: $.param(params), success: fetchSuccess, error: fetchError});
-		}
-		App.doc = doc;
-
-		// Replace <div> elements produced by the enter key in the editor
-		// with <br /> tags.
-		// Move this out to an editor module.
-		$('div[contenteditable]').keydown(function(e) {
-		    // trap the return key being pressed
-		    if (e.keyCode === 13) {
-		      // insert 2 br tags (if only one br tag is inserted the cursor won't go to the next line)
-		      document.execCommand('insertHTML', false, '<br /><br />');
-		      // prevent the default behaviour of return key pressed
-		      return false;
-		    }
-		});
-	});
-}
-
-// This view permits users to view the revision history of a document
-function resourceHistory(page, params){
-	document.title = "Revision history for " + page + App.title;
-	console.log('Page history for "' + page + '".');
-	Ractive.load({
-		pagehistory: 'pagehistory.tmpl',
-	}).then(function(components){
-
-		App.banner.show();
-		App.doc = new App.Document({title:page});
-		App.Views['pagehistory'] = new components.pagehistory({
-			el: $('.original'),
-			data: { page:page, user: App.Config.user },
-			adaptor: ['Backbone'],
-		});
-
-		var doc = new App.Document({id: page});
-		App.doc = doc;
-		doc.fetch({
-			data: {history: 0},
-			success: function(){
-				hist = doc.get('history');
-				if (hist){
-					for (var i = 0; i < hist.length; i++){
-						hist[i].title = page;
-						var ts = hist[i].created;
-						hist[i].created = timeStamp(ts);
-						doc.get('history')[i] = hist[i]
-					}
-					doc.trigger("change");
-					doc.trigger("change:history");
-				}
-
-				App.Views.pagehistory.current_page = 1;
-
-				hist.reverse();
-				App.Views.pagehistory.hist_cache = hist;
-				App.Views.pagehistory.end = Math.floor(hist.length / 10);
-				hist = paginate(hist, App.Views.pagehistory.current_page, 10);
-
-
-
-				App.Views.pagehistory.set({prev_available:false, next_available: false});
-
-				if (App.Views.pagehistory.end > App.Views.pagehistory.current_page){
-					App.Views.pagehistory.set({next_available: true});
-				}
-
-				doc.set("history", hist);
-				var ts = App.doc.get('modified');
-				App.doc.set('modified', timeStamp(ts));
-				var ts = App.doc.get('created');
-				App.doc.set('created', timeStamp(ts));
-				App.Views.pagehistory.set({doc: App.doc});
-			},
-			error: function() {
-				renderError("Couldn't retrieve page history.");
-			},
-		});
-		App.Views.pagehistory.on({
-			next: function(){
-				var doc = App.Views.pagehistory.get("doc");
-				var hist = App.Views.pagehistory.hist_cache;
-				App.Views.pagehistory.current_page += 1;
-				var history = paginate(hist, App.Views.pagehistory.current_page, 10);
-				if (App.Views.pagehistory.current_page >= App.Views.pagehistory.end){
-					App.Views.pagehistory.set({next_available:false})
-				}
-				if (App.Views.pagehistory.current_page > 1){
-					App.Views.pagehistory.set({prev_available:true})
-				}
-				doc.set("history", history);
-				App.Views.pagehistory.set({doc: doc});
-			},
-			prev: function(){
-				var doc = App.Views.pagehistory.get("doc");
-				var hist = App.Views.pagehistory.hist_cache;
-				App.Views.pagehistory.current_page -= 1;
-				var history = paginate(hist, App.Views.pagehistory.current_page, 10);
-				doc.set("history", history);
-				App.Views.pagehistory.set({doc: doc});
-				if (App.Views.pagehistory.current_page == 1){
-					App.Views.pagehistory.set({prev_available:false})
-				}
-				if (App.Views.pagehistory.current_page < App.Views.pagehistory.end){
-					App.Views.pagehistory.set({next_available:true})
-				}
-			}
-		});
-
-	});
-}
-
-function accountView() {
-	document.title = "Your account" + App.title;
-	Ractive.load({
-		accountview: 'accountview.tmpl',
-	}).then(function(components){
-		App.Views['accountview'] = new components.accountview({
-			el: $('.original'),
-			data: {},
-			adaptor: ['Backbone'],
-		});
-		App.Views.accountview.on({
-			edit: function(event){ console.log("Edit button says hello");},
-			show_delete: function(event, index) { 
-				var row = $('#'+index);
-				var c = row.children();
-				c = c[c.length -1]
-				c.style.visibility = "";
-			},
-			hide_delete: function(event, index) { 
-				var row = $('#'+index);
-				var c = row.children();
-				c = c[c.length -1]
-				c.style.visibility = "hidden";
-			},
-			delete_session: function(event, index) { 
-				var sessions = App.Views.accountview.get("sessions");
-				console.log(sessions[index]);
-				$.ajax({
-					url: '/v1/users/' + App.Config.user.username + '/sessions',
-					type: 'DELETE',
-					data: {timestamp: sessions[index].timestamp},
-					success: function(result) {
-						$('#'+index).remove();
-						App.Views.accountview.set(
-							"session_count",
-							App.Views.accountview.get("session_count") - 1
-						);
-					}
-				});
-			},
-			edit: function(event){
-				$('.editholder').hide();
-				$('.buttonholder').show();
-				$('.editor').show();
-				$('.bio').hide();
-			},
-			save: function(event){
-				var content = $('.editor').html();
-				$.ajax({
-					type: "POST",
-					url: "/v1/users/" + App.Config.user.username,
-					data: {bio: content},
-					success: function(data,status){
-						if (data){
-							renderGlobal("Saved");
-							var bio = App.markdown.makeHtml(data.bio);
-							App.Views.accountview.set({bio: bio});
-						} else {
-							renderError("There was a problem saving your bio");
-						}
-					},
-					error: function(xhr, status) {
-						console.log(xhr);
-						console.log(status);
-						renderError("Couldn't update your user profile");
-					}
-				});
-				$('.buttonholder').hide();
-				$('.editholder').show();
-				$('.editor').hide();
-				$('.bio').show();
-			},
-			cancel: function(event){
-				$('.buttonholder').hide();
-				$('.editholder').show();
-				$('.editor').hide();
-				$('.bio').show()
-			},
-		});
-
-		$.get('/v1/users/' + App.Config.user.username + '/sessions',
-			function(data, status){
-				console.log(data);
-				for (var i = 0; i < data.sessions.length; i++){
-					var ts = data.sessions[i].created;
-					data.sessions[i].timestamp = ts
-					data.sessions[i].created = timeStamp(ts);
-					data.sessions[i].index = i;
-				}
-				App.Views.accountview.set({
-					username: App.Config.user.username,
-					sessions: data.sessions,
-					session_count: data.session_count,
-				});
-		});
-		$.get('/v1/users/' + App.Config.user.username + '?bio=1',
-			function(data, status){
-				console.log(data);
-				data.mdbio = App.markdown.makeHtml(data.bio);
-				App.Views.accountview.set({
-					mdbio: data.mdbio,
-					bio: data.bio,
-				});
 		});
 	});
 }
@@ -998,8 +425,9 @@ function peersView(){
     });
 }
 
-
-// The profile page of a user
+// This is /#users/<username>
+// Should behave as a settings page for yourself but show your public revisions
+// and user ID to others.
 function userView(username, params){
 	document.title = username + App.title;
 	Ractive.load({
@@ -1011,20 +439,77 @@ function userView(username, params){
 			data: {profile: false},
 			adaptor: ['Backbone'],
 		});
-        /*
-        if (App.Config.user){
-			$.get('/v1/users/' + username + '?profile=1', function(data, status){
-				// Render the biography as a markdown document
-				if (data.bio){ data.bio = App.markdown.makeHtml(data.bio); }
-				App.Views.userpage.set({profile: data});
-			}).fail(function(){
-				App.Views.userpage.set({error:true})
-			});
 
-	    }
-        */
+        // Get some helper functions out of the way
+        function populate_table(table_type, url){
+            $.get(url, function(data){
+                App.Views.userpage.set(table_type + "_paging_error", undefined);
+                App.Views.userpage.set(table_type, data.data);
+                App.Views.userpage[table_type] = data;
+
+                if (data.links.hasOwnProperty("self")) {
+                    var url = data.links.self.split('page=')[1];
+                    if (url != undefined) {
+                        if (url > 1) {
+                            App.Views.userpage.set(table_type + "_back_available", true);
+                        } else {
+                            App.Views.userpage.set(table_type + "_back_available", false);
+                        }
+                    } 
+                }
+
+                // forward_available
+                if (data.links.hasOwnProperty("next")) {
+                    App.Views.userpage.set(table_type + "_forward_available", true);
+                }
+            }).fail(function(){
+               App.Views.userpage.set(table_type + "_paging_error", true);
+            });
+        }
+
+        // Determine whether this is a profile or settings page.
+        if (App.Config.user.username != username) {
+            App.Views.userpage.set("show_profile", true);
+            populate_table("revisions", "/v1//user/" + username + "/revisions");
+        } else {
+            App.Views.userpage.set("sessions_button",  "Show");
+            App.Views.userpage.set("revisions_button", "Show");
+            App.Views.userpage.set("friends_button",   "Show");
+            App.Views.userpage.set("showing_sessions",  undefined);
+            App.Views.userpage.set("showing_revisions", undefined);
+            App.Views.userpage.set("showing_friends",   undefined);
+
+            populate_table("revisions", "/v1/users/" + username + "/revisions");
+            populate_table("sessions", "/v1/users/" + username + "/sessions");
+        }
 
         App.Views.userpage.on({
+            toggle:  function(event, section){
+                var button = section + "_button"
+                var showing = App.Views.userpage.get("showing_" + section);
+                if (showing === undefined) {
+                    App.Views.userpage.set(button, "Hide");
+                    App.Views.userpage.set("showing_" + section, true);
+                } else {
+                    App.Views.userpage.set(button, "Show");
+                    App.Views.userpage.set("showing_" + section, undefined);
+                }
+            },
+            forward: function(event, table_type){
+                var url = this[table_type].links.next;
+                populate_table(table_type, url);
+            },
+            back:    function(event, table_type){
+                var url = this[table_type].links.self.split('page=');
+                var page = url[1] - 1;
+                populate_table(table_type, url[0] + 'page=' + page);
+            },
+            add_friend:      function(event){
+                if (event.original.keyCode == 13){
+				    event.original.preventDefault();
+                    console.log(this.get("friend_addr"));
+                }
+            },
 	    	change_password: function(event){
 				event.original.preventDefault();
                 var current = App.Views.userpage.get("pass0");
