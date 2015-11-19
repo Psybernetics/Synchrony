@@ -4,9 +4,9 @@ import time
 import magic
 import bcrypt
 import hashlib
-from synchrony import db
 from io import BytesIO
 from sqlalchemy import and_
+from synchrony import log, db
 from flask import make_response
 import sqlalchemy.types as types
 from synchrony.controllers.utils import uid, tconv
@@ -65,8 +65,14 @@ class Resource(db.Model):
     created       = db.Column(db.DateTime(), default=db.func.now())
     revisions     = db.relationship("Revision", backref="resource")
 
-    def jsonify(self):
-        return {}
+    def jsonify(self, with_revisions=False):
+        response = {}
+        response['path'] = self.path
+        response['count'] = len(self.revisions)
+        if with_revisions:
+            response['revisions'] = [r.jsonify() for r in self.revisions]
+        response['created'] = time.mktime(self.created.timetuple())
+        return response
 
     def __repr__(self):
         if self.domain:
@@ -374,6 +380,13 @@ class User(db.Model):
         return response
 
     def can(self, priv_name):
+        """
+        Logs whether a user has an access right and returns True, None or False.
+
+        None here means the user wasn't a member of any groups associated with
+        the Priv being queried.
+        """
+        log_message = "Checking whether %s can %s: " % (self.username, priv_name)
         permission = []
         priv = Priv.query.filter(Priv.name == priv_name).first()
         if priv:
@@ -381,8 +394,13 @@ class User(db.Model):
                 for p in r.privs:
                     if p.priv_id == priv.id:
                         permission.append(p.allowed)
-            if any(permission): return True
-        else: return None
+            if any(permission):
+                log(log_message + "Yes.")
+                return True
+        else:
+            log(log_message + "No.")
+            return None
+        log(log_message + "No.")
         return False
 
     def __repr__(self):
