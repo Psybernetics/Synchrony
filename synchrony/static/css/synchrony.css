@@ -318,6 +318,7 @@ label { display: inline-block; }
 .wide > tbody > tr > td {
 	border-top: 0px;
     padding: 5px 20px;
+    width: 500px;
 }
 
 .rename-input {
@@ -744,7 +745,7 @@ a {
     position: absolute;
     margin: 48px 0px;
     width: 50%;
-    padding: 50px 0px;
+    padding: 10px 0px;
     background-color: rgba(255,255,255, 0.9);
     margin-left: 24%;
     border-bottom-left-radius: 10px;
@@ -753,4 +754,16 @@ a {
 
 .index_overview a {
     color: #5D9FDB;
+}
+
+.index_overview > .table {
+    padding: 0 0 30px 0;
+}
+
+.center {
+    text-align: center;
+}
+
+.center a {
+    cursor: pointer;
 }
