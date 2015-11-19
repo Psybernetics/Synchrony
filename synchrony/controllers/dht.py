@@ -472,6 +472,8 @@ class RoutingTable(object):
         res['name']    = self.network
         res['peers']   = len(self)
         res['private'] = self.private
+        if hasattr(self, "node"):
+            res['node_id'] = str(self.node.long_id)
         return res
 
     def __iter__(self):

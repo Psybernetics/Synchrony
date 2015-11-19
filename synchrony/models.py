@@ -370,9 +370,10 @@ class User(db.Model):
         response = {}
         if self.username:
             response['username'] = self.username
-            response['email'] = self.email
-            response['active'] = self.active
-            response['created'] = time.mktime(self.created.timetuple())
+            response['uid']      = self.uid
+            response['email']    = self.email
+            response['active']   = self.active
+            response['created']  = time.mktime(self.created.timetuple())
             if sessions:
                 response['sessions'] = [s.jsonify() for s in self.sessions]
             if groups:

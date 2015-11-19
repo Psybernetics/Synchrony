@@ -25,3 +25,16 @@ class NetworkCollection(restful.Resource):
         # have the same private/public keypair and will only accept new peers
         # who can decrypt for that key. This is useful for guaranteeing that
         # nodes using --autoreplicate only replicate for your instances.
+
+
+class NetworkResource(restful.Resource):
+    """
+    Retrieve a specific network.
+    """
+    def get(self, network):
+        auth(session, required=True)
+        network = app.routes.get(network, None)
+        if network == None:
+            return {}, 404
+
+        return network.jsonify()

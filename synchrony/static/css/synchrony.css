@@ -669,6 +669,10 @@ button {
 
 }
 
+.view td {
+    padding: 0px 20px;
+}
+
 .dark_text {
     color: #222;
 }
