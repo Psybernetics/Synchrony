@@ -364,7 +364,7 @@ function indexView(){
                     App.Views.index.set("forward_available", true);
                 }
             }).fail(function(){
-                App.Views.index.set("paging_error", "Server unavailable.");
+               App.Views.index.set("paging_error", true);
             });
         }
 
