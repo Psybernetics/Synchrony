@@ -50,24 +50,25 @@ We can then monitor events in the iframe.
 
 // App init
 (function(){
-	window.App = {
-		Config: {},
-		Views:  {},
-		stream: [],
-		title: " - Synchrony",
-	}
+    window.App = {
+        Config: {},
+        Views:  {},
+        DHT:    {},
+        stream: [],
+        title: " - Synchrony",
+    }
 
-	// Ask the server who we are.
-	$.get("/v1/users?me=1", function(data, status){
-		App.Config.user = data;
-	});
+    // Ask the server who we are.
+    $.get("/v1/users?me=1", function(data, status){
+        App.Config.user = data;
+    });
 
-//	var m = new moment();
-//	if (m.hour() >= 20 || m.hour() <= 6){
-		setTimeout(function(){
-			$('.main').addClass("after-hours");
-		}, 50);
-//	}
+//    var m = new moment();
+//    if (m.hour() >= 20 || m.hour() <= 6){
+        setTimeout(function(){
+            $('.main').addClass("after-hours");
+        }, 50);
+//    }
 
 })();
 
@@ -77,133 +78,133 @@ Ractive.load.baseUrl = '/static/templates/';
 // Tell Backbone where our API endpoints are for documents.
 App.Document  = Backbone.Model.extend({urlRoot: '/v1/pages' });
 App.Documents = Backbone.Collection.extend({
-	model: App.Document,
-	url: '/v1/pages',
-	paginate: function(perPage, page) {
-		page = page - 1;
-		var collection = this;
-		collection = _(collection.rest(perPage*page));
-		collection = _(collection.first(perPage));    
-		return collection.map( function(model) { return model.toJSON() }); 
-	},
+    model: App.Document,
+    url: '/v1/pages',
+    paginate: function(perPage, page) {
+        page = page - 1;
+        var collection = this;
+        collection = _(collection.rest(perPage*page));
+        collection = _(collection.first(perPage));    
+        return collection.map( function(model) { return model.toJSON() }); 
+    },
 });
 
 //  URL hashes -> attributes on this router
 App.Router = Backbone.Router.extend({
-	routes: {
-		'':                    'index',
-//		'request':             'requestindex',
-//		'request/:resource':   'requestpage',
-		'user/:username':      'userview',
-		'peers':               'peersview',
-		'settings':            'settingsview',
-		'sessions':            'sessionsview',
-		'account/objects':     'accountobjects',
-		'account/pages/groups':'accountpagegroups',
-		'manage':              'manageview',
-		'manage/pages':        'managepages',
-		'manage/pages/groups': 'managepagegroups',
-		'manage/users':        'manageusers',
-		'chat':                'chatview',
-		'login':               'loginview',
-		'logout':              'logout',
-//		'*default': 'renderError',
-	},
+    routes: {
+        '':                    'index',
+//        'request':             'requestindex',
+//        'request/:resource':   'requestpage',
+        'user/:username':      'userview',
+        'peers':               'peersview',
+        'settings':            'settingsview',
+        'sessions':            'sessionsview',
+        'account/objects':     'accountobjects',
+        'account/pages/groups':'accountpagegroups',
+        'manage':              'manageview',
+        'manage/pages':        'managepages',
+        'manage/pages/groups': 'managepagegroups',
+        'manage/users':        'manageusers',
+        'chat':                'chatview',
+        'login':               'loginview',
+        'logout':              'logout',
+//        '*default': 'renderError',
+    },
 
-//	Attributes -> functions in the environment
-	index:              indexView,
-//	requestindex:       requestIndex,
-//	requestresource:    requestView,
-	userview:           userView,
+//    Attributes -> functions in the environment
+    index:              indexView,
+//    requestindex:       requestIndex,
+//    requestresource:    requestView,
+    userview:           userView,
     peersview:          peersView,
-	settingsview:       settingsView,
-	sessionsview:       sessionsView,
-	accountobjects:     accountObjects,
-	accountpagegroups:  accountPageGroups,
-	manageview:         manageView,
-	managepages:        managePages,
-	managepagegroups:   managePageGroups,
-	manageusers:        manageUsers,
-	chatview:           chatView,
-	loginview:          loginView,
-	logout:             logout,
+    settingsview:       settingsView,
+    sessionsview:       sessionsView,
+    accountobjects:     accountObjects,
+    accountpagegroups:  accountPageGroups,
+    manageview:         manageView,
+    managepages:        managePages,
+    managepagegroups:   managePageGroups,
+    manageusers:        manageUsers,
+    chatview:           chatView,
+    loginview:          loginView,
+    logout:             logout,
 
-//	Any pre-post render behaviors
-	before: function() {
+//    Any pre-post render behaviors
+    before: function() {
         if (location.hash == '') {
-		    $('.main').addClass("main_background");
+            $('.main').addClass("main_background");
         }
     },
-	after: function() {
+    after: function() {
         if (location.hash != '') {
-		    $('.main').removeClass("main_background");
+            $('.main').removeClass("main_background");
         }
-	},
+    },
 });
 
 // Our error handler prints to the stream for ten seconds
 function renderError(statement) {
-	console.log('Error: ' + statement);
-	App.stream.push(statement);
-	setTimeout(function(){ App.stream.pop(); }, 10000);
+    console.log('Error: ' + statement);
+    App.stream.push(statement);
+    setTimeout(function(){ App.stream.pop(); }, 10000);
 }
 
 // Push a global message to the stream for eight seconds
 function renderGlobal(statement) {
-	console.log('Global: ' + statement);
-	App.stream.push( '<span class="global-message">' + statement + '</span>' );
-	setTimeout(function(){ App.stream.pop(); }, 8000);
+    console.log('Global: ' + statement);
+    App.stream.push( '<span class="global-message">' + statement + '</span>' );
+    setTimeout(function(){ App.stream.pop(); }, 8000);
 }
 
 // Push $user is typing to the stream for three seconds
 function renderTyping(statement) {
-	App.stream.push( '<span class="global-message">' + statement + '</span>' );
-	setTimeout(function(){ App.stream.pop(); }, 1000);
+    App.stream.push( '<span class="global-message">' + statement + '</span>' );
+    setTimeout(function(){ App.stream.pop(); }, 1000);
 }
 
 function linkUser(username){
-	return '<a href="/#user/' + username + '">' + username + '</a>';
+    return '<a href="/#user/' + username + '">' + username + '</a>';
 }
 
 // Return a collection of documents with their modification times in english
 function upDate(docs){
-	var docs_copy = docs.slice(0);
-	for (var i = 0; i < docs.length; i++){
-		var ts = docs[i].modified;
-		docs_copy[i].modified = timeStamp(ts);
-	}
-	return docs_copy;
+    var docs_copy = docs.slice(0);
+    for (var i = 0; i < docs.length; i++){
+        var ts = docs[i].modified;
+        docs_copy[i].modified = timeStamp(ts);
+    }
+    return docs_copy;
 }
 
 function pulseChat(){
-	$("body").addClass("urgent-sidebar");
-	setTimeout(function(){ $("body").removeClass("urgent-sidebar") }, 1000);
+    $("body").addClass("urgent-sidebar");
+    setTimeout(function(){ $("body").removeClass("urgent-sidebar") }, 1000);
 }
 
 function paginate(list, page, per_page){
-	if (per_page === "undefined"){ per_page = 10; }
-	return list.slice(page * per_page - per_page, page * per_page)
+    if (per_page === "undefined"){ per_page = 10; }
+    return list.slice(page * per_page - per_page, page * per_page)
 }
 
 function toggle_synchrony(){
-	if (App.Config.user){
-		if (!$('.synchrony').hasClass("expanded")){
+    if (App.Config.user){
+        if (!$('.synchrony').hasClass("expanded")){
             update_synchrony();
-			$('.synchrony').addClass("expanded");
-			$('.synchrony').removeClass("contracted");
-		} else {
-			$('.synchrony').removeClass("expanded");
-			$('.synchrony').addClass("contracted");
-		}
+            $('.synchrony').addClass("expanded");
+            $('.synchrony').removeClass("contracted");
+        } else {
+            $('.synchrony').removeClass("expanded");
+            $('.synchrony').addClass("contracted");
+        }
 
-		if (!$('.synchrony').hasClass("circular")){
-			$('.synchrony').addClass("circular");
-			$('.control_panel').hide();
-		} else {
-			$('.synchrony').removeClass("circular");
-			$('.control_panel').show();
-		}
-	}
+        if (!$('.synchrony').hasClass("circular")){
+            $('.synchrony').addClass("circular");
+            $('.control_panel').hide();
+        } else {
+            $('.synchrony').removeClass("circular");
+            $('.control_panel').show();
+        }
+    }
 }
 
 // This is for populating synchrony.tmpl on mouseover.
@@ -217,13 +218,13 @@ function update_synchrony(){
 }
 
 function toggleMain(){
-	if ($('.main').is(':visible')) {
-		$('.main').hide();
-		$('.show-hide').html('Show');
-	} else {
-		$('.main').show();
-		$('.show-hide').html('Hide');
-	}
+    if ($('.main').is(':visible')) {
+        $('.main').hide();
+        $('.show-hide').html('Show');
+    } else {
+        $('.main').show();
+        $('.show-hide').html('Hide');
+    }
 }
 
 
@@ -232,22 +233,22 @@ new App.Router();
 Backbone.history.start();
 
 function indexView(){
-	document.title = "Welcome" + App.title;
-	Ractive.load({
-		index: 'index.tmpl',
-	}).then(function(components){
-		if (!App.Config.user) {
-			location.hash = "login";
-		}
+    document.title = "Welcome" + App.title;
+    Ractive.load({
+        index: 'index.tmpl',
+    }).then(function(components){
+        if (!App.Config.user) {
+            location.hash = "login";
+        }
 
-		App.Views['index'] = new components.index({
-			el: $('.main'),
-			data: App.Config,
-			adaptor: ['Backbone'],
-		});
+        App.Views['index'] = new components.index({
+            el: $('.main'),
+            data: App.Config,
+            adaptor: ['Backbone'],
+        });
 
         if (!$('.main').hasClass('main_background')){
-		    $('.main').addClass("main_background");
+            $('.main').addClass("main_background");
         }
 
         // Get the initial set of visible revisions
@@ -280,7 +281,7 @@ function indexView(){
 
         populate_revision_table('/v1/revisions');
 
-		App.Views.index.on({
+        App.Views.index.on({
 
             forward: function(event){
                 var url = this.revisions.links.next;
@@ -297,131 +298,131 @@ function indexView(){
                 if (event.original.keyCode == 13){
                     event.original.preventDefault();
 
-		    		var url = this.get("url");
-    				if (url.indexOf("://") > -1){
-    					 url = url.slice(url.indexOf("://")+3, url.length);
-    				}
-    				if ($('.main').is(':visible')) {
-    					toggleMain();
-	    			}
-    				// Update the appearance of the URL bar
-    				location.hash = "request/" + url;
-    				$.ajax({
-    					type: "GET",
-    					url: "/v1/request/" + url,
-    					success: function(data, status){
-    						console.log(data);
-    						iframe = $('.iframe');
-    						iframe.contents().find('body').html(data.response);
-    						App.document = data.response;
-    						$('.external_resources').html(data.response);
-    					},
-    					error: function(data, status){
-    						renderError(data.responseJSON.message);
-    					}
-    				});
-    			}
-			},
-		});
-	});
+                    var url = this.get("url");
+                    if (url.indexOf("://") > -1){
+                         url = url.slice(url.indexOf("://")+3, url.length);
+                    }
+                    if ($('.main').is(':visible')) {
+                        toggleMain();
+                    }
+                    // Update the appearance of the URL bar
+                    location.hash = "request/" + url;
+                    $.ajax({
+                        type: "GET",
+                        url: "/v1/request/" + url,
+                        success: function(data, status){
+                            console.log(data);
+                            iframe = $('.iframe');
+                            iframe.contents().find('body').html(data.response);
+                            App.document = data.response;
+                            $('.external_resources').html(data.response);
+                        },
+                        error: function(data, status){
+                            renderError(data.responseJSON.message);
+                        }
+                    });
+                }
+            },
+        });
+    });
 }
 
 function logout(){
-//	location = '/logout/';	
-	$.ajax({
-		type: "DELETE",
-		url: "/v1/users/" + username + "/sessions",
-		data: {timestamp: App.config.user.session.created},
-		success: function(data, status){
-			console.log(data);
-			console.log("Logged out");
-			App.Config.user = null;
-			App.Views.synchrony.set("Config", App.Config);
-			location.hash = '';
-			location = '/';
-		},
-		error: function(data, status){
-			console.log("Error logging out:" + data);
-		}
-	});
+//    location = '/logout/';    
+    $.ajax({
+        type: "DELETE",
+        url: "/v1/users/" + username + "/sessions",
+        data: {timestamp: App.config.user.session.created},
+        success: function(data, status){
+            console.log(data);
+            console.log("Logged out");
+            App.Config.user = null;
+            App.Views.synchrony.set("Config", App.Config);
+            location.hash = '';
+            location = '/';
+        },
+        error: function(data, status){
+            console.log("Error logging out:" + data);
+        }
+    });
 }
 
 
 function accountObjects(params){
 
-	document.title = "Your pages" + App.title;
-	Ractive.load({
-		accountpages: 'accountpages.tmpl',
-	}).then(function(components){
+    document.title = "Your pages" + App.title;
+    Ractive.load({
+        accountpages: 'accountpages.tmpl',
+    }).then(function(components){
 
-		App.Views['accountpages'] = new components.accountpages({
-			el: $('.original'),
-			data: { user: App.Config.user },
-			adaptor: ['Backbone'],
-		});
+        App.Views['accountpages'] = new components.accountpages({
+            el: $('.original'),
+            data: { user: App.Config.user },
+            adaptor: ['Backbone'],
+        });
 
-		$.get('/v1/users/' + App.Config.user.username + '/pages',
-			function(data, status){
-				for (var i = 0; i < data.pages.length; i++){
-					var ts = data.pages[i].created;
-					data.pages[i].timestamp = ts
-					data.pages[i].created = timeStamp(ts);
-					data.pages[i].index = i;
-				}
-				for (var i = 0; i < data.edits.length; i++){
-					var ts = data.edits[i].created;
-					data.edits[i].timestamp = ts
-					data.edits[i].created = timeStamp(ts);
-					data.edits[i].index = i;
-				}
-				App.Views.accountpages.set({user: data});
-		}).fail(function(){
-			renderError("Couldn't contact the document server.");
-		});
-		$.get('/v1/users/' + App.Config.user.username + '/pages?deleted=1',
-			function(data, status){
-				for (var i = 0; i < data.length; i++){
-					var ts = data[i].created;
-					data[i].timestamp = ts
-					data[i].created = timeStamp(ts);
-					data[i].index = i;
-				}
-				App.Views.accountpages.set({deleted_pages: data});
-		}).fail(function(){
-			renderError("Couldn't retrieve deleted pages");
-		});
+        $.get('/v1/users/' + App.Config.user.username + '/pages',
+            function(data, status){
+                for (var i = 0; i < data.pages.length; i++){
+                    var ts = data.pages[i].created;
+                    data.pages[i].timestamp = ts
+                    data.pages[i].created = timeStamp(ts);
+                    data.pages[i].index = i;
+                }
+                for (var i = 0; i < data.edits.length; i++){
+                    var ts = data.edits[i].created;
+                    data.edits[i].timestamp = ts
+                    data.edits[i].created = timeStamp(ts);
+                    data.edits[i].index = i;
+                }
+                App.Views.accountpages.set({user: data});
+        }).fail(function(){
+            renderError("Couldn't contact the document server.");
+        });
+        $.get('/v1/users/' + App.Config.user.username + '/pages?deleted=1',
+            function(data, status){
+                for (var i = 0; i < data.length; i++){
+                    var ts = data[i].created;
+                    data[i].timestamp = ts
+                    data[i].created = timeStamp(ts);
+                    data[i].index = i;
+                }
+                App.Views.accountpages.set({deleted_pages: data});
+        }).fail(function(){
+            renderError("Couldn't retrieve deleted pages");
+        });
 
-		App.Views.accountpages.on({
-			toggle_edits: function(){
-				$('.hidden-table').toggle();
-				if (!App.Views.accountpages.showing_edits){
-					App.Views.accountpages.showing_edits = true;
-					$('.edits-button').html("Hide");
-				} else {
-					App.Views.accountpages.showing_edits = false;
-					$('.edits-button').html("Show");
-				}
-			},
-		});
+        App.Views.accountpages.on({
+            toggle_edits: function(){
+                $('.hidden-table').toggle();
+                if (!App.Views.accountpages.showing_edits){
+                    App.Views.accountpages.showing_edits = true;
+                    $('.edits-button').html("Hide");
+                } else {
+                    App.Views.accountpages.showing_edits = false;
+                    $('.edits-button').html("Show");
+                }
+            },
+        });
 
-	});
+    });
 }
 
 
 function peersView(){
-	document.title = "Peer Browser" + App.title;
-	Ractive.load({
-		peers: 'peers.tmpl',
-	}).then(function(components){
-		if (!App.Config.user) {
-			location.hash = "login";
-		}
+    document.title = "Peer Browser" + App.title;
+    Ractive.load({
+        peers: 'peers.tmpl',
+    }).then(function(components){
+        if (!App.Config.user) {
+            location.hash = "login";
+        }
 
-		App.Views['peers'] = new components.peers({
-			el: $('.main'),
-			data: App.Config,
-			adaptor: ['Backbone'],
-		});
+        App.Views['peers'] = new components.peers({
+            el: $('.main'),
+            data: App.Config,
+            adaptor: ['Backbone'],
+        });
     });
 }
 
@@ -429,16 +430,20 @@ function peersView(){
 // Should behave as a settings page for yourself but show your public revisions
 // and user ID to others.
 function userView(username, params){
-	document.title = username + App.title;
-	Ractive.load({
-		userpage: 'userpage.tmpl',
-	}).then(function(components){
+    document.title = username + App.title;
+    Ractive.load({
+        userpage: 'userpage.tmpl',
+    }).then(function(components){
 
-		App.Views['userpage'] = new components.userpage({
-			el: $('.main'),
-			data: {profile: false},
-			adaptor: ['Backbone'],
-		});
+        if (!App.Config.user) {
+            location.hash = "login";
+        }
+
+        App.Views['userpage'] = new components.userpage({
+            el: $('.main'),
+            data: {profile: false},
+            adaptor: ['Backbone'],
+        });
 
         // Get some helper functions out of the way
         function populate_table(table_type, url){
@@ -518,12 +523,12 @@ function userView(username, params){
             },
             add_friend:      function(event){
                 if (event.original.keyCode == 13){
-				    event.original.preventDefault();
+                    event.original.preventDefault();
                     console.log(this.get("friend_addr"));
                 }
             },
-	    	change_password: function(event){
-				event.original.preventDefault();
+            change_password: function(event){
+                event.original.preventDefault();
                 var current = App.Views.userpage.get("pass0");
                 var pass1   = App.Views.userpage.get("pass1");
                 var pass2   = App.Views.userpage.get("pass2");
@@ -532,7 +537,7 @@ function userView(username, params){
                     App.Views.userpage.set("password_message", "Passwords were mismatched.");
                } else {
                    // Validate current password
-        			$.ajax({
+                    $.ajax({
                         type:    "POST",
                         url:     "/v1/users/" + username,
                         data:    {verify_password: App.Views.userpage.get("pass0")},
@@ -559,29 +564,29 @@ function userView(username, params){
                             }
                         }
                     }).fail(function(){
-		        		App.Views.userpage.set({password_message: "Couldn't contact the server."});
-        			});
+                        App.Views.userpage.set({password_message: "Couldn't contact the server."});
+                    });
                }
-		    }
+            }
         });
     });
 }
 
 Ractive.load({
-	content:   'content.tmpl',
-	synchrony: 'synchrony.tmpl',
+    content:   'content.tmpl',
+    synchrony: 'synchrony.tmpl',
 
 }).then(function(components){
 
 /*
-	This is the content area of the page that holds external resources in an iframe
-	it's loaded here so it can be displayed at all times alongside SPA templates.
+    This is the content area of the page that holds external resources in an iframe
+    it's loaded here so it can be displayed at all times alongside SPA templates.
 
-*/	App.Views['content'] = new components.content({
-		el: $('.content'),
-		data: {events: App.stream},
-		adaptor: ['Backbone'],
-	});
+*/    App.Views['content'] = new components.content({
+        el: $('.content'),
+        data: {events: App.stream},
+        adaptor: ['Backbone'],
+    });
 /*
  * The current strategy revolves around subscribing to a channel named "public"
  * though this could just as well be a User UID to follow them through their
@@ -600,13 +605,13 @@ Ractive.load({
  * This should be as simple as doing dom.patch(subtree)
  *
  */
-	App.Views.content.socket = io.connect('/documents', {resource: "stream"})
-	App.Views.content.socket.emit('subscribe', 'public')
-	App.Views.content.socket.on("fragment", function(data){
-		// Someone is sending us a document.
-		console.log(data);
-		parser = new DOMParser();
-		doc = parser.parseFromString(data.document, "text/xml");
+    App.Views.content.socket = io.connect('/documents', {resource: "stream"})
+    App.Views.content.socket.emit('subscribe', 'public')
+    App.Views.content.socket.on("fragment", function(data){
+        // Someone is sending us a document.
+        console.log(data);
+        parser = new DOMParser();
+        doc = parser.parseFromString(data.document, "text/xml");
         // Clean out errors found by the parser.
         var element = doc.getElementsByTagName("parsererror");
         for (index = element.length - 1; index >= 0; index--) {
@@ -616,26 +621,26 @@ Ractive.load({
         console.log(element);
         var doc_text = $(doc).text();
         console.log("doc_text: "+ doc_text);
-//		window.doc = doc;
-		var nodes = "";
-		var text_data = "";
-//		doc.children[0].className
-		nodes = nodes + doc.children[0].nodeName
-		if (doc.children[0].children) {
-			nodes = nodes + ' ' + doc.children[0].children[0].nodeName
-			if (doc.children[0].children[0].children) {
-				nodes = nodes + ' ' + doc.children[0].children[0].children[0].nodeName
-				text_data = doc.children[0].children[0].children[0].innerHTML
-			} else {
-				text_data = doc.children[0].children[0].innerHTML
-			}
-		} else {
-			text_data = doc.children[0].innerHTML
-		}
+//        window.doc = doc;
+        var nodes = "";
+        var text_data = "";
+//        doc.children[0].className
+        nodes = nodes + doc.children[0].nodeName
+        if (doc.children[0].children) {
+            nodes = nodes + ' ' + doc.children[0].children[0].nodeName
+            if (doc.children[0].children[0].children) {
+                nodes = nodes + ' ' + doc.children[0].children[0].children[0].nodeName
+                text_data = doc.children[0].children[0].children[0].innerHTML
+            } else {
+                text_data = doc.children[0].children[0].innerHTML
+            }
+        } else {
+            text_data = doc.children[0].innerHTML
+        }
         console.log("nodes: " + nodes);
         console.log("text_data: " + text_data);
-		var length = text_data.length;
-		// First half
+        var length = text_data.length;
+        // First half
         var c = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')');
         var swapped = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')').first().html(data.document);
         console.log("swap attempt 1:");
@@ -648,406 +653,415 @@ Ractive.load({
             console.log("swap attempt 2:")
             console.log(swapped.length);
             console.log(swapped.text());
-		}
+        }
         console.log("c: " + c.length);
         console.log(c);
         for (var i = 0; i < c.length; i++) {
             console.log($(c[i]).text());
         }
-	});
+    });
 
-//	Only transmit when textnode characters have been modified
-	$('.iframe').contents().find('body').on('DOMCharacterDataModified', function(event){
-//		Traverse to up to two parent elements and transmit the outerHTML.
-		if (event.target.parentElement) {
-			if (event.target.parentElement.parentElement) {
-				edit_data = event.target.parentElement.parentElement.outerHTML;
-			} else {
-				edit_data = event.target.parentElement.outerHTML;
-			}
-		} else {
-			edit_data = event.target.outerHTML;
-		}
-		
-		App.Views.content.socket.emit('edit', edit_data);
+//    Only transmit when textnode characters have been modified
+    $('.iframe').contents().find('body').on('DOMCharacterDataModified', function(event){
+//        Traverse to up to two parent elements and transmit the outerHTML.
+        if (event.target.parentElement) {
+            if (event.target.parentElement.parentElement) {
+                edit_data = event.target.parentElement.parentElement.outerHTML;
+            } else {
+                edit_data = event.target.parentElement.outerHTML;
+            }
+        } else {
+            edit_data = event.target.outerHTML;
+        }
+        
+        App.Views.content.socket.emit('edit', edit_data);
 
-		console.log(event);
-		App.e = event;
-	});
+        console.log(event);
+        App.e = event;
+    });
 
 /*
-	App.Views['results'] = new components.results({
-		el: $('.results'),
-		adaptor: ['Backbone'],
-	});
-	$('.results').hide();
-	$('.results').click(function(){
-		App.Views.search.set('term', '');
-	});
+    App.Views['results'] = new components.results({
+        el: $('.results'),
+        adaptor: ['Backbone'],
+    });
+    $('.results').hide();
+    $('.results').click(function(){
+        App.Views.search.set('term', '');
+    });
 */
-	// Search bar and an event handler for searching on input
-	App.Views['synchrony'] = new components.synchrony({
-		el: $('.synchrony'),
-		data: {
-		Config: App.Config,
-		edit_button:"Edit",
-		},
-		adaptor: ['Backbone'],
-	});
+    // Search bar and an event handler for searching on input
+    App.Views['synchrony'] = new components.synchrony({
+        el: $('.synchrony'),
+        data: {
+        Config: App.Config,
+        edit_button:"Edit",
+        },
+        adaptor: ['Backbone'],
+    });
 
-	App.Views.synchrony.socket = io.connect('/global', {resource:"stream"});
-	App.Views.synchrony.socket.emit('join', "global");
-	App.Views.synchrony.socket.on("message", function(data){
-		App.stream.push(data.message);
-		setTimeout(function(){ App.stream.pop(); }, 1000)
-	});
+    App.Views.synchrony.socket = io.connect('/global', {resource:"stream"});
+    App.Views.synchrony.socket.emit('join', "global");
+    App.Views.synchrony.socket.on("message", function(data){
+        App.stream.push(data.message);
+        setTimeout(function(){ App.stream.pop(); }, 1000)
+    });
 
-	App.Views.synchrony.on({
-		request: function(event){
-			if (event.original.keyCode == 13){
-				event.original.preventDefault();
+    App.Views.synchrony.on({
+        request: function(event){
+            if (event.original.keyCode == 13){
+                event.original.preventDefault();
 
-				var url = this.get("url");
-				if (url.indexOf("://") > -1){
-					 url = url.slice(url.indexOf("://")+3, url.length);
-				}
-				if ($('.main').is(':visible')) {
-					toggleMain();
-				}
-				// Update the appearance of the URL bar
-				location.hash = "request/" + url;
-				$.ajax({
-					type: "GET",
-					url: "/v1/request/" + url,
-					success: function(data, status, jq_obj){
-						console.log(data);
+                var url = this.get("url");
+                if (url.indexOf("://") > -1){
+                     url = url.slice(url.indexOf("://")+3, url.length);
+                }
+                if ($('.main').is(':visible')) {
+                    toggleMain();
+                }
+                // Update the appearance of the URL bar
+                location.hash = "request/" + url;
+                $.ajax({
+                    type: "GET",
+                    url: "/v1/request/" + url,
+                    success: function(data, status, jq_obj){
+                        console.log(data);
                         //
                         // The Content-Hash and Overlay-Network headers are used
                         // to keep a log of what came from who, which can then
                         // be used in POST requests to /v1/revisions/downloads
                         //
-                        console.log(jq_obj.getResponseHeader('Content-Hash'));
-                        console.log(jq_obj.getResponseHeader('Overlay-Network'));
-						iframe = $('.iframe');
-						iframe.contents().find('body').html(data.response);
-						App.document = data.response;
-						$('.external_resources').html(data.response);
-					},
-					error: function(data, status){
-						renderError(data.responseJSON.message);
-					}
-				});
-			}
-		},
-		edit: function(event){
-			iframe = $('.iframe');
-			var attr = iframe.contents().find('body').attr('contenteditable');
-//			console.log(attr);
-			if (typeof attr === typeof undefined || attr == false || attr == "false") {
-				iframe.contents().find('body').attr('contenteditable','true');
-				iframe.contents().find('body').attr('autocorrect','false');
-				iframe.contents().find('body').attr('spellcheck','false');
-				App.Views.synchrony.set('edit_button', "Done");
-				$('.edit_button').html("Done");
-			} else {
-				iframe.contents().find('body').attr('contenteditable','false');
-				App.Views.synchrony.set('edit_button', "Edit");
-				$('.edit_button').html("Edit");
-			}
-		},
-		settings: function(event){
-			window.location.hash = "#settings";
-		},
-		sessions: function(event){
-			window.location.hash = "#sessions";
-		},
-		show_hide: function(event){ // Show/hide the .main panel over content
-			toggleMain();
-		},
-		chat: function(event){
-			window.location.hash = "#chat";
-		},
-	});
+                        var network = jq_obj.getResponseHeader('Overlay-Network');
+                        if (network != undefined){
+                            var hash    = jq_obj.getResponseHeader('Content-Hash');
+                            App.DHT[url] = {
+                                hash:    hash,
+                                network: network
+                            }
+                        }
+                        iframe = $('.iframe');
+                        iframe.contents().find('body').html(data.response);
+
+                        // Also caching the unedited document in the event it's ever
+                        // sent directly over webrtc.
+                        App.document = data.response;
+                        $('.external_resources').html(data.response);
+                    },
+                    error: function(data, status){
+                        renderError(data.responseJSON.message);
+                    }
+                });
+            }
+        },
+        edit: function(event){
+            iframe = $('.iframe');
+            var attr = iframe.contents().find('body').attr('contenteditable');
+//            console.log(attr);
+            if (typeof attr === typeof undefined || attr == false || attr == "false") {
+                iframe.contents().find('body').attr('contenteditable','true');
+                iframe.contents().find('body').attr('autocorrect','false');
+                iframe.contents().find('body').attr('spellcheck','false');
+                App.Views.synchrony.set('edit_button', "Done");
+                $('.edit_button').html("Done");
+            } else {
+                iframe.contents().find('body').attr('contenteditable','false');
+                App.Views.synchrony.set('edit_button', "Edit");
+                $('.edit_button').html("Edit");
+            }
+        },
+        settings: function(event){
+            window.location.hash = "#settings";
+        },
+        sessions: function(event){
+            window.location.hash = "#sessions";
+        },
+        show_hide: function(event){ // Show/hide the .main panel over content
+            toggleMain();
+        },
+        chat: function(event){
+            window.location.hash = "#chat";
+        },
+    });
 });
 
 function chatView() {
-	document.title = "Chat" + App.title;
-	Ractive.load({chat: 'chat.tmpl'}).then(function(components){
-		App.Views['chat'] = new components.chat({
-			el: $('.main'),
-			data: {chat_available:true},
-			adaptor: ['Backbone']
-		});
-		App.Views.chat.visible = false;
+    document.title = "Chat" + App.title;
+    Ractive.load({chat: 'chat.tmpl'}).then(function(components){
+        App.Views['chat'] = new components.chat({
+            el: $('.main'),
+            data: {chat_available:true},
+            adaptor: ['Backbone']
+        });
+        App.Views.chat.visible = false;
 
-		// An array of messages typed into the input field.
-		App.Views.chat.doskeys = [];
-		App.Views.chat.current_doskey = 0;
+        // An array of messages typed into the input field.
+        App.Views.chat.doskeys = [];
+        App.Views.chat.current_doskey = 0;
 
-		// Join the public channel and listen for messages
-		App.Views.chat.socket = io.connect('/chat', {resource:"stream"})
-		App.Views.chat.socket.emit('join', 'public')
+        // Join the public channel and listen for messages
+        App.Views.chat.socket = io.connect('/chat', {resource:"stream"})
+        App.Views.chat.socket.emit('join', 'public')
 
-		// Recieve chat messages.
-		App.Views.chat.socket.on("privmsg", function(data){
-			console.log(data);
-//			if (!App.Views.sidebar.visible){ pulseSidebar(); }
-//			The anonymous flag is for if you've permitted unsigned-up users to chat
-//			via the auth server.
-//			data = {m:message, u:username, a:anonymous_flag}
-			$('.chat-messages').append('<br />&lt;' + linkUser(data.u) + '&gt; ' + data.m);
-			$(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
-		});
+        // Recieve chat messages.
+        App.Views.chat.socket.on("privmsg", function(data){
+            console.log(data);
+//            if (!App.Views.sidebar.visible){ pulseSidebar(); }
+//            The anonymous flag is for if you've permitted unsigned-up users to chat
+//            via the auth server.
+//            data = {m:message, u:username, a:anonymous_flag}
+            $('.chat-messages').append('<br />&lt;' + linkUser(data.u) + '&gt; ' + data.m);
+            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+        });
 
-		// Recieve the responses from commands
-		App.Views.chat.socket.on("response", function(data){
-			console.log(data);
-//			if (!App.Views.chat.visible){ pulseChat(); }
-			$('.chat-messages').append('<br />' + data.r);
-			$(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
-		});
+        // Recieve the responses from commands
+        App.Views.chat.socket.on("response", function(data){
+            console.log(data);
+//            if (!App.Views.chat.visible){ pulseChat(); }
+            $('.chat-messages').append('<br />' + data.r);
+            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+        });
 
-		// Server disappeared. TODO: Set a reconnect timer here.
-//		App.Views.chat.socket.on("disconnect", function(data){
-//			console.log(data);
-//			App.Views.chat.set("chat_available", false);
-//			App.Views.chat.set("chat_error", data.message);
-//		});
+        // Server disappeared. TODO: Set a reconnect timer here.
+//        App.Views.chat.socket.on("disconnect", function(data){
+//            console.log(data);
+//            App.Views.chat.set("chat_available", false);
+//            App.Views.chat.set("chat_error", data.message);
+//        });
 
-		// We've connected to chat before authenticating and the
-		// server is telling us to reconnect.
-		App.Views.chat.socket.on("reconnect", function(data){
-			console.log(data.m);
-			$('.chat-messages').append('<br />Reconnecting to chat...');
-			$(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
-			App.Views.chat.socket.disconnect();
-			App.Views.chat.socket.socket.connect();
-		});
+        // We've connected to chat before authenticating and the
+        // server is telling us to reconnect.
+        App.Views.chat.socket.on("reconnect", function(data){
+            console.log(data.m);
+            $('.chat-messages').append('<br />Reconnecting to chat...');
+            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+            App.Views.chat.socket.disconnect();
+            App.Views.chat.socket.socket.connect();
+        });
 
-		App.Views.chat.socket.on("appear_offline", function(data){
-			$('[name="appear_offline"]').attr("checked", data);
-		});
+        App.Views.chat.socket.on("appear_offline", function(data){
+            $('[name="appear_offline"]').attr("checked", data);
+        });
 
-		if (App.Config.user){
-			App.Views.chat.set("chat_available", true);
-		}
+        if (App.Config.user){
+            App.Views.chat.set("chat_available", true);
+        }
 
-	}).then(function(components){
-		App.Views.chat.on({
-			send: function(event){
-				console.log("Sending");
-			},
+    }).then(function(components){
+        App.Views.chat.on({
+            send: function(event){
+                console.log("Sending");
+            },
 
-//			Transmit chat messages. this is an on-submit event.
-			privmsg: function(event){
-				event.original.preventDefault();
-				var message = this.get("message");
-	
-				this.doskeys.push(message);
-				App.Views.chat.current_doskey = 1;
+//            Transmit chat messages. this is an on-submit event.
+            privmsg: function(event){
+                event.original.preventDefault();
+                var message = this.get("message");
+    
+                this.doskeys.push(message);
+                App.Views.chat.current_doskey = 1;
 
-				if (message){
-					if (message[0] === "/") {
-						App.Views.chat.socket.emit('cmd', message.substring(1));
-						console.log(this.get("message"));
-						$('#chat-input').val('');
-						this.set("message", '');
-					} else {
-						App.Views.chat.socket.emit('msg', message);
-						console.log(this.get("message"));
-						$('#chat-input').val('');
-						this.set("message", '');
-					}
-				}
-			},
+                if (message){
+                    if (message[0] === "/") {
+                        App.Views.chat.socket.emit('cmd', message.substring(1));
+                        console.log(this.get("message"));
+                        $('#chat-input').val('');
+                        this.set("message", '');
+                    } else {
+                        App.Views.chat.socket.emit('msg', message);
+                        console.log(this.get("message"));
+                        $('#chat-input').val('');
+                        this.set("message", '');
+                    }
+                }
+            },
 
-			chat_appear_offline: function(event){
-//				event.original.preventDefault();
-				console.log(event);
-				var appearing_offline = this.get("appearing_offline");
-				console.log(appearing_offline)
-				// We've prevented the default, so transmit the inverse,
-				// as it's the state the user is aiming for
-				if (appearing_offline){
-					App.Views.chat.socket.emit("appear_offline", 0);
-				} else {
-					App.Views.chat.socket.emit("appear_offline", 1);
-				}
-			},
+            chat_appear_offline: function(event){
+//                event.original.preventDefault();
+                console.log(event);
+                var appearing_offline = this.get("appearing_offline");
+                console.log(appearing_offline)
+                // We've prevented the default, so transmit the inverse,
+                // as it's the state the user is aiming for
+                if (appearing_offline){
+                    App.Views.chat.socket.emit("appear_offline", 0);
+                } else {
+                    App.Views.chat.socket.emit("appear_offline", 1);
+                }
+            },
 
-//			Implements a buffer of entered messages
-//			available with the up and down arrow keys
-//			Went with the name doskeys instead of buffer etc because it's more descriptive.
-			doskeys: function(event){
-				if (event.original.keyCode == 38){
-				// If up arrow
-				var current_line = this.get("message");
-					var doskeys = App.Views.chat.doskeys;
-	
-					if (doskeys.length && App.Views.chat.current_doskey <= doskeys.length){
-						var line = App.Views.chat.doskeys[
-							App.Views.chat.doskeys.length - App.Views.chat.current_doskey
-						];
-						this.set({message:line});
-						App.Views.chat.current_doskey += 1;
-					}
+//            Implements a buffer of entered messages
+//            available with the up and down arrow keys
+//            Went with the name doskeys instead of buffer etc because it's more descriptive.
+            doskeys: function(event){
+                if (event.original.keyCode == 38){
+                // If up arrow
+                var current_line = this.get("message");
+                    var doskeys = App.Views.chat.doskeys;
+    
+                    if (doskeys.length && App.Views.chat.current_doskey <= doskeys.length){
+                        var line = App.Views.chat.doskeys[
+                            App.Views.chat.doskeys.length - App.Views.chat.current_doskey
+                        ];
+                        this.set({message:line});
+                        App.Views.chat.current_doskey += 1;
+                    }
 
-				} 
-				else if (event.original.keyCode == 40){
-				// If down arrow
-					var doskeys = App.Views.chat.doskeys;
-					if (doskeys.length && App.Views.chat.current_doskey != 1){
-						App.Views.chat.current_doskey -= 1;
-						var line = App.Views.chat.doskeys[
-							App.Views.chat.doskeys.length - App.Views.chat.current_doskey
-						];
-						this.set({message:line});
-					}
-				}
-			},
+                } 
+                else if (event.original.keyCode == 40){
+                // If down arrow
+                    var doskeys = App.Views.chat.doskeys;
+                    if (doskeys.length && App.Views.chat.current_doskey != 1){
+                        App.Views.chat.current_doskey -= 1;
+                        var line = App.Views.chat.doskeys[
+                            App.Views.chat.doskeys.length - App.Views.chat.current_doskey
+                        ];
+                        this.set({message:line});
+                    }
+                }
+            },
 
-			chat_settings: function(event){
-				if ($('.chat-messages').is(':visible')) {
-					$('.chat-messages').hide();
-					$('.chat-settings-panel').show();
-				} else {
-					$('.chat-settings-panel').hide();
-					$('.chat-messages').show();
-				}
-			},
+            chat_settings: function(event){
+                if ($('.chat-messages').is(':visible')) {
+                    $('.chat-messages').hide();
+                    $('.chat-settings-panel').show();
+                } else {
+                    $('.chat-settings-panel').hide();
+                    $('.chat-messages').show();
+                }
+            },
 
-		});
-	});
-	
+        });
+    });
+    
 }
 function loginView() {
-	document.title = "Log in or create an account" + App.title;
-	Ractive.load({login: 'login.tmpl'}).then(function(components){
-		App.Views['login'] = new components.login({
-			el: $('.main'),
-			adaptor: ['Backbone']
-		});
-	}).then(function(components){
-		App.Views.login.on({
-			login: function(event){
+    document.title = "Log in or create an account" + App.title;
+    Ractive.load({login: 'login.tmpl'}).then(function(components){
+        App.Views['login'] = new components.login({
+            el: $('.main'),
+            adaptor: ['Backbone']
+        });
+    }).then(function(components){
+        App.Views.login.on({
+            login: function(event){
 
-				event.original.preventDefault();
+                event.original.preventDefault();
 
-				var username = this.get("username0");
-				var pass1 = this.get("pass0");
-				App.Views.login.set("message", "Logging in...");
-				// Use jQuery to make a PUT to /v1/users/:username/sessions
-				$.ajax({
-					type: "PUT",
-					url: "/v1/users/" + username + "/sessions",
-					data: {password: pass1},
-					success: function(data, status){
-						// TODO: Reconnect to active sockets.
-						console.log(data);
-						console.log("Great success");
-						App.Config.user = data;
-						App.Views.synchrony.set("Config", App.Config);
-						location.hash = '';
-					},
-					error: function(data, status){
-						App.Views.login.set("message", "Incorrect username or password.");
-					}
-				});
+                var username = this.get("username0");
+                var pass1 = this.get("pass0");
+                App.Views.login.set("message", "Logging in...");
+                // Use jQuery to make a PUT to /v1/users/:username/sessions
+                $.ajax({
+                    type: "PUT",
+                    url: "/v1/users/" + username + "/sessions",
+                    data: {password: pass1},
+                    success: function(data, status){
+                        // TODO: Reconnect to active sockets.
+                        console.log(data);
+                        console.log("Great success");
+                        App.Config.user = data;
+                        App.Views.synchrony.set("Config", App.Config);
+                        location.hash = '';
+                    },
+                    error: function(data, status){
+                        App.Views.login.set("message", "Incorrect username or password.");
+                    }
+                });
 
-			},
-			create: function(event){
-				event.original.preventDefault();
-				var username = this.get("username1");
-				var pass1 = this.get("pass1");
-				var pass2 = this.get("pass2");
-				var email = this.get("email");
-				if (pass1 != pass2 || pass1 == '') {
-					App.Views.login.set("message", "Passwords must match.");
-				} else {
-					App.Views.login.set("message", "Give it a minute..");
-					$.ajax({
-						type: "PUT",
-						url: "/v1/users",
-						data: {
-							username: username,
-							password: pass1,
-							email: email
-						},
-						success: function(data, status){
-							console.log(data);
-							console.log("Great success");
-							App.Views.login.set("message", "Great success.");
-						},
-						error: function(data, status){
-							App.Views.login.set("message", "Server error.");
-						}
-					});
-				}
-			},
-		});
-	});
-	
+            },
+            create: function(event){
+                event.original.preventDefault();
+                var username = this.get("username1");
+                var pass1 = this.get("pass1");
+                var pass2 = this.get("pass2");
+                var email = this.get("email");
+                if (pass1 != pass2 || pass1 == '') {
+                    App.Views.login.set("message", "Passwords must match.");
+                } else {
+                    App.Views.login.set("message", "Give it a minute..");
+                    $.ajax({
+                        type: "PUT",
+                        url: "/v1/users",
+                        data: {
+                            username: username,
+                            password: pass1,
+                            email: email
+                        },
+                        success: function(data, status){
+                            console.log(data);
+                            console.log("Great success");
+                            App.Views.login.set("message", "Great success.");
+                        },
+                        error: function(data, status){
+                            App.Views.login.set("message", "Server error.");
+                        }
+                    });
+                }
+            },
+        });
+    });
+    
 }
 
 function accountPageGroups(){
-	document.title = "Page groups" + App.title;
-	console.log("System management.");
-	Ractive.load({accountpagegroups: 'accountpagegroups.tmpl'}).then(function(components){
-		App.Views['accountpagegroups'] = new components.accountpagegroups({
-			el: $('.original'),
-			adaptor: ['Backbone']
-		});
-	});
-	
+    document.title = "Page groups" + App.title;
+    console.log("System management.");
+    Ractive.load({accountpagegroups: 'accountpagegroups.tmpl'}).then(function(components){
+        App.Views['accountpagegroups'] = new components.accountpagegroups({
+            el: $('.original'),
+            adaptor: ['Backbone']
+        });
+    });
+    
 }
 
 function settingsView() {
-	document.title = "Settings" + App.title;
-	Ractive.load({settings: 'settings.tmpl'}).then(function(components){
-		App.Views['settings'] = new components.settings({
-			el: $('.main'),
-			data: App.Config,
-			adaptor: ['Backbone']
-		});
-	});
+    document.title = "Settings" + App.title;
+    Ractive.load({settings: 'settings.tmpl'}).then(function(components){
+        App.Views['settings'] = new components.settings({
+            el: $('.main'),
+            data: App.Config,
+            adaptor: ['Backbone']
+        });
+    });
 }
 function sessionsView() {
-	document.title = "Sessions" + App.title;
-	Ractive.load({sessions: 'sessions.tmpl'}).then(function(components){
-		App.Views['sessions'] = new components.sessions({
-			el: $('.main'),
-			data: App.Config,
-			adaptor: ['Backbone']
-		});
-	});
+    document.title = "Sessions" + App.title;
+    Ractive.load({sessions: 'sessions.tmpl'}).then(function(components){
+        App.Views['sessions'] = new components.sessions({
+            el: $('.main'),
+            data: App.Config,
+            adaptor: ['Backbone']
+        });
+    });
 }
 function manageView() {
-	document.title = "Site management" + App.title;
-	console.log("System management.");
-	Ractive.load({manage: 'manage.tmpl'}).then(function(components){
-		App.Views['manage'] = new components.manage({
-			el: $('.original'),
-			adaptor: ['Backbone']
-		});
-	});
+    document.title = "Site management" + App.title;
+    console.log("System management.");
+    Ractive.load({manage: 'manage.tmpl'}).then(function(components){
+        App.Views['manage'] = new components.manage({
+            el: $('.original'),
+            adaptor: ['Backbone']
+        });
+    });
 }
 
 function managePages(){}
 function managePageGroups(){}
 function manageUsers(){
-	document.title = "User management" + App.title;
-	console.log("User management.");
-	Ractive.load({manageusers: 'manage-users.tmpl'}).then(function(components){
-		App.Views['manageusers'] = new components.manageusers({
-			el: $('.original'),
-			adaptor: ['Backbone']
-		});
-	}).then(function(components){
-		console.log(App.Views);
+    document.title = "User management" + App.title;
+    console.log("User management.");
+    Ractive.load({manageusers: 'manage-users.tmpl'}).then(function(components){
+        App.Views['manageusers'] = new components.manageusers({
+            el: $('.original'),
+            adaptor: ['Backbone']
+        });
+    }).then(function(components){
+        console.log(App.Views);
 
-		$.get('/v1/users', function(response){
-			App.Views.manageusers.set({users:response});
-		});
-	});
+        $.get('/v1/users', function(response){
+            App.Views.manageusers.set({users:response});
+        });
+    });
 
 }

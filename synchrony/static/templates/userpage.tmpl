@@ -17,13 +17,13 @@
     </table>
     <div class="center">
         {{#sessions_back_available}}
-        <a on-click="back:{{"revisions"}}">Back</a>
+        <a on-click="back:{{"sessions"}}">Back</a>
             {{#sessions_forward_available}}
             /
             {{/sessions_forward_available}}
         {{/sessions_back_available}}
         {{#sessions_forward_available}}
-        <a on-click="forward:{{"revisions"}}">Forward</a>
+        <a on-click="forward:{{"sessions"}}">Forward</a>
         {{/sessions_forward_available}}
     </div>
     {{#sessions_paging_error}}Server unavailable.{{/sessions_paging_error}}
