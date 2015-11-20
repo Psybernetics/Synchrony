@@ -5,10 +5,7 @@
 
 TODO:
 
-PUT /v1/users
 
-PUT     /v1/users/:name/sessions
-GET     /v1/users/:name/sessions
 DELETE  /v1/users/:name/sessions
 
 /v1/request/:url   Resource status metadata
