@@ -35,20 +35,20 @@ def get(url, user_agent, user=None):
         return revision
 
     # Check the web
-#    response = None
-#    try:
-#        log("Fetching %s from the original domain." % url.geturl())
-#        response = requests.get(url.geturl(), headers={'User-Agent': user_agent}, 
-#            timeout=app.config['HTTP_TIMEOUT'])
-#    except Exception, e:
-#        log("Error retrieving %s: %s" % (url.geturl(), e.message))
-#
-#    if response:
-#        revision.add(response)
-#        if 'content-type' in response.headers:
-#            revision.mimetype = response.headers['content-type']
-#            revision.save(user, domain, path)
-#        return revision
+    response = None
+    try:
+        log("Fetching %s from the original domain." % url.geturl())
+        response = requests.get(url.geturl(), headers={'User-Agent': user_agent}, 
+            timeout=app.config['HTTP_TIMEOUT'])
+    except Exception, e:
+        log("Error retrieving %s: %s" % (url.geturl(), e.message))
+
+    if response:
+        revision.add(response)
+        if 'content-type' in response.headers:
+            revision.mimetype = response.headers['content-type']
+            revision.save(user, domain, path)
+        return revision
 
     # Check an overlay network
     if user and user.can("retrieve_from_dht"):
