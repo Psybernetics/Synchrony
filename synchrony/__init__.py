@@ -102,11 +102,8 @@ def init():
     from synchrony.resources import revisions
     from synchrony.resources import networks
     from synchrony.resources import domains
-    from synchrony.resources import request
     from synchrony.resources import users
     from synchrony.resources import peers
-
-    api.add_resource(request.RequestResource,             "/request/<path:url>")
 
     api.add_resource(networks.NetworkCollection,          "/networks")
     api.add_resource(networks.NetworkResource,            "/networks/<string:network>")
