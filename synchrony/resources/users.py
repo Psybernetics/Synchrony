@@ -1,4 +1,5 @@
 # This file defines the API endpoints for users and sessions
+import time
 from sqlalchemy import desc
 from synchrony import db, log
 from flask.ext import restful
@@ -220,15 +221,23 @@ class UserSessionsResource(restful.Resource):
         user = auth(session, required=True)
 
         parser = reqparse.RequestParser()
-        parser.add_argument("timestamp", type=int, help="session timestamp", required=True)
+        parser.add_argument("timestamp", type=str, help="session timestamp", required=True)
         args = parser.parse_args()
 
+        if user.username != username and not user.can("delete_at_will"):
+            return {}, 304
+
+        target = User.query.filter(User.username == username).first()
+        if not target:
+            return {}, 404
+
+        timestamp = float(args.timestamp + '.0')
+
         for s in user.sessions:
-            if time.mktime(s.created.timetuple()) == args.timestamp:
+            if time.mktime(s.created.timetuple()) == timestamp:
                 db.session.delete(s)
                 db.session.commit()
-        log("%s logged out." % user.username)
-
+        log("%s deleted a session for %s." % (user.username, target.username))
         return {}, 204
 
 

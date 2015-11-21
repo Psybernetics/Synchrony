@@ -749,17 +749,32 @@ Ractive.load({
                 $('.edit_button').html("Edit");
             }
         },
-        settings: function(event){
+        settings:  function(event){
             window.location.hash = "#settings";
         },
-        sessions: function(event){
+        sessions:  function(event){
             window.location.hash = "#sessions";
         },
         show_hide: function(event){ // Show/hide the .main panel over content
             toggleMain();
         },
-        chat: function(event){
+        chat:      function(event){
             window.location.hash = "#chat";
+        },
+        logout:    function(event){
+            console.log("Hello.");
+            $.ajax({
+                url:     "/v1/users/" + App.Config.user.username + "/sessions",
+                type:    "DELETE",
+                data:    {timestamp: App.Config.user.session.created},
+                success: function(data){
+                    window.location.hash = "#login";
+                },
+                error:   function(data){
+                    console.log("error");
+                    console.log(data);
+                },
+            });
         },
     });
 });
