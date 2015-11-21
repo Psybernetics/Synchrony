@@ -15,7 +15,10 @@ class RequestView(BaseView):
     def get(self, url):
         user     = auth(session, required=not app.config['OPEN_PROXY'])
         revision = fetch.get("http://"+url, request.user_agent, user)
-        
+
+        if not revision:
+            return Response(status=404)
+
         if not "text" in revision.mimetype:
             return send_file(revision.bcontent, mimetype=revision.mimetype)
         else:
