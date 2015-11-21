@@ -732,11 +732,13 @@ a {
 	outline: none;
 	text-decoration: none;
 }
+.active_button {
+    background-color: #333;
+}
 .big_button {
 	height: 30px;
 	width: 55px;
 }
-
 .synchrony_buttons {
 	float: right;
 	margin-top: 4px;
