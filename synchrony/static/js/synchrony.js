@@ -5,7 +5,6 @@
 
 TODO:
 
-
 DELETE  /v1/users/:name/sessions
 
 /v1/request/:url   Resource status metadata
@@ -48,10 +47,10 @@ We can then monitor events in the iframe.
 // App init
 (function(){
     window.App = {
-        Config: {},
-        Views:  {},
-        DHT:    {},
-        stream: [],
+        Config:        {},
+        Views:         {},
+        DHT_downloads: {},
+        stream:        [],
         title: " - Synchrony",
     }
 
@@ -239,29 +238,30 @@ function request(event){
         location.hash = "request/" + url;
         $.ajax({
             type: "GET",
-            url: "/v1/request/" + url,
+            url: "/request/" + url,
             success: function(data, status, jq_obj){
                 console.log(data);
                 //
                 // The Content-Hash and Overlay-Network headers are used
                 // to keep a log of what came from who, which can then
                 // be used in POST requests to /v1/revisions/downloads
+                // to decrement the trust ratings of malicious peers.
                 //
                 var network      = jq_obj.getResponseHeader('Overlay-Network');
                 if (network != undefined){
                     var hash     = jq_obj.getResponseHeader('Content-Hash');
-                    App.DHT[url] = {
+                    App.DHT_downloads[url] = {
                         hash:    hash,
                         network: network
                     }
                 }
                 iframe = $('.iframe');
-                iframe.contents().find('body').html(data.response);
+                iframe.contents().find('body').html(data);
 
                 // Also caching the unedited document in the event it's ever
                 // sent directly over webrtc.
-                App.document = data.response;
-                $('.external_resources').html(data.response);
+                App.document = data;
+//                $('.external_resources').html(data);
             },
             error: function(data, status){
                 renderError(data.responseJSON.message);
