@@ -42,7 +42,7 @@ def get(url, user_agent, user=None):
             timeout=app.config['HTTP_TIMEOUT'])
     except Exception, e:
         log("Error retrieving %s: %s" % (url.geturl(), e.message))
-
+ 
     if response:
         revision.add(response)
         if 'content-type' in response.headers:
