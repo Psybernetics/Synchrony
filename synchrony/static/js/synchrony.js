@@ -104,6 +104,7 @@ App.Router = Backbone.Router.extend({
         'chat':                'chatview',
         'login':               'loginview',
         'logout':              'logout',
+        ':page':                'index',
 //        '*default': 'renderError',
     },
 
@@ -274,7 +275,7 @@ function request(event){
 new App.Router();
 Backbone.history.start();
 
-function indexView(){
+function indexView(page){
     document.title = "Welcome" + App.title;
     Ractive.load({
         index: 'index.tmpl',
@@ -282,6 +283,9 @@ function indexView(){
         if (!App.Config.user) {
             location.hash = "login";
         }
+
+        console.log(page);
+
 
         App.Views['index'] = new components.index({
             el: $('.main'),
@@ -308,6 +312,7 @@ function indexView(){
                 if (data.links.hasOwnProperty("self")) {
                     var url = data.links.self.split('page=')[1];
                     if (url != undefined) {
+                        window.location.hash = "/" + url;
                         if (url > 1) {
                             App.Views.index.set("back_available", true);
                         } else {
@@ -325,7 +330,11 @@ function indexView(){
             });
         }
 
-        populate_revision_table('/v1/revisions');
+        if (page != undefined) {
+            populate_revision_table('/v1/revisions?page=' + page);
+        } else {
+            populate_revision_table('/v1/revisions');
+        }
 
         App.Views.index.on({
 
@@ -749,17 +758,32 @@ Ractive.load({
                 $('.edit_button').html("Edit");
             }
         },
-        settings: function(event){
+        settings:  function(event){
             window.location.hash = "#settings";
         },
-        sessions: function(event){
+        sessions:  function(event){
             window.location.hash = "#sessions";
         },
         show_hide: function(event){ // Show/hide the .main panel over content
             toggleMain();
         },
-        chat: function(event){
+        chat:      function(event){
             window.location.hash = "#chat";
+        },
+        logout:    function(event){
+            console.log("Hello.");
+            $.ajax({
+                url:     "/v1/users/" + App.Config.user.username + "/sessions",
+                type:    "DELETE",
+                data:    {timestamp: App.Config.user.session.created},
+                success: function(data){
+                    window.location.hash = "#login";
+                },
+                error:   function(data){
+                    console.log("error");
+                    console.log(data);
+                },
+            });
         },
     });
 });
