@@ -89,7 +89,6 @@ class Revision(db.Model):
     id            = db.Column(db.Integer(), primary_key=True)
     content_id    = db.Column(db.Integer(), db.ForeignKey('content.id'))
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
-#    peer_id       = db.Column(db.Integer(), db.ForeignKey('peers.id'))
     created       = db.Column(db.DateTime(), default=db.func.now())
     hash          = db.Column(db.String())
     public        = db.Column(db.Boolean(), default=False) # Publicly available
@@ -111,6 +110,8 @@ class Revision(db.Model):
         res['size']     = self.size
         res['public']   = self.public
         res['network']  = self.network
+        if self.user:
+            res['user'] = self.user.username
         return res
 
     def __repr__(self):
