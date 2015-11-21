@@ -104,6 +104,7 @@ App.Router = Backbone.Router.extend({
         'chat':                'chatview',
         'login':               'loginview',
         'logout':              'logout',
+        ':page':                'index',
 //        '*default': 'renderError',
     },
 
@@ -274,7 +275,7 @@ function request(event){
 new App.Router();
 Backbone.history.start();
 
-function indexView(){
+function indexView(page){
     document.title = "Welcome" + App.title;
     Ractive.load({
         index: 'index.tmpl',
@@ -282,6 +283,9 @@ function indexView(){
         if (!App.Config.user) {
             location.hash = "login";
         }
+
+        console.log(page);
+
 
         App.Views['index'] = new components.index({
             el: $('.main'),
@@ -308,6 +312,7 @@ function indexView(){
                 if (data.links.hasOwnProperty("self")) {
                     var url = data.links.self.split('page=')[1];
                     if (url != undefined) {
+                        window.location.hash = "/" + url;
                         if (url > 1) {
                             App.Views.index.set("back_available", true);
                         } else {
@@ -325,7 +330,11 @@ function indexView(){
             });
         }
 
-        populate_revision_table('/v1/revisions');
+        if (page != undefined) {
+            populate_revision_table('/v1/revisions?page=' + page);
+        } else {
+            populate_revision_table('/v1/revisions');
+        }
 
         App.Views.index.on({
 
