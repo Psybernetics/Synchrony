@@ -71,7 +71,8 @@
     {{!Technically an address bar..}}
     <input class="main_addressbar" on-keydown="add_friend" value="{{friend_addr}}" spellcheck="false" placeholder="Network / Node ID / User ID">
     {{/showing_friends}}
-    <h2>Password</h2>
+    <h2>Password<button on-click="toggle:{{"password"}}" class="button big_button pull-right">{{password_button}}</button></h2>
+    {{#showing_password}}
     <form class="form-horizontal" name="create">
           <input type="password" size="10" class="form-control" id="inputPassword" name="pass1" placeholder="Current Password" value="{{pass0}}">
           <input type="password" class="form-control" id="inputPassword" name="pass1" placeholder="New Password" value="{{pass1}}">
@@ -79,6 +80,7 @@
           <button type="submit" class="button" on-click="change_password">Change</button>
     </form>
     <div class="message">{{password_message}}</div>
+    {{/showing_password}}
     {{/show_settings}}
     <div class="center">Address: {{network}}/{{node_id}}/{{uid}}</div>
 </div>

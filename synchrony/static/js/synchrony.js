@@ -224,6 +224,51 @@ function toggleMain(){
     }
 }
 
+function request(event){
+    if (event.original.keyCode == 13){
+        event.original.preventDefault();
+
+        var url = this.get("url");
+        if (url.indexOf("://") > -1){
+                url = url.slice(url.indexOf("://")+3, url.length);
+        }
+        if ($('.main').is(':visible')) {
+            toggleMain();
+        }
+        // Update the appearance of the URL bar
+        location.hash = "request/" + url;
+        $.ajax({
+            type: "GET",
+            url: "/v1/request/" + url,
+            success: function(data, status, jq_obj){
+                console.log(data);
+                //
+                // The Content-Hash and Overlay-Network headers are used
+                // to keep a log of what came from who, which can then
+                // be used in POST requests to /v1/revisions/downloads
+                //
+                var network      = jq_obj.getResponseHeader('Overlay-Network');
+                if (network != undefined){
+                    var hash     = jq_obj.getResponseHeader('Content-Hash');
+                    App.DHT[url] = {
+                        hash:    hash,
+                        network: network
+                    }
+                }
+                iframe = $('.iframe');
+                iframe.contents().find('body').html(data.response);
+
+                // Also caching the unedited document in the event it's ever
+                // sent directly over webrtc.
+                App.document = data.response;
+                $('.external_resources').html(data.response);
+            },
+            error: function(data, status){
+                renderError(data.responseJSON.message);
+            }
+        });
+    }
+}
 
 // Start the Backbone URL hash monitor
 new App.Router();
@@ -243,6 +288,10 @@ function indexView(){
             data: App.Config,
             adaptor: ['Backbone'],
         });
+
+        if (!$('.main').is(':visible')) {
+            toggleMain();
+        }
 
         if (!$('.main').hasClass('main_background')){
             $('.main').addClass("main_background");
@@ -289,38 +338,9 @@ function indexView(){
                 var page = url[1] - 1;
                 populate_revision_table(url[0] + 'page=' + page);
             },
-
             // index template addressbar
-            request: function(event){
-                if (event.original.keyCode == 13){
-                    event.original.preventDefault();
-
-                    var url = this.get("url");
-                    if (url.indexOf("://") > -1){
-                         url = url.slice(url.indexOf("://")+3, url.length);
-                    }
-                    if ($('.main').is(':visible')) {
-                        toggleMain();
-                    }
-                    // Update the appearance of the URL bar
-                    location.hash = "request/" + url;
-                    $.ajax({
-                        type: "GET",
-                        url: "/v1/request/" + url,
-                        success: function(data, status){
-                            console.log(data);
-                            iframe = $('.iframe');
-                            iframe.contents().find('body').html(data.response);
-                            App.document = data.response;
-                            $('.external_resources').html(data.response);
-                        },
-                        error: function(data, status){
-                            renderError(data.responseJSON.message);
-                        }
-                    });
-                }
-            },
-        });
+            request: request, // globally available request function
+       });
     });
 }
 
@@ -442,6 +462,10 @@ function userView(username, params){
             adaptor: ['Backbone'],
         });
 
+        if (!$('.main').is(':visible')) {
+            toggleMain();
+        }
+
         // Get some helper functions out of the way
         function populate_table(table_type, url){
             $.get(url, function(data){
@@ -489,9 +513,11 @@ function userView(username, params){
             App.Views.userpage.set("sessions_button",   "Show");
             App.Views.userpage.set("revisions_button",  "Show");
             App.Views.userpage.set("friends_button",    "Show");
+            App.Views.userpage.set("password_button",   "Show");
             App.Views.userpage.set("showing_sessions",  undefined);
             App.Views.userpage.set("showing_revisions", undefined);
             App.Views.userpage.set("showing_friends",   undefined);
+            App.Views.userpage.set("showing_password",  undefined);
 
             populate_table("revisions", "/v1/users/" + username + "/revisions");
             populate_table("sessions", "/v1/users/" + username + "/sessions");
@@ -705,51 +731,8 @@ Ractive.load({
     });
 
     App.Views.synchrony.on({
-        request: function(event){
-            if (event.original.keyCode == 13){
-                event.original.preventDefault();
+        request: request, // Globally available request function
 
-                var url = this.get("url");
-                if (url.indexOf("://") > -1){
-                     url = url.slice(url.indexOf("://")+3, url.length);
-                }
-                if ($('.main').is(':visible')) {
-                    toggleMain();
-                }
-                // Update the appearance of the URL bar
-                location.hash = "request/" + url;
-                $.ajax({
-                    type: "GET",
-                    url: "/v1/request/" + url,
-                    success: function(data, status, jq_obj){
-                        console.log(data);
-                        //
-                        // The Content-Hash and Overlay-Network headers are used
-                        // to keep a log of what came from who, which can then
-                        // be used in POST requests to /v1/revisions/downloads
-                        //
-                        var network = jq_obj.getResponseHeader('Overlay-Network');
-                        if (network != undefined){
-                            var hash    = jq_obj.getResponseHeader('Content-Hash');
-                            App.DHT[url] = {
-                                hash:    hash,
-                                network: network
-                            }
-                        }
-                        iframe = $('.iframe');
-                        iframe.contents().find('body').html(data.response);
-
-                        // Also caching the unedited document in the event it's ever
-                        // sent directly over webrtc.
-                        App.document = data.response;
-                        $('.external_resources').html(data.response);
-                    },
-                    error: function(data, status){
-                        renderError(data.responseJSON.message);
-                    }
-                });
-            }
-        },
         edit: function(event){
             iframe = $('.iframe');
             var attr = iframe.contents().find('body').attr('contenteditable');

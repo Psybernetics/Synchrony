@@ -54,7 +54,7 @@ def get(url, user_agent, user=None):
     if user and user.can("retrieve_from_dht"):
         log("Fetching %s from network \"%s\"." % \
             (url.geturl(), app.routes._default.network))
-        revision = app.routes._default[url.geturl()]
+        revision = app.routes._default[url.netloc + url.path]
         if revision:
             return revision
 
