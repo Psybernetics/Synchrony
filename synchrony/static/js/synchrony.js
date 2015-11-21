@@ -312,6 +312,7 @@ function indexView(page){
                 if (data.links.hasOwnProperty("self")) {
                     var url = data.links.self.split('page=')[1];
                     if (url != undefined) {
+                        // Change the url hash to reflect subpage
                         window.location.hash = "/" + url;
                         if (url > 1) {
                             App.Views.index.set("back_available", true);
@@ -330,6 +331,7 @@ function indexView(page){
             });
         }
 
+        // Support direct linking to subviews
         if (page != undefined) {
             populate_revision_table('/v1/revisions?page=' + page);
         } else {

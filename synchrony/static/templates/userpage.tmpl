@@ -34,6 +34,7 @@
 
     <h2>Friends<button on-click="toggle:{{"friends"}}" class="button big_button pull-right">{{friends_button}}</button></h2>
     {{#showing_friends}}
+    <div class="center">Your address: {{network}}/{{node_id}}/{{uid}}</div>
     <table>
         <tbody>
             <tr>
@@ -82,5 +83,4 @@
     <div class="message">{{password_message}}</div>
     {{/showing_password}}
     {{/show_settings}}
-    <div class="center">Address: {{network}}/{{node_id}}/{{uid}}</div>
 </div>
