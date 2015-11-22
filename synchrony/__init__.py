@@ -105,33 +105,34 @@ def init():
     from synchrony.resources import users
     from synchrony.resources import peers
 
-    api.add_resource(networks.NetworkCollection,          "/networks")
-    api.add_resource(networks.NetworkResource,            "/networks/<string:network>")
+    api.add_resource(networks.NetworkCollection,            "/networks")
+    api.add_resource(networks.NetworkResource,              "/networks/<string:network>")
 
-    api.add_resource(domains.DomainCollection,            "/domains")
-    api.add_resource(domains.DomainResource,              "/domains/<domain>")
-    api.add_resource(domains.DomainCountResource,         "/domains/count")
+    api.add_resource(domains.DomainCollection,              "/domains")
+    api.add_resource(domains.DomainResource,                "/domains/<domain>")
+    api.add_resource(domains.DomainCountResource,           "/domains/count")
 
-    api.add_resource(revisions.RevisionCollection,        "/revisions")
-    api.add_resource(revisions.RevisionResource,          "/revisions/<string:hash>")
-    api.add_resource(revisions.RevisionContentResource,   "/revisions/<string:hash>/content")
-    api.add_resource(revisions.RevisionFeedbackResource,  "/revisions/downloads/<string:network>/<string:hash>")
-    api.add_resource(revisions.RevisionDownloadsResource, "/revisions/downloads/<string:network>")
+    api.add_resource(revisions.RevisionCollection,          "/revisions")
+    api.add_resource(revisions.RevisionResource,            "/revisions/<string:hash>")
+    api.add_resource(revisions.RevisionContentResource,     "/revisions/<string:hash>/content")
+    api.add_resource(revisions.RevisionDownloadsCollection, "/revisions/downloads")
+    api.add_resource(revisions.RevisionDownloadsResource,   "/revisions/downloads/<string:network>")
+    api.add_resource(revisions.RevisionFeedbackResource,    "/revisions/downloads/<string:network>/<string:hash>")
 
 
-    api.add_resource(users.UserCollection,                "/users")
-    api.add_resource(users.UserResource,                  "/users/<string:username>")
-    api.add_resource(users.UserSessionsResource,          "/users/<string:username>/sessions")
-    api.add_resource(users.UserFriendsCollection,         "/users/<string:username>/friends")
-    api.add_resource(users.UserRevisionCollection,        "/users/<string:username>/revisions")
+    api.add_resource(users.UserCollection,                  "/users")
+    api.add_resource(users.UserResource,                    "/users/<string:username>")
+    api.add_resource(users.UserSessionsResource,            "/users/<string:username>/sessions")
+    api.add_resource(users.UserFriendsCollection,           "/users/<string:username>/friends")
+    api.add_resource(users.UserRevisionCollection,          "/users/<string:username>/revisions")
 
-    api.add_resource(peers.PeerCollection,                "/peers")
-    api.add_resource(peers.PeerResource,                  "/peers/<string:network>/<int:node_id>")
-    api.add_resource(peers.PublicRevisionCollection,      "/peers/revisions")
-    api.add_resource(peers.PublicRevisionResource,        "/peers/revisions/<string:content_hash>")
+    api.add_resource(peers.PeerCollection,                  "/peers")
+    api.add_resource(peers.PeerResource,                    "/peers/<string:network>/<int:node_id>")
+    api.add_resource(peers.PublicRevisionCollection,        "/peers/revisions")
+    api.add_resource(peers.PublicRevisionResource,          "/peers/revisions/<string:content_hash>")
 
-    api.add_resource(peers.PeerTestSet,                   "/peers/test")
-    api.add_resource(peers.PeerTestGet,                   "/peers/test/<path:url>")
+    api.add_resource(peers.PeerTestSet,                     "/peers/test")
+    api.add_resource(peers.PeerTestGet,                     "/peers/test/<path:url>")
 
 # /users/username/revisions
 # /domains/domain/resources
