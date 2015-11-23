@@ -8,7 +8,7 @@ from flask import request, session
 from synchrony.models import Revision
 from sqlalchemy import and_, or_, desc
 from synchrony.controllers.auth import auth
-from synchrony.controllers.utils import make_response
+from synchrony.controllers.utils import Pagination, make_response
 
 class RevisionCollection(restful.Resource):
     def get(self):
@@ -62,6 +62,52 @@ class RevisionContentResource(restful.Resource):
             return rev.as_response
         return {}, 404
 
+class RevisionDownloadsCollection(restful.Resource):
+    def get(self):
+        """
+        Return all DHT downloads across all networks.
+        """
+        user = auth(session, required=True)
+
+        if not user.can("see_all"):
+            return {}, 403
+
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("page",type=int, help="", required=False, default=1)
+        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        args = parser.parse_args()  
+
+        response = []
+        for routes in app.routes.values():
+            r = {'network': routes.network}
+            r['downloads'] = [f for f in routes.protocol.downloads]
+            response.append(r)
+        
+        pages = Pagination(response, args.page, args.per_page)
+        return make_response(request.url, pages, jsonify=False)
+
+class RevisionDownloadsResource(restful.Resource):
+    def get(self, network=None):
+        """
+        Provides an overview of revisions fetched via overlay network.
+
+        Would be part of RevisionFeedbackResource except this has no need
+        for a "hash" param.
+        """
+        user = auth(session, required=True)
+
+        if not user.can("see_all"):
+            return {}, 403
+
+        if not network:
+            routes = app.routes._default
+        else:
+            routes = app.routes.get(network, None)
+            if not routes:
+                return {}, 404
+
+        return [f for f in routes.protocol.downloads]
+
 class RevisionFeedbackResource(restful.Resource):
     """
     Facilitates feedback into the system for bogus DHT revisions.
@@ -79,24 +125,5 @@ class RevisionFeedbackResource(restful.Resource):
             return {}, 404
 
         return routes.protocol.decrement_trust(hash, args.reason)
-
-class RevisionDownloadsResource(restful.Resource):
-    """
-    Provides an overview of revisions fetched via overlay network.
-
-    Would be part of RevisionFeedbackResource except this has no need
-    for a "hash" param.
-    """
-
-    def get(self, network=None):
-        user = auth(session)
-        if not network:
-            routes = app.routes._default
-        else:
-            routes = app.routes.get(network, None)
-            if not routes:
-                return {}, 404
-
-        return [f for f in routes.protocol.downloads]
 
 
