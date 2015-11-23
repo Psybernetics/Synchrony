@@ -142,15 +142,15 @@ import requests
 from io import BytesIO
 from hashlib import sha1
 from copy import deepcopy
-from synchrony import app, db
 from gevent import Greenlet
-from synchrony import log as _log
+from synchrony import app, db
 from gevent.coros import RLock
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
-from synchrony.controllers import utils
+from synchrony import log as _log
 from gevent.greenlet import Greenlet
 from gevent.event import AsyncResult
+from synchrony.controllers import utils
 from binascii import hexlify, unhexlify
 from synchrony.models import Peer, Revision
 from itertools import takewhile, imap, izip
@@ -176,9 +176,8 @@ class RoutingTable(object):
     requires contacting the "best" nodes of the buckets responsible for that part
     of the space.
 
-    Every hour we check for dead nodes and republish keys we're storing values for.
+    Every hour we check for dead nodes and republish keys.
     """
-#    def __init__(self, options, httpd, upnp, ksize=20, alpha=3, id=None, nodes=[]):
     def __init__(self, addr, port, pubkey, httpd, ksize=20, alpha=3, id=None, nodes=[], network=None):
         """
         The first three options can be set to None.

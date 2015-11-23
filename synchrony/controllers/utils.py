@@ -331,6 +331,8 @@ def make_response(url, query, jsonify=True):
     response = {}
     if jsonify:
         response['data'] = [i.jsonify() for i in query.items]   
+    else:
+        response['data'] = query.items
 
     response['links'] = {}
     response['links']['self'] = url

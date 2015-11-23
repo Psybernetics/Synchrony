@@ -51,6 +51,7 @@ We can then monitor events in the iframe.
         Views:         {},
         DHT_downloads: {},
         stream:        [],
+        history:       [],
         title: " - Synchrony",
     }
 
@@ -235,18 +236,22 @@ function request(event){
         if ($('.main').is(':visible')) {
             toggleMain();
         }
+        App.history.push(url);
         // Update the appearance of the URL bar
         location.hash = "request/" + url;
         $.ajax({
             type: "GET",
             url: "/request/" + url,
             success: function(data, status, jq_obj){
-                console.log(data);
                 //
                 // The Content-Hash and Overlay-Network headers are used
                 // to keep a log of what came from who, which can then
-                // be used in POST requests to /v1/revisions/downloads
-                // to decrement the trust ratings of malicious peers.
+                // be used in POST requests to /v1/revisions/downloads to
+                // decrement the trust ratings of malicious peers.
+                //
+                // This doesn't work for sub-resources (imaging if browsers
+                // permitted banking pages to be put in iframes.) but we
+                // have /v1/revisions/downloads that can list all downloads.
                 //
                 var network      = jq_obj.getResponseHeader('Overlay-Network');
                 if (network != undefined){
@@ -257,8 +262,16 @@ function request(event){
                     }
                 }
                 iframe = $('.iframe');
+                // Attach function for <img>, <script> and <link> here.
                 iframe.contents().find('body').html(data);
+                App.DHT_downloads[url] = iframe.contents().find('body');
 
+                // Bind a callback to anchor tags so their href attribute
+                // is appended to App.history when clicked.
+                iframe.contents().find('a').on('click', function(){
+                    var url = $(this).attr('href').split('/');
+                    App.history.push(url.slice(2, url.length).join('/'));
+               });
                 // Also caching the unedited document in the event it's ever
                 // sent directly over webrtc.
                 App.document = data;
@@ -283,9 +296,6 @@ function indexView(page){
         if (!App.Config.user) {
             location.hash = "login";
         }
-
-        console.log(page);
-
 
         App.Views['index'] = new components.index({
             el: $('.main'),
@@ -745,6 +755,11 @@ Ractive.load({
         request: request, // Globally available request function
 
         edit: function(event){
+            if ($('.edit_button').hasClass('active_button')) {
+                $('.edit_button').removeClass('active_button');
+            } else {
+                $('.edit_button').addClass('active_button');
+            }
             iframe = $('.iframe');
             var attr = iframe.contents().find('body').attr('contenteditable');
 //            console.log(attr);
@@ -754,7 +769,7 @@ Ractive.load({
                 iframe.contents().find('body').attr('spellcheck','false');
                 App.Views.synchrony.set('edit_button', "Done");
                 $('.edit_button').html("Done");
-            } else {
+           } else {
                 iframe.contents().find('body').attr('contenteditable','false');
                 App.Views.synchrony.set('edit_button', "Edit");
                 $('.edit_button').html("Edit");
@@ -773,7 +788,6 @@ Ractive.load({
             window.location.hash = "#chat";
         },
         logout:    function(event){
-            console.log("Hello.");
             $.ajax({
                 url:     "/v1/users/" + App.Config.user.username + "/sessions",
                 type:    "DELETE",
