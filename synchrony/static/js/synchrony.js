@@ -51,6 +51,7 @@ We can then monitor events in the iframe.
         Views:         {},
         DHT_downloads: {},
         stream:        [],
+        history:       [],
         title: " - Synchrony",
     }
 
@@ -235,6 +236,7 @@ function request(event){
         if ($('.main').is(':visible')) {
             toggleMain();
         }
+        App.history.push(url);
         // Update the appearance of the URL bar
         location.hash = "request/" + url;
         $.ajax({
@@ -260,7 +262,16 @@ function request(event){
                     }
                 }
                 iframe = $('.iframe');
+                // Attach function for <img>, <script> and <link> here.
                 iframe.contents().find('body').html(data);
+                App.DHT_downloads[url] = iframe.contents().find('body');
+
+                // Bind a callback to anchor tags so their href attribute
+                // is appended to App.history when clicked.
+                iframe.contents().find('a').on('click', function(){
+                    var url = $(this).attr('href').split('/');
+                    App.history.push(url.slice(2, url.length).join('/'));
+               });
                 // Also caching the unedited document in the event it's ever
                 // sent directly over webrtc.
                 App.document = data;
