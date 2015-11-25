@@ -407,12 +407,21 @@ class RoutingTable(object):
                 key = key.url
             else:
                 key = key.hash
+        url  = key
         node = Node(digest(key))
         nearest = self.find_neighbours(node)
         if len(nearest) == 0:
             log("There are no known neighbours to get %s" % key)
             return None
-        spider = ValueSpider(self.protocol, node, nearest, self.ksize, self.alpha)
+        # Unfortunately long list of arguments but it helps us map {url: peer_who_served}
+        spider = ValueSpider(
+                    self.protocol,
+                    node,
+                    nearest,
+                    self.ksize,
+                    self.alpha,
+                    url
+                 )
         # If spider.find() returns a revision object then it's only this method
         # that can associate it with the correct Resource and Domain.
         return spider.find()
@@ -762,7 +771,7 @@ class SynchronyProtocol(object):
 
         return True
 
-    def fetch_revision(self, content_hash, nodes):
+    def fetch_revision(self, url, content_hash, nodes):
         """
         Return a revision object for a content hash given a list of peers.
         Called from ValueSpider._handle_found_values.
@@ -792,7 +801,7 @@ class SynchronyProtocol(object):
 #            (n[1],n[2],content_hash) for n in nodes]
         # TODO: Handle unresponsive peers
         headers = {'User-Agent': 'Synchrony %s' % app.version}
-        threads = [gevent.spawn(requests.get, url, headers=headers) for url in urls]
+        threads = [gevent.spawn(requests.get, peer_url, headers=headers) for peer_url in urls]
         gevent.joinall(threads)
         threads = [t.value for t in threads]
         for response in threads:
@@ -814,17 +823,18 @@ class SynchronyProtocol(object):
                 app.bytes_received += revision.size
 
                 # Remember this download in case we have feedback on it
+                # Ideal data structure: {url: {hash: peerple}}
                 host = urlparse.urlparse(response.url)
                 if ':' in host.netloc:
                     addr    = host.netloc.split(':')
                     addr[1] = int(addr[1])
-                    self.downloads[revision.hash] = tuple(addr)
+                    self.downloads[url] = {revision.hash: tuple(addr)}
                 else:
                     if not host.port:
                         port = 80
                     else:
                         port = host.port
-                    self.downloads[revision.hash] = (host.netloc, port)
+                    self.downloads[url] = {revision.hash: (host.netloc, port)}
                 return revision
 
     def republish_keys(self):
@@ -1575,8 +1585,13 @@ class ValueSpider(Spider):
     Retrieve it from a peer.
     return a Revision.
     """
-    def __init__(self, protocol, node, peers, ksize, alpha):
+    def __init__(self, protocol, node, peers, ksize, alpha, url=None):
         Spider.__init__(self, protocol, node, peers, ksize, alpha)
+        
+        # Keep track of the URL, which can be a hash, to use as an argument to
+        # protocol.downloads.
+        self.url = url
+        
         # keep track of the single nearest node without the value - per
         # section 2.3 so we can set the key there if found
         self.nearest_without_value = NodeHeap(self.node, 1)
@@ -1690,7 +1705,7 @@ class ValueSpider(Spider):
 #            return self.protocol.router.storage_method(peer_to_save_to,
 #                self.protocol.source_node.id, unhexlify(self.node.id), key)
 
-        return self.protocol.fetch_revision(key, nodes)
+        return self.protocol.fetch_revision(self.url, key, nodes)
 
 class RPCFindResponse(object):
     def __init__(self, spider, response):
