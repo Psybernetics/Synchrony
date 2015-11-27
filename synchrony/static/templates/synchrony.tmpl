@@ -14,9 +14,13 @@
     {{domains}} domains.<br />
 	<br />
 </span>
+<div class="stream">
+    {{#stream}}
+        {{&this}}<br />
+    {{/stream}}
+</div> 
 
 <form><input class="addressbar" on-keydown="request" value="{{url}}" size="25" placeholder="url" spellcheck="false"></input></form>
-
 </div>
 
 

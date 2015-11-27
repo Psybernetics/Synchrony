@@ -622,6 +622,18 @@ input.switch:empty ~ label:after
     color: #F3F6EA;
 }
 
+.stream {
+    width: 100%;
+    height: 60%;
+    overflow: auto;
+    display: inline-block;
+}
+
+.stream a {
+    color: #A2C7F7;
+    font-style: italic;
+}
+
 #profile_link {
 	color: #D7FF57;
 	font-style: italic;
@@ -779,3 +791,14 @@ a {
 .center a {
     cursor: pointer;
 }
+
+.peers_left {
+    float: left;
+    width: 60%;
+}
+
+.peers_right {
+    float: right;
+    width: 40%;
+}
+

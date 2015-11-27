@@ -3,7 +3,7 @@
 # /v1/revisions/<hash>
 # /v1/revisions/<hash>/content
 from synchrony import app, db
-from flask.ext import restful
+import flask_restful as restful
 from flask import request, session
 from synchrony.models import Revision
 from sqlalchemy import and_, or_, desc

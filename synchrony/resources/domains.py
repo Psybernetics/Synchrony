@@ -3,7 +3,7 @@ This endpoint is mainly for populating the UI with an overview of how many
 sites have been cached.
 """
 from sqlalchemy import and_
-from flask.ext import restful
+import flask_restful as restful
 from flask import session, request
 from synchrony.models import Domain
 from synchrony.controllers.auth import auth

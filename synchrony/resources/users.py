@@ -2,9 +2,9 @@
 import time
 from sqlalchemy import desc
 from synchrony import db, log
-from flask.ext import restful
+import flask_restful as restful
 from flask import request, session
-from flask.ext.restful import reqparse
+from flask_restful import reqparse
 from synchrony.controllers.auth import auth
 from synchrony.controllers.utils import make_response
 from synchrony.models import User, Session, Revision, Friend, UserGroup
@@ -78,6 +78,10 @@ class UserResource(restful.Resource):
         """
         user = auth(session, required=True)
 
+        parser = reqparse.RequestParser()
+        parser.add_argument("can", type=str)
+        args = parser.parse_args()
+
         if user.username != username and not user.can("see_all"):
             return {}, 403
 
@@ -85,6 +89,9 @@ class UserResource(restful.Resource):
 
         if not user:
             return {}, 404
+
+        if args.can:
+            return user.can(args.can)
 
         return user.jsonify(groups=True, sessions=True)
 

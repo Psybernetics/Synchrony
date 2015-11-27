@@ -2,7 +2,7 @@ import json
 import hashlib
 import binascii
 from synchrony import app, log
-from flask.ext import restful
+import flask_restful as restful
 from flask import session, request
 from synchrony.controllers.dht import Node
 from synchrony.controllers.auth import auth

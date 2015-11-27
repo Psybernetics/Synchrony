@@ -49,7 +49,6 @@ We can then monitor events in the iframe.
     window.App = {
         Config:        {},
         Views:         {},
-        DHT_downloads: {},
         stream:        [],
         history:       [],
         title: " - Synchrony",
@@ -150,8 +149,13 @@ function renderError(statement) {
 // Push a global message to the stream for eight seconds
 function renderGlobal(statement) {
     console.log('Global: ' + statement);
+    App.stream.reverse();
     App.stream.push( '<span class="global-message">' + statement + '</span>' );
-    setTimeout(function(){ App.stream.pop(); }, 8000);
+    App.stream.reverse();
+    setTimeout(function(){
+        App.stream.pop();
+        App.stream.reverse();
+    }, 60000);
 }
 
 // Push $user is typing to the stream for three seconds
@@ -242,26 +246,8 @@ function request(event){
         $.ajax({
             type: "GET",
             url: "/request/" + url,
-            success: function(data, status, jq_obj){
-                //
-                // The Content-Hash and Overlay-Network headers are used
-                // to keep a log of what came from who, which can then
-                // be used in POST requests to /v1/revisions/downloads to
-                // decrement the trust ratings of malicious peers.
-                //
-                // This doesn't work for sub-resources (imaging if browsers
-                // permitted banking pages to be put in iframes.) but we
-                // have /v1/revisions/downloads that can list all downloads.
-                //
-                var network      = jq_obj.getResponseHeader('Overlay-Network');
-                if (network != undefined){
-                    var hash     = jq_obj.getResponseHeader('Content-Hash');
-                    App.DHT_downloads[url] = {
-                        hash:    hash,
-                        network: network
-                    }
-                }
-                iframe = $('.iframe');
+            success: function(data, status){
+               iframe = $('.iframe');
                 // Attach function for <img>, <script> and <link> here.
                 iframe.contents().find('body').html(data);
                 App.DHT_downloads[url] = iframe.contents().find('body');
@@ -446,7 +432,6 @@ function accountObjects(params){
     });
 }
 
-
 function peersView(){
     document.title = "Peer Browser" + App.title;
     Ractive.load({
@@ -460,6 +445,14 @@ function peersView(){
             el: $('.main'),
             data: App.Config,
             adaptor: ['Backbone'],
+        });
+
+        $.get('/v1/peers', function(data){
+            console.log(data);
+        });
+
+        $.get('/v1/revisions/downloads', function(data){
+            console.log(data);
         });
     });
 }
@@ -740,6 +733,7 @@ Ractive.load({
         data: {
         Config: App.Config,
         edit_button:"Edit",
+        stream: App.stream,
         },
         adaptor: ['Backbone'],
     });
