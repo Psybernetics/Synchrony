@@ -1,4 +1,4 @@
-<div class="view">
+ <div class="view">
     {{#show_settings}}
     <h1>Account Settings</h1>
     <hr />
@@ -7,12 +7,13 @@
     <table>
        <tbody>
             {{#revisions}}
-            <tr>
+            <tr on-mouseover="select:{{"revision"}},{{@index}}" on-mouseout="select:{{"revision"}},{{@index}}" id="revision-{{@index}}">
                 <td><a href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
                 <td>{{mimetype}}</td>
                 <td>{{network}}</td>
                 <td>{{size}}</td>
-                <td>{{public}}</td>
+                <td id="public-revision-{{@index}}">{{public}}</td>
+                <td id="delete-revision-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"revision"}},{{@index}}">Delete</button></td>
             </tr>
             {{/revisions}}
             {{^revisions}}No revisions.{{/revisions}}
@@ -29,7 +30,7 @@
         <a on-click="forward:{{"revisions"}}">Forward</a>
         {{/revisions_forward_available}}
     </div>
-    {{#revisions_paging_error}}Server unavailable.{{/revisions_paging_error}}
+    {{#revisions_paging_error}}Server unavailable.Try refreshing the page.{{/revisions_paging_error}}
     {{/showing_revisions}}
 
     <h2>Friends<button on-click="toggle:{{"friends"}}" class="button big_button pull-right">{{friends_button}}</button></h2>
@@ -50,9 +51,10 @@
     <table>
         <tbody>
             {{#sessions}}
-            <tr>
+            <tr on-mouseover="select:{{"session"}},{{@index}}" on-mouseout="select:{{"session"}},{{@index}}" id="session-{{@index}}">
                 <td>{{ip}}</td>
                 <td>{{user_agent}}</td>
+                <td id="delete-session-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"session"}},{{@index}}">Delete</button></td>
             </tr>
             {{/sessions}}
             {{^sessions}}No sessions..{{/sessions}}
@@ -69,7 +71,7 @@
         <a on-click="forward:{{"sessions"}}">Forward</a>
         {{/sessions_forward_available}}
     </div>
-    {{#sessions_paging_error}}Server unavailable.{{/sessions_paging_error}}
+    {{#sessions_paging_error}}Server unavailable. Try refreshing the page.{{/sessions_paging_error}}
     {{/showing_sessions}}
 
     <h2>Password<button on-click="toggle:{{"password"}}" class="button big_button pull-right">{{password_button}}</button></h2>

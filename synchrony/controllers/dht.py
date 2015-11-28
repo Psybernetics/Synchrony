@@ -772,7 +772,7 @@ class SynchronyProtocol(object):
             # Get the trust rating of this referee
             referee = self.router.get_existing_node(referee)
             if not referee or referee.trust < 0:
-                log("%s is currently republishing for %s.", "warning")
+                log("%s is currently republishing for %s." % (node, referee), "warning")
                 continue
 
             self.storage.merge(keys)

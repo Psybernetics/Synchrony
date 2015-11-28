@@ -1,13 +1,35 @@
 <div class="view">
+    {{#peers.length}}
+        <div class="peers_left">
+            <h1>Peer Browser</h1>
+            <hr />
+            <table>
+                <tbody>
+                    {{#peers}}
+                        <tr on-mouseover="show_peer:{{@index}}" on-mouseout="hide_peer:{{@index}}" id="peer-{{@index}}">
+                            <td>{{this.node[1]}}</td>
+                            <td>{{this.node[2]}}</td>
+                            <td>{{this.trust}}</td>
+                        </tr>
+                    {{/peers}}
+                </tbody>
+            </table>
+        </div>
+    {{/peers.length}}
 
-    <div class="peers_left">
-        <h1>Peer Browser</h1>
-        <hr />
-    </div>
-
-    <div class="peers_right">
+    {{#downloads.length}}
+        <div class="peers_right">
         <h1>Downloads</h1>
         <hr />
-    </div>
-
+        {{#downloads}}
+            {{this.network}}<br />
+            <tr on-mouseover="show_download:{{@index}}" on-mouseout="hide_download:{{@index}}" id="{{@index}}">
+                {{#this.downloads}}
+                <td>{{this}}</td>
+                <td style="visibility: hidden;" id="download-{{@index}}">Test.</td>
+                {{/this.downloads}}
+            </tr>
+        {{/downloads}}
+        </div>
+    {{/downloads.length}}
 </div>
