@@ -10,7 +10,8 @@ def init_user_groups():
             modify_usergroup
             deactivate
             manage_networks
-       Users:
+            review_downloads
+        Users:
             chat
             initiate_rtc
             create_revision
@@ -26,10 +27,10 @@ def init_user_groups():
     # Bans happen by setting User.active to False and clearing their existing sessions.
     groups = ["Administrators", "Users"]
     privs  = [ "see_all", "delete_at_will", "reset_user_pw", "modify_usergroup",
-               "deactivate", "manage_networks", "create_revision_group", 
-               "delete_revision_group", "chat", "initiate_rtc", "create_revision",
-               "retrieve_from_dht", "browse_peer_nodes", "retrieve_resource",
-               "stream_document"]
+               "deactivate", "manage_networks", "review_downloads", 
+               "create_revision_group", "delete_revision_group", "chat",
+               "initiate_rtc", "create_revision", "retrieve_from_dht", 
+               "browse_peer_nodes", "retrieve_resource", "stream_document"]
 
     if not Priv.query.first():
         log("Creating privileges.")
@@ -47,10 +48,10 @@ def init_user_groups():
             g = UserGroup(name=group)
             for p in Priv.query.all():
                 if group != "Administrators" and p.name in \
-                        ["see_all", "delete_at_will", "reset_user_pw",
-                         "modify_usergroup", "deactivate", "manage_networks"]:
+                        ["see_all", "delete_at_will", "reset_user_pw", "modify_usergroup",
+                         "deactivate", "manage_networks", "review_downloads"]:
                     continue
-                a = Acl()
+                a         = Acl()
                 a.group   = g
                 a.priv    = p
                 a.allowed = True
@@ -60,7 +61,6 @@ def init_user_groups():
             db.session.add(g)
             db.session.commit()
             log("Created user group \"%s\"." % group)
-
 
 def ban(user):
     pass

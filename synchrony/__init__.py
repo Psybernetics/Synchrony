@@ -3,11 +3,11 @@ __path__ = extend_path(__path__, __name__)
 __all__ = ["run", "repl", "models", "resources", "views", "streams", "controllers", "templates", "static", "tests"]
 
 import os
-from flask.ext import restful
-from flask.ext.sqlalchemy import SQLAlchemy
+import flask_restful as restful
+from flask_sqlalchemy import SQLAlchemy
 from flask import Flask, request, make_response
 from sqlalchemy.engine.reflection import Inspector
-from flask.ext.mako import MakoTemplates, render_template
+from flask_mako import MakoTemplates, render_template
 
 static_files = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
 

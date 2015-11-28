@@ -49,7 +49,6 @@ We can then monitor events in the iframe.
     window.App = {
         Config:        {},
         Views:         {},
-        DHT_downloads: {},
         stream:        [],
         history:       [],
         title: " - Synchrony",
@@ -150,8 +149,13 @@ function renderError(statement) {
 // Push a global message to the stream for eight seconds
 function renderGlobal(statement) {
     console.log('Global: ' + statement);
+    App.stream.reverse();
     App.stream.push( '<span class="global-message">' + statement + '</span>' );
-    setTimeout(function(){ App.stream.pop(); }, 8000);
+    App.stream.reverse();
+    setTimeout(function(){
+        App.stream.pop();
+        App.stream.reverse();
+    }, 60000);
 }
 
 // Push $user is typing to the stream for three seconds
@@ -229,6 +233,10 @@ function request(event){
     if (event.original.keyCode == 13){
         event.original.preventDefault();
 
+        // Grab the iframe div
+        var iframe = $('.iframe');
+
+        // Remove any schema from the url
         var url = this.get("url");
         if (url.indexOf("://") > -1){
                 url = url.slice(url.indexOf("://")+3, url.length);
@@ -236,41 +244,35 @@ function request(event){
         if ($('.main').is(':visible')) {
             toggleMain();
         }
+
+        function update_address_bars(url) {
+            location.hash = "request/" + url;
+            if (App.Views.index != undefined) {
+                App.Views.index.set({url: url});
+            }
+            if (App.Views.synchrony != undefined) {
+                App.Views.synchrony.set({url: url});
+            }
+        }
+        
+        update_address_bars(url);
         App.history.push(url);
-        // Update the appearance of the URL bar
-        location.hash = "request/" + url;
+
+        $('iframe').contents().find('body').html("Loading...");
+
         $.ajax({
             type: "GET",
             url: "/request/" + url,
-            success: function(data, status, jq_obj){
-                //
-                // The Content-Hash and Overlay-Network headers are used
-                // to keep a log of what came from who, which can then
-                // be used in POST requests to /v1/revisions/downloads to
-                // decrement the trust ratings of malicious peers.
-                //
-                // This doesn't work for sub-resources (imaging if browsers
-                // permitted banking pages to be put in iframes.) but we
-                // have /v1/revisions/downloads that can list all downloads.
-                //
-                var network      = jq_obj.getResponseHeader('Overlay-Network');
-                if (network != undefined){
-                    var hash     = jq_obj.getResponseHeader('Content-Hash');
-                    App.DHT_downloads[url] = {
-                        hash:    hash,
-                        network: network
-                    }
-                }
-                iframe = $('.iframe');
-                // Attach function for <img>, <script> and <link> here.
+            success: function(data, status){
                 iframe.contents().find('body').html(data);
-                App.DHT_downloads[url] = iframe.contents().find('body');
 
                 // Bind a callback to anchor tags so their href attribute
                 // is appended to App.history when clicked.
                 iframe.contents().find('a').on('click', function(){
                     var url = $(this).attr('href').split('/');
-                    App.history.push(url.slice(2, url.length).join('/'));
+                    url     = url.slice(2, url.length).join('/');
+                    App.history.push(url);
+                    update_address_bars(url);
                });
                 // Also caching the unedited document in the event it's ever
                 // sent directly over webrtc.
@@ -446,7 +448,6 @@ function accountObjects(params){
     });
 }
 
-
 function peersView(){
     document.title = "Peer Browser" + App.title;
     Ractive.load({
@@ -460,6 +461,29 @@ function peersView(){
             el: $('.main'),
             data: App.Config,
             adaptor: ['Backbone'],
+        });
+
+        // Populate the page.
+        // Should be /v1/networks/<name>/peers
+        $.get('/v1/peers', function(response){
+            console.log(response.data);
+            App.Views.peers.set("peers", response.data);
+        });
+
+        $.get('/v1/revisions/downloads', function(response){
+            console.log(response.data);
+            App.Views.peers.set("downloads", response.data);
+        });
+
+        App.Views.peers.on({
+            show_peer: function(event, index){},
+            hide_peer: function(event, index){},
+            show_download: function(event, index){
+                console.log(index);
+            },
+            hide_download: function(event, index){
+                console.log(index);
+            },
         });
     });
 }
@@ -487,13 +511,18 @@ function userView(username, params){
             toggleMain();
         }
 
-        // Get some helper functions out of the way
+        // This function is pretty general in terms of populating tables
         function populate_table(table_type, url){
+            // Grab the data
             $.get(url, function(data){
+                // Update the DOM on success
                 App.Views.userpage.set(table_type + "_paging_error", undefined);
                 App.Views.userpage.set(table_type, data.data);
                 App.Views.userpage[table_type] = data;
 
+                // Show navigation links depending on the response data
+                // This is where the jsonapi.org style of {links: {next: "http://"}}
+                // comes in handy.
                 if (data.links.hasOwnProperty("self")) {
                     var url = data.links.self.split('page=')[1];
                     if (url != undefined) {
@@ -505,7 +534,6 @@ function userView(username, params){
                     } 
                 }
 
-                // forward_available
                 if (data.links.hasOwnProperty("next")) {
                     App.Views.userpage.set(table_type + "_forward_available", true);
                 }
@@ -530,6 +558,7 @@ function userView(username, params){
         if (App.Config.user.username != username) {
 //            populate_table("revisions", "/v1//user/" + username + "/revisions");
         } else {
+            // Ugliest section in the file, but this stuff has to be somewhere
             App.Views.userpage.set("show_settings",     true);
             App.Views.userpage.set("sessions_button",   "Show");
             App.Views.userpage.set("revisions_button",  "Show");
@@ -541,7 +570,7 @@ function userView(username, params){
             App.Views.userpage.set("showing_password",  undefined);
 
             populate_table("revisions", "/v1/users/" + username + "/revisions");
-            populate_table("sessions", "/v1/users/" + username + "/sessions");
+            populate_table("sessions",  "/v1/users/" + username + "/sessions");
         }
 
         App.Views.userpage.on({
@@ -564,6 +593,32 @@ function userView(username, params){
                 var url = this[table_type].links.self.split('page=');
                 var page = url[1] - 1;
                 populate_table(table_type, url[0] + 'page=' + page);
+            },
+            select:  function(event, type, index){
+                var row = $('#' + type + '-' + index);
+                var c = row.children();
+                c = c[c.length -1];
+                if ($('#delete-' + type + '-' + index).css('visibility') === "hidden") {
+                    c.style.visibility = "";
+                } else {
+                    c.style.visibility = "hidden";
+                }
+            },
+            delete:  function(event, type, index){
+                if        (type === "revision") {
+                    var revision = this.get('revisions')[index];
+                    console.log(revision);
+                    $.ajax({
+                        url:  '/v1/revisions/' + revision.hash,
+                        type: "DELETE",
+                        success: function(response){
+                            console.log(response);
+                        }
+                    });
+                } else if (type === "session") {
+                    var session = this.get('sessions')[index];
+                    console.log(session);
+                 }
             },
             add_friend:      function(event){
                 if (event.original.keyCode == 13){
@@ -740,6 +795,7 @@ Ractive.load({
         data: {
         Config: App.Config,
         edit_button:"Edit",
+        stream: App.stream,
         },
         adaptor: ['Backbone'],
     });
