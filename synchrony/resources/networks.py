@@ -3,7 +3,7 @@ Defines a paginated view of overlay networks the application is configured to
 see as legitimate.
 """
 from synchrony import app
-from flask.ext import restful
+import flask_restful as restful
 from flask import session, request
 from synchrony.controllers.auth import auth
 from synchrony.controllers.utils import Pagination, make_response

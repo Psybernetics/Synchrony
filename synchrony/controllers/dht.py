@@ -407,6 +407,15 @@ class RoutingTable(object):
                 key = key.url
             else:
                 key = key.hash
+
+        # url here is passed to ValueSpider so it can be a param to
+        # SynchronyProtocol.fetch_revision, which can then set
+        # SynchronyProtocol.downloads correctly. The reason this is done is 
+        # because tracking a pages' <link>, <script> and <img> downloads via
+        # headers when that page is in an iframe isn't supposed to be possible.
+        # It's a protection for visiting security-sensitive sites, which is a
+        # good design. Instead we memorise all DHT downloads and let admins do
+        # the trust rating feedback.
         url  = key
         node = Node(digest(key))
         nearest = self.find_neighbours(node)
@@ -763,7 +772,7 @@ class SynchronyProtocol(object):
             # Get the trust rating of this referee
             referee = self.router.get_existing_node(referee)
             if not referee or referee.trust < 0:
-                log("%s is currently republishing for %s.", "warning")
+                log("%s is currently republishing for %s." % (node, referee), "warning")
                 continue
 
             self.storage.merge(keys)

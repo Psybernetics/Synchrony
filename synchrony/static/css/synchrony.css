@@ -622,6 +622,18 @@ input.switch:empty ~ label:after
     color: #F3F6EA;
 }
 
+.stream {
+    width: 100%;
+    height: 60%;
+    overflow: auto;
+    display: inline-block;
+}
+
+.stream a {
+    color: #A2C7F7;
+    font-style: italic;
+}
+
 #profile_link {
 	color: #D7FF57;
 	font-style: italic;
@@ -634,6 +646,12 @@ button a {
 
 button {
 	cursor: pointer;
+}
+
+hr {
+    height: 1px;
+    border: 0;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0));
 }
 
 .main_background {
@@ -666,11 +684,14 @@ button {
 
 .view {
     margin-left: 350px;
-
 }
 
 .view td {
     padding: 0px 20px;
+}
+
+.view h1 {
+    text-align: center;
 }
 
 .dark_text {
@@ -767,7 +788,6 @@ a {
     color: #222;
 }
 
-
 .index_overview > .table {
     padding: 0 0 30px 0;
 }
@@ -779,3 +799,22 @@ a {
 .center a {
     cursor: pointer;
 }
+
+.peers_left {
+    float: left;
+    width: 60%;
+}
+
+.peers_left table {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+/*  background-color: #eee;
+    border-bottom: 1px solid #888; */
+}
+
+.peers_right {
+    float: right;
+    width: 40%;
+}
+

@@ -3,7 +3,7 @@
 # /v1/revisions/<hash>
 # /v1/revisions/<hash>/content
 from synchrony import app, db
-from flask.ext import restful
+import flask_restful as restful
 from flask import request, session
 from synchrony.models import Revision
 from sqlalchemy import and_, or_, desc
@@ -30,6 +30,9 @@ class RevisionCollection(restful.Resource):
 
 class RevisionResource(restful.Resource):
     def get(self, hash):
+        """
+        Return a specific revision by hash.
+        """
         user = auth(session)
         rev  = Revision.query.filter(and_(Revision.hash == hash, Revision.user == user)).first()
         if rev:
@@ -37,7 +40,10 @@ class RevisionResource(restful.Resource):
         return {}, 404
 
     def post(self, hash):
-        user = auth(session)
+        """
+        Modify attributes of an existing revision.
+        """
+        user = auth(session, required=True)
 
         parser = restful.reqparse.RequestParser()
         parser.add_argument("public",type=bool, help="", required=False, default=None)
@@ -54,6 +60,26 @@ class RevisionResource(restful.Resource):
 
         return {}, 404
 
+    def delete(self, hash):
+        """
+        Delete a revision object by hash.
+        """
+        user = auth(session, required=True)
+
+        if user.can("delete_at_will"):
+            rev  = Revision.query.filter(Revision.hash == hash).first()
+        else:
+            rev  = Revision.query.filter(
+                    and_(Revision.hash == hash, Revision.user == user)
+                   ).first()
+        
+        if not rev:
+            return {}, 404
+
+        db.session.delete(rev)
+        db.session.commit()
+        return {}, 204
+
 class RevisionContentResource(restful.Resource):
     def get(self, hash):
         user = auth(session)
@@ -69,7 +95,7 @@ class RevisionDownloadsCollection(restful.Resource):
         """
         user = auth(session, required=True)
 
-        if not user.can("see_all"):
+        if not user.can("see_all") and not user.can("review_downloads"):
             return {}, 403
 
         parser = restful.reqparse.RequestParser()
@@ -96,7 +122,7 @@ class RevisionDownloadsResource(restful.Resource):
         """
         user = auth(session, required=True)
 
-        if not user.can("see_all"):
+        if not user.can("see_all") and not user.can("review_downloads"):
             return {}, 403
 
         if not network:
@@ -119,6 +145,9 @@ class RevisionFeedbackResource(restful.Resource):
         parser = restful.reqparse.RequestParser()
         parser.add_argument("reason",type=int, help="", required=True)
         args = parser.parse_args()
+
+        if not user.can("review_downloads"):
+            return {}, 403
 
         routes = app.routes.get(network, None)
         if not routes:
