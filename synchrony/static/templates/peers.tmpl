@@ -2,7 +2,8 @@
     <h1>Peers and Downloads</h1>
     <hr />
     {{#peers.length}}
-           <h2>Peer Browser</h2>
+    <h2>Peer Browser<button on-click="toggle:{{"peers"}}" class="button big_button pull-right">{{peers_button}}</button></h2>
+    {{#showing_peers}}
             <table>
                 <tbody>
                     {{#peers}}
@@ -14,9 +15,11 @@
                     {{/peers}}
                 </tbody>
             </table>
+    {{/showing_peers}}
     {{/peers.length}}
 
-    <h2>Downloads</h2>
+    <h2>Downloads<button on-click="toggle:{{"downloads"}}" class="button big_button pull-right">{{downloads_button}}</button></h2>
+    {{#showing_downloads}}
     {{#selection}}
     <div class="selection">
         <table>
@@ -52,7 +55,7 @@
 
     {{/selection}}
 
-    Click or tap a URL to display versions that have been downloaded.<br />
+    Click or tap a URL to display versions from the overlay network.<br />
     {{! "downloads" is an array of [network-name, [{url:{hash:[peers]} }]] mappings}}
     {{! not particularly suited for being reasoned about in Moustache templates.}}
     {{#downloads}}
@@ -71,4 +74,5 @@
             </tbody>
         </table>
     {{/downloads}}
+    {{/showing_downloads}}
 </div>
