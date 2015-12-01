@@ -914,41 +914,29 @@ class SynchronyProtocol(object):
             self.router.add_contact(node)
             return node
 
-    def decrement_trust(self, content_hash, reason):
+    def decrement_trust(self, addr, severity):
         """
         Implements the feedback mechanism for our trust metric.
         
-        "content_hash" is expected to be a key in self.downloads.
-        "reason" an integer severity level indicating how bad the content in
-        question was perceived to be.
+        "addr" is an (ip, port) tuple to match to a known peer.
+        "severity" is a floating point severity level indicating how bad the
+        content in question was perceived to be.
 
         Notes on how this all works in sum as a distributed system are here:
         http://nlp.stanford.edu/pubs/eigentrust.pdf
         http://www.cc.gatech.edu/~lingliu/papers/2012/XinxinFan-EigenTrust++.pdf
         http://dimacs.rutgers.edu/Workshops/InformationSecurity/slides/gamesandreputation.pdf
 
-        The second one is highly recommended.
+        The second PDF is highly recommended.
         """
-        # Too severe, Enhance Your Calm
-        if reason > 1:
-            return {}, 420
-
-        # Fetched revision not found in the journal
-        addr = self.downloads.get(content_hash)
-        if not addr:
-            return {}, 404
-
-        log(addr, "debug")
-
         for node in self.router:
             if node.ip == addr[0] and node.port == addr[1]:
-                amount = reason / 100.0
+                amount = severity / 100.0
                 log("Decrementing trust rating for %s by %f." % (node, amount), "warning")
                 node.trust -= amount
-                return {}, 200
+                return True
 
-        # Peer is 410 Gone
-        return {}, 410
+        return False
 
     def get_address(self, node):
         if node.ip == self.source_node.ip:

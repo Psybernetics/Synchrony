@@ -38,3 +38,28 @@ class NetworkResource(restful.Resource):
             return {}, 404
 
         return network.jsonify()
+
+class NetworkPeerCollection(restful.Resource):
+    """
+    Retrieve the peer nodes we know of for a specific network.
+    """
+    def get(self, network):
+        """
+        Currently returns /all/ peers we know of,
+        but it should be a paginated resource.
+        """
+        auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("page",type=int, help="", required=False, default=1)
+        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        args = parser.parse_args()
+
+        routes = app.routes.get(network, None)
+        if not routes:
+            return {}, 404
+ 
+        peers = [peer for peer in routes]
+        pages = Pagination(peers, args.page, args.per_page)
+        return make_response(request.url, pages)
+
+
