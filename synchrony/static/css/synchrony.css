@@ -825,3 +825,24 @@ a {
 .clickable {
     cursor: pointer;
 }
+
+.selection {
+    padding: 0 0 20px 0;;
+}
+
+.advice {
+    margin: 15px;
+    font-style: italic;
+}
+
+.red {
+    color: #FF2900;
+}
+
+.green {
+    color: #51A800;
+}
+
+.blue {
+    color: #2138DB;
+}
