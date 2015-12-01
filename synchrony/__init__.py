@@ -107,6 +107,7 @@ def init():
 
     api.add_resource(networks.NetworkCollection,            "/networks")
     api.add_resource(networks.NetworkResource,              "/networks/<string:network>")
+    api.add_resource(networks.NetworkPeerCollection,        "/networks/<string:network>/peers")
 
     api.add_resource(domains.DomainCollection,              "/domains")
     api.add_resource(domains.DomainResource,                "/domains/<domain>")
@@ -117,7 +118,7 @@ def init():
     api.add_resource(revisions.RevisionContentResource,     "/revisions/<string:hash>/content")
     api.add_resource(revisions.RevisionDownloadsCollection, "/revisions/downloads")
     api.add_resource(revisions.RevisionDownloadsResource,   "/revisions/downloads/<string:network>")
-    api.add_resource(revisions.RevisionFeedbackResource,    "/revisions/downloads/<string:network>/<string:hash>")
+    api.add_resource(revisions.RevisionFeedbackResource,    "/revisions/downloads/<string:network>/<path:url>")
 
 
     api.add_resource(users.UserCollection,                  "/users")

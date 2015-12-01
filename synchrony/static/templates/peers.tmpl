@@ -1,8 +1,8 @@
 <div class="view">
+    <h1>Peers and Downloads</h1>
+    <hr />
     {{#peers.length}}
-        <div class="peers_left">
-            <h1>Peer Browser</h1>
-            <hr />
+           <h2>Peer Browser</h2>
             <table>
                 <tbody>
                     {{#peers}}
@@ -14,22 +14,61 @@
                     {{/peers}}
                 </tbody>
             </table>
-        </div>
     {{/peers.length}}
 
-    {{#downloads.length}}
-        <div class="peers_right">
-        <h1>Downloads</h1>
-        <hr />
-        {{#downloads}}
-            {{this.network}}<br />
-            <tr on-mouseover="show_download:{{@index}}" on-mouseout="hide_download:{{@index}}" id="{{@index}}">
+    <h2>Downloads</h2>
+    {{#selection}}
+    <div class="selection">
+        <table>
+            <tbody>
+                <tr>
+                    <td>Network:</td>
+                    <td>{{this.network}}</td>
+                </tr>
+                <tr>
+                    <td>URL:</td>
+                    <td>{{this.url}}</td>
+                </tr>
+            </tbody>
+        </table>
+        {{#this.hashes}}
+        <table>
+            <tbody>
+                <tr> 
+                    <td>Version:<td>
+                    <td>{{hash}}</td>
+                    {{#peers}}
+                    <td>{{this}}</td>
+                    {{/peers}}
+                </tr>
+            </tbody>
+        </table>
+        <br />
+
+        {{/this.hashes}}
+    </div>
+
+    <br />
+
+    {{/selection}}
+
+    Click or tap a URL to display versions that have been downloaded.<br />
+    {{! "downloads" is an array of [network-name, [{url:{hash:[peers]} }]] mappings}}
+    {{! not particularly suited for being reasoned about in Moustache templates.}}
+    {{#downloads}}
+        <table>
+        {{this.network}}<br />
+        <tbody id="{{@index}}">
                 {{#this.downloads}}
-                <td>{{this}}</td>
-                <td style="visibility: hidden;" id="download-{{@index}}">Test.</td>
+                    {{#this:url}}
+                        {{! Things like id="{ { url } }" produces invalid selectors. Selection has to happen by function instead. }}
+                        <tr>
+                            <td class="clickable" on-mouseover="select:{{"url"}},{{url}}">{{url}}</td>
+                            <td>{{this}}</td>
+                       </tr>
+                    {{/this}}
                 {{/this.downloads}}
-            </tr>
-        {{/downloads}}
-        </div>
-    {{/downloads.length}}
+            </tbody>
+        </table>
+    {{/downloads}}
 </div>

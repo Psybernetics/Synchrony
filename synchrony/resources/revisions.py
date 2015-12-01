@@ -106,7 +106,8 @@ class RevisionDownloadsCollection(restful.Resource):
         response = []
         for routes in app.routes.values():
             r = {'network': routes.network}
-            r['downloads'] = [f for f in routes.protocol.downloads]
+            r['downloads'] = [{f: routes.protocol.downloads[f]} for \
+                f in routes.protocol.downloads]
             response.append(r)
         
         pages = Pagination(response, args.page, args.per_page)
@@ -137,13 +138,16 @@ class RevisionDownloadsResource(restful.Resource):
 class RevisionFeedbackResource(restful.Resource):
     """
     Facilitates feedback into the system for bogus DHT revisions.
+    Take a url, hash and floating point severity level and decrement
+    the serving peers' trust rating.
     """
 
-    def post(self, network, hash):
+    def post(self, network, url):
         user = auth(session)
 
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("reason",type=int, help="", required=True)
+        parser.add_argument("hash",     type=str,   required=True)
+        parser.add_argument("severity", type=float, required=True)
         args = parser.parse_args()
 
         if not user.can("review_downloads"):
@@ -153,6 +157,23 @@ class RevisionFeedbackResource(restful.Resource):
         if not routes:
             return {}, 404
 
-        return routes.protocol.decrement_trust(hash, args.reason)
+        # Too severe, Enhance Your Calm
+        if args.severity > 1:
+            return {}, 420
+
+        hashes = routes.protocol.downloads.get(url)
+        if not hashes:
+            return {}, 404
+
+        addr = hashes.get(args.hash, None)
+        if not addr:
+            return {}, 404
+
+        success = routes.protocol.decrement_trust(addr, args.severity)
+        # Peer is 410 Gone
+        if not success:
+            return {}, 410
+
+        return {}, 200
 
 

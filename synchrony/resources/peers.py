@@ -34,9 +34,7 @@ class PeerCollection(restful.Resource):
         peers = [peer for peer in routes]
         pages = Pagination(peers, args.page, args.per_page)
         return make_response(request.url, pages)
-
-#        return [peer.jsonify() for peer in app.routes._default]
-
+    
     def post(self):
         """
         Unserialise the data and accept the following calls:
