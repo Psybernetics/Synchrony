@@ -39,20 +39,21 @@
             <tbody>
                 <tr> 
                     <td>Version:<td>
-                    <td on-click="decrement:{{hash}}" class="clickable">{{hash}}</td>
+                    <td on-click="decrement:{{hash}}" class="clickable red">{{hash}}</td>
                     {{#peers}}
                     <td>{{this}}</td>
                     {{/peers}}
                 </tr>
             </tbody>
         </table>
-        <br />
-
         {{/this.hashes}}
+        <div class="advice">
+        Please be aware that marking a revision (and by extension the peer who served it) as bad
+        has network-wide consequences for the serving peer.<br />
+        This feedback is not taken lightly and
+        cannot be undone too easily. Please exercise caution when marking a peer as untrustworthy.
+        </div>
     </div>
-
-    <br />
-
     {{/selection}}
 
     Click or tap a URL to display versions from the overlay network.<br />
@@ -60,15 +61,15 @@
     {{! not particularly suited for being reasoned about in Moustache templates.}}
     {{#downloads}}
         <table>
-        {{this.network}}<br />
+            <span class="green">{{this.network}}</span><br />
         <tbody id="{{@index}}">
                 {{#this.downloads}}
                     {{#this:url}}
                         {{! Things like id="{ { url } }" produces invalid selectors. Selection has to happen by function instead. }}
                         <tr>
-                            <td class="clickable" on-mouseover="select:{{"url"}},{{url}}">{{url}}</td>
-                            <td>{{this}}</td>
-                       </tr>
+                            <td class="clickable blue" on-mouseover="select:{{"url"}},{{url}}">{{url}}</td>
+                            <td></td>
+                        </tr>
                     {{/this}}
                 {{/this.downloads}}
             </tbody>

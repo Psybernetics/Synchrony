@@ -505,7 +505,6 @@ function peersView(){
             },
             // mouseover a url
             select: function(event, type, index){
-                console.log(event);
                 if (type === "url") {
                     var index = event.node.parentElement.parentElement.id;
                     var network = this.get("downloads." + index);
