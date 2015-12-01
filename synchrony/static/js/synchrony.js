@@ -484,11 +484,27 @@ function peersView(){
             App.Views.peers.set("downloads", response.data);
         });
 
-        // POST /v1/revisions/downloads/<network>/<hash>
+
+        App.Views.peers.set("peers_button","Show");
+        App.Views.peers.set("downloads_button", "Show");
+
+        // POST /v1/revisions/downloads/<network>
         // {reason: integer_severity_level}
         App.Views.peers.on({
+            // button for show/hide section
+            toggle:  function(event, section){
+                var button = section + "_button";
+                var showing = this.get("showing_" + section);
+                if (showing === undefined) {
+                    this.set(button, "Hide");
+                    this.set("showing_" + section, true);
+                } else {
+                    this.set(button, "Show");
+                    this.set("showing_" + section, undefined);
+                }
+            },
+            // mouseover a url
             select: function(event, type, index){
-                console.log(event);
                 if (type === "url") {
                     var index = event.node.parentElement.parentElement.id;
                     var network = this.get("downloads." + index);
@@ -525,7 +541,8 @@ function peersView(){
 //               } else {
 //                   $('#' + type + '-' + index).css('visibility','hidden')
 //               }
-           },
+            },
+            // clicking a hash to mark as improper
             decrement: function(event, hash){
                 var selection = this.get("selection");
                 console.log(selection);
@@ -538,6 +555,10 @@ function peersView(){
                         "severity": 1
                     },
                     success: function(response){
+                        $.get('/v1/peers', function(response){
+                            console.log(response.data);
+                            App.Views.peers.set("peers", response.data);
+                        });
                         console.log(response);
                     },
                 });

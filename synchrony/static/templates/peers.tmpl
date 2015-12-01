@@ -2,7 +2,8 @@
     <h1>Peers and Downloads</h1>
     <hr />
     {{#peers.length}}
-           <h2>Peer Browser</h2>
+    <h2>Peer Browser<button on-click="toggle:{{"peers"}}" class="button big_button pull-right">{{peers_button}}</button></h2>
+    {{#showing_peers}}
             <table>
                 <tbody>
                     {{#peers}}
@@ -14,9 +15,11 @@
                     {{/peers}}
                 </tbody>
             </table>
+    {{/showing_peers}}
     {{/peers.length}}
 
-    <h2>Downloads</h2>
+    <h2>Downloads<button on-click="toggle:{{"downloads"}}" class="button big_button pull-right">{{downloads_button}}</button></h2>
+    {{#showing_downloads}}
     {{#selection}}
     <div class="selection">
         <table>
@@ -36,39 +39,41 @@
             <tbody>
                 <tr> 
                     <td>Version:<td>
-                    <td on-click="decrement:{{hash}}">{{hash}}</td>
+                    <td on-click="decrement:{{hash}}" class="clickable red">{{hash}}</td>
                     {{#peers}}
                     <td>{{this}}</td>
                     {{/peers}}
                 </tr>
             </tbody>
         </table>
-        <br />
-
         {{/this.hashes}}
+        <div class="advice">
+        Please be aware that marking a revision (and by extension the peer who served it) as bad
+        has network-wide consequences for the serving peer.<br />
+        This feedback is not taken lightly and
+        cannot be undone too easily. Please exercise caution when marking a peer as untrustworthy.
+        </div>
     </div>
-
-    <br />
-
     {{/selection}}
 
-    Click or tap a URL to display versions that have been downloaded.<br />
+    Click or tap a URL to display versions from the overlay network.<br />
     {{! "downloads" is an array of [network-name, [{url:{hash:[peers]} }]] mappings}}
     {{! not particularly suited for being reasoned about in Moustache templates.}}
     {{#downloads}}
         <table>
-        {{this.network}}<br />
+            <span class="green">{{this.network}}</span><br />
         <tbody id="{{@index}}">
                 {{#this.downloads}}
                     {{#this:url}}
                         {{! Things like id="{ { url } }" produces invalid selectors. Selection has to happen by function instead. }}
                         <tr>
-                            <td class="clickable" on-mouseover="select:{{"url"}},{{url}}">{{url}}</td>
-                            <td>{{this}}</td>
-                       </tr>
+                            <td class="clickable blue" on-mouseover="select:{{"url"}},{{url}}">{{url}}</td>
+                            <td></td>
+                        </tr>
                     {{/this}}
                 {{/this.downloads}}
             </tbody>
         </table>
     {{/downloads}}
+    {{/showing_downloads}}
 </div>
