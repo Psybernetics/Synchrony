@@ -556,6 +556,10 @@ function peersView(){
                         "severity": 1
                     },
                     success: function(response){
+                        $.get('/v1/peers', function(response){
+                            console.log(response.data);
+                            App.Views.peers.set("peers", response.data);
+                        });
                         console.log(response);
                     },
                 });
