@@ -188,6 +188,15 @@ function paginate(list, page, per_page){
     return list.slice(page * per_page - per_page, page * per_page)
 }
 
+function notify(message){
+    if (!"Notification" in window) { return; }
+    if (Notification.permission != "granted") {
+        Notification.requestPermission();
+    }
+    var options = {icon:'/static/img/synchrony.png'};
+    var notification = new Notification(message, options);
+}
+
 function toggle_synchrony(){
     if (App.Config.user){
         if (!$('.synchrony').hasClass("expanded")){
@@ -475,16 +484,65 @@ function peersView(){
             App.Views.peers.set("downloads", response.data);
         });
 
+        // POST /v1/revisions/downloads/<network>/<hash>
+        // {reason: integer_severity_level}
         App.Views.peers.on({
-            show_peer: function(event, index){},
-            hide_peer: function(event, index){},
-            show_download: function(event, index){
-                console.log(index);
+            select: function(event, type, index){
+                console.log(event);
+                if (type === "url") {
+                    var index = event.node.parentElement.parentElement.id;
+                    var network = this.get("downloads." + index);
+//                    console.log(network);
+                    for (i in network.downloads) {
+                        var downloads = network.downloads[i];
+                        var url = Object.keys(downloads)[0];
+//                        console.log(downloads[url]);
+
+                        var hashes = new Array();
+
+                        for (k in Object.keys(downloads[url])) {
+                            var hash = Object.keys(downloads[url]);
+//                            console.log(hash[k]);
+//                            console.log(hash);
+                            hashes.push({"hash": hash[k], "peers": downloads[url][hash[k]]});
+                        }
+                        var selection = {
+                            "network": network.network,
+                            "url":  url,
+                            "hashes": hashes,
+                        };
+                        this.set("selection", selection);
+                    }
+                } else if (type === "peer") {
+//                    var row = $('#' + type + '-' + index);
+                }
+/*              console.log(c);
+                var c = row.children();
+                console.log(c);
+                c = c[c.length -1]; */
+//               if ($('#' + type + '-' + index).css('visibility') === "hidden") {
+//                   $('#' + type + '-' + index).css('visibility','')
+//               } else {
+//                   $('#' + type + '-' + index).css('visibility','hidden')
+//               }
+           },
+            decrement: function(event, hash){
+                var selection = this.get("selection");
+                console.log(selection);
+                $.ajax({
+                    url: "/v1/revisions/downloads/" + selection.network,
+                    type: "POST",
+                    data: {
+                        "url":  selection.url,
+                        "hash": hash,
+                        "severity": 1
+                    },
+                    success: function(response){
+                        console.log(response);
+                    },
+                });
             },
-            hide_download: function(event, index){
-                console.log(index);
-            },
-        });
+       });
     });
 }
 
@@ -612,13 +670,22 @@ function userView(username, params){
                         url:  '/v1/revisions/' + revision.hash,
                         type: "DELETE",
                         success: function(response){
-                            console.log(response);
+                            // Remove the row on success.
+                            $('#' + type + '-' + index).remove();
                         }
                     });
                 } else if (type === "session") {
                     var session = this.get('sessions')[index];
-                    console.log(session);
-                 }
+                    $.ajax({
+                        url:  '/v1/users/' + App.Config.user.username + '/sessions',
+                        type: "DELETE",
+                        data: {timestamp: session.created},
+                        success: function(response){
+                            // Remove the row on success.
+                            $('#' + type + '-' + index).remove();
+                        }
+                    });
+                  }
             },
             add_friend:      function(event){
                 if (event.original.keyCode == 13){
@@ -868,6 +935,11 @@ function chatView() {
             data: {chat_available:true},
             adaptor: ['Backbone']
         });
+        
+        if (!App.Config.user) {
+            location.hash = "login";
+        }
+        
         App.Views.chat.visible = false;
 
         // An array of messages typed into the input field.
@@ -875,8 +947,8 @@ function chatView() {
         App.Views.chat.current_doskey = 0;
 
         // Join the public channel and listen for messages
-        App.Views.chat.socket = io.connect('/chat', {resource:"stream"})
-        App.Views.chat.socket.emit('join', 'public')
+        App.Views.chat.socket = io.connect('/chat', {resource:"stream"});
+        App.Views.chat.socket.emit('join', '#public');
 
         // Recieve chat messages.
         App.Views.chat.socket.on("privmsg", function(data){
@@ -907,12 +979,15 @@ function chatView() {
         // We've connected to chat before authenticating and the
         // server is telling us to reconnect.
         App.Views.chat.socket.on("reconnect", function(data){
-            console.log(data.m);
-            $('.chat-messages').append('<br />Reconnecting to chat...');
+            $('.chat-messages').append('<br />Reconnecting...');
             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+            // Actually recreate the connection to re-auth.
+            // Using chat.socket.disconnect and socket.connect doesn't work.
             App.Views.chat.socket.disconnect();
-            App.Views.chat.socket.socket.connect();
-        });
+            delete App.Views.chat.socket;
+            App.Views.chat.socket = io.connect('/chat', {resource:"stream"});
+            console.log(data.m);
+       });
 
         App.Views.chat.socket.on("appear_offline", function(data){
             $('[name="appear_offline"]').attr("checked", data);

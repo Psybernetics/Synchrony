@@ -318,7 +318,11 @@ label { display: inline-block; }
 .wide > tbody > tr > td {
 	border-top: 0px;
     padding: 5px 20px;
-    width: 500px;
+/*  width: 500px; */
+}
+
+.view table {
+    width: 100%;
 }
 
 .rename-input {
@@ -818,3 +822,6 @@ a {
     width: 40%;
 }
 
+.clickable {
+    cursor: pointer;
+}
