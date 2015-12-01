@@ -95,13 +95,13 @@ class RevisionDownloadsCollection(restful.Resource):
         """
         user = auth(session, required=True)
 
-        if not user.can("see_all") and not user.can("review_downloads"):
-            return {}, 403
-
         parser = restful.reqparse.RequestParser()
         parser.add_argument("page",type=int, help="", required=False, default=1)
         parser.add_argument("per_page",type=int, help="", required=False, default=10)
         args = parser.parse_args()  
+
+        if not user.can("see_all") and not user.can("review_downloads"):
+            return {}, 403
 
         response = []
         for routes in app.routes.values():
@@ -114,7 +114,7 @@ class RevisionDownloadsCollection(restful.Resource):
         return make_response(request.url, pages, jsonify=False)
 
 class RevisionDownloadsResource(restful.Resource):
-    def get(self, network=None):
+    def get(self, network):
         """
         Provides an overview of revisions fetched via overlay network.
 
@@ -135,20 +135,16 @@ class RevisionDownloadsResource(restful.Resource):
 
         return [f for f in routes.protocol.downloads]
 
-class RevisionFeedbackResource(restful.Resource):
-    """
-    Facilitates feedback into the system for bogus DHT revisions.
-    Take a url, hash and floating point severity level and decrement
-    the serving peers' trust rating.
-    """
-
-    def post(self, network, url):
-        user = auth(session)
+    def post(self, network):
+        user = auth(session, required=True)
 
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("hash",     type=str,   required=True)
-        parser.add_argument("severity", type=float, required=True)
+        parser.add_argument("url",      type=str, required=True)
+        parser.add_argument("hash",     type=str, required=True)
+        parser.add_argument("severity", type=int, required=True)
         args = parser.parse_args()
+
+        # TODO: delete the revision in question.
 
         if not user.can("review_downloads"):
             return {}, 403
@@ -157,17 +153,17 @@ class RevisionFeedbackResource(restful.Resource):
         if not routes:
             return {}, 404
 
-        # Too severe, Enhance Your Calm
-        if args.severity > 1:
-            return {}, 420
-
-        hashes = routes.protocol.downloads.get(url)
+        hashes = routes.protocol.downloads.get(args.url)
         if not hashes:
             return {}, 404
 
         addr = hashes.get(args.hash, None)
         if not addr:
             return {}, 404
+
+        # Too severe, Enhance Your Calm
+        if args.severity > 100:
+            return {}, 420
 
         success = routes.protocol.decrement_trust(addr, args.severity)
         # Peer is 410 Gone

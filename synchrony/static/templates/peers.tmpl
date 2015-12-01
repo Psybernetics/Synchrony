@@ -36,7 +36,7 @@
             <tbody>
                 <tr> 
                     <td>Version:<td>
-                    <td>{{hash}}</td>
+                    <td on-click="decrement:{{hash}}">{{hash}}</td>
                     {{#peers}}
                     <td>{{this}}</td>
                     {{/peers}}

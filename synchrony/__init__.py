@@ -118,7 +118,7 @@ def init():
     api.add_resource(revisions.RevisionContentResource,     "/revisions/<string:hash>/content")
     api.add_resource(revisions.RevisionDownloadsCollection, "/revisions/downloads")
     api.add_resource(revisions.RevisionDownloadsResource,   "/revisions/downloads/<string:network>")
-    api.add_resource(revisions.RevisionFeedbackResource,    "/revisions/downloads/<string:network>/<path:url>")
+#    api.add_resource(revisions.RevisionFeedbackResource,    "/revisions/downloads/<string:network>/<path:url>")
 
 
     api.add_resource(users.UserCollection,                  "/users")

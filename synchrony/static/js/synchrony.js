@@ -492,18 +492,18 @@ function peersView(){
                 if (type === "url") {
                     var index = event.node.parentElement.parentElement.id;
                     var network = this.get("downloads." + index);
-                    console.log(network);
+//                    console.log(network);
                     for (i in network.downloads) {
                         var downloads = network.downloads[i];
                         var url = Object.keys(downloads)[0];
-                        console.log(downloads[url]);
+//                        console.log(downloads[url]);
 
                         var hashes = new Array();
 
                         for (k in Object.keys(downloads[url])) {
                             var hash = Object.keys(downloads[url]);
-                            console.log(hash[k]);
-                            console.log(hash);
+//                            console.log(hash[k]);
+//                            console.log(hash);
                             hashes.push({"hash": hash[k], "peers": downloads[url][hash[k]]});
                         }
                         var selection = {
@@ -526,9 +526,21 @@ function peersView(){
 //                   $('#' + type + '-' + index).css('visibility','hidden')
 //               }
            },
-            decrement: function(event, network, index){
-                var download = this.get("downloads")[index];
-                console.log(download);
+            decrement: function(event, hash){
+                var selection = this.get("selection");
+                console.log(selection);
+                $.ajax({
+                    url: "/v1/revisions/downloads/" + selection.network,
+                    type: "POST",
+                    data: {
+                        "url":  selection.url,
+                        "hash": hash,
+                        "severity": 1
+                    },
+                    success: function(response){
+                        console.log(response);
+                    },
+                });
             },
        });
     });
