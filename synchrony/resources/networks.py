@@ -13,8 +13,8 @@ class NetworkCollection(restful.Resource):
     def get(self):
         auth(session, required=True)
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        parser.add_argument("page",     type=int, required=False, default=1)
+        parser.add_argument("per_page", type=int, required=False, default=10)
         args = parser.parse_args()
 
         pages = Pagination(app.routes.values(), args.page, args.per_page)
@@ -50,8 +50,8 @@ class NetworkPeerCollection(restful.Resource):
         """
         auth(session, required=True)
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        parser.add_argument("page",     type=int, required=False, default=1)
+        parser.add_argument("per_page", type=int, required=False, default=10)
         args = parser.parse_args()
 
         routes = app.routes.get(network, None)
