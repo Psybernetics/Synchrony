@@ -2,10 +2,19 @@
 <div class="control_panel" style="display: none;"> 
 
 <span class="synchrony_buttons">
+    {{#showing_home_button}}
     <a href="/#"><button class="button big_button">Home</button></a><br />
+    {{/showing_home_button}}
 	<button class="button big_button" on-click="chat">Chat</button><br />
+    {{#showing_edit_button}}
 	<button class="button big_button edit_button" on-click="edit">{{edit_button}}</button><br />
+    {{/showing_edit_button}}
+    {{#showing_hide_button}}
 	<button class="button big_button show-hide" on-click="show_hide">Hide</button><br />
+    {{/showing_hide_button}}
+    {{#showing_settings_button}}
+    <button class="button big_button" on-click="settings">Settings</button><br />
+    {{/showing_settings_button}}
 	<button class="button big_button" on-click="logout">Log out</button><br />
 </span>
 <span>

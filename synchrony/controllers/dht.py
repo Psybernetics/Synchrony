@@ -671,7 +671,6 @@ class SynchronyProtocol(object):
     def handle_chat(self, data):
         self.read_envelope(data)
         data = app.key.decrypt(data['rpc_chat'])
-        # TODO: Find an active chat stream for this user on self.router.httpd
         pass
 
     def handle_edit(self, data):
