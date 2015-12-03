@@ -136,6 +136,7 @@ App.Router = Backbone.Router.extend({
         if (location.hash != '') {
             $('.main').removeClass("main_background");
         }
+        update_synchrony();
     },
 });
 
@@ -220,13 +221,37 @@ function toggle_synchrony(){
 
 // This is for populating synchrony.tmpl on mouseover.
 function update_synchrony(){
+    
+    if (App.Views.synchrony === undefined) { return; }
+
     $.get('/v1/networks', function(r){
         App.Views.synchrony.set({peers: r.data[0].peers});
     });
+    
     $.get('/v1/domains/count', function(r){
         App.Views.synchrony.set({domains: r});
     });
-}
+    
+    // Cool thing about the ?can parameter is it returns booleans.
+    $.get('/v1/users/' + App.Config.user.username + "?can=see_all", function(response){
+        App.Views.synchrony.set("showing_settings_button", response);
+    });
+    
+    if ($('.iframe').contents().find("body").html() != "") {
+        App.Views.synchrony.set("showing_edit_button", true);
+        App.Views.synchrony.set("showing_hide_button", true);
+    } else {
+        App.Views.synchrony.set("showing_edit_button", false);
+        App.Views.synchrony.set("showing_hide_button", false);
+    }
+    
+    if (location.hash.split('/')[0] != '#' && location.hash.split('/')[0] != '') {
+        App.Views.synchrony.set("showing_home_button", true);
+    } else {
+        App.Views.synchrony.set("showing_home_button", false);
+    }
+
+ }
 
 function toggleMain(){
     if ($('.main').is(':visible')) {
@@ -282,11 +307,12 @@ function request(event){
                     url     = url.slice(2, url.length).join('/');
                     App.history.push(url);
                     update_address_bars(url);
-               });
+                });
                 // Also caching the unedited document in the event it's ever
                 // sent directly over webrtc.
                 App.document = data;
-//                $('.external_resources').html(data);
+
+                update_synchrony();
             },
             error: function(data, status){
                 renderError(data.responseJSON.message);
@@ -484,9 +510,16 @@ function peersView(){
             App.Views.peers.set("downloads", response.data);
         });
 
+        if (App.Views.peers.get("showing_peers") === undefined) {
+            App.Views.peers.set("peers_button","Hide");
+            App.Views.peers.set("showing_peers",true);
+        }
 
-        App.Views.peers.set("peers_button","Show");
-        App.Views.peers.set("downloads_button", "Show");
+        if (App.Views.peers.get("showing_downloads") === undefined) {
+            App.Views.peers.set("downloads_button", "Show");
+        } else {
+            App.Views.peers.set("downloads_button", "Hide");
+        }
 
         // POST /v1/revisions/downloads/<network>
         // {reason: integer_severity_level}
@@ -560,6 +593,10 @@ function peersView(){
                             App.Views.peers.set("peers", response.data);
                         });
                         console.log(response);
+                    },
+                    error: function(response){
+                        var m = "Couldn't contact the server. Please try again later.";
+                        this.set("decrement_error", m);
                     },
                 });
             },
