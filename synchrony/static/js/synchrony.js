@@ -1424,6 +1424,7 @@ function settingsView() {
                             var networks = App.Views.settings.get("networks");
                             networks.push(response)
                             App.Views.settings.set("networks", networks);
+                            App.Views.settings.set("network_name", "");
                         },
                         error:   function(response){}
                     });
