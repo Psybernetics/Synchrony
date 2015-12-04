@@ -288,15 +288,45 @@ class UserFriendsCollection(restful.Resource):
             .order_by(desc(Friend.created)).paginate(args.page, args.per_page)
         return make_response(request.url, query)
 
-
-    def post(self, username):
+    def put(self, username):
+        """
+        Add a friend on a remote instance.
+        """
         user = auth(session, required=True)
 
         parser = reqparse.RequestParser()
-        parser.add_argument("add",     type=bool)
-        parser.add_argument("remove",  type=bool)
+        parser.add_argument("name",    type=str)
         parser.add_argument("address", type=str, required=True)
         args = parser.parse_args()
 
         return {}
         return {}, 201
+
+    def post(self, username):
+        """
+        Rename a friend.
+        """
+        user = auth(session, required=True)
+
+        parser = reqparse.RequestParser()
+        parser.add_argument("name",    type=str)
+        parser.add_argument("address", type=str, required=True)
+        args = parser.parse_args()
+
+        return {}
+        return {}, 201
+
+    def delete(self, username):
+        """
+        Unfriend an address.
+        """
+        user = auth(session, required=True)
+
+        parser = reqparse.RequestParser()
+        parser.add_argument("address", type=str, required=True)
+        args = parser.parse_args()
+
+        return {}
+        return {}, 201
+
+
