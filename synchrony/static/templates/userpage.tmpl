@@ -6,13 +6,26 @@
     {{#showing_revisions}}
     <table>
        <tbody>
+            <tr>
+                <td>url</td>
+                <td>mime</td>
+                <td></td>
+                <td>bytes</td>
+                <td>public</td>
+                <td></td>
+            </tr>
             {{#revisions}}
             <tr on-mouseover="select:{{"revision"}},{{@index}}" on-mouseout="select:{{"revision"}},{{@index}}" id="revision-{{@index}}">
                 <td><a href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
                 <td>{{mimetype}}</td>
                 <td>{{network}}</td>
                 <td>{{size}}</td>
-                <td id="public-revision-{{@index}}">{{public}}</td>
+                <td id="public-revision-{{@index}}">
+                    <span id="public-revision-text-{{@index}}">{{#if public}}Yes{{else}}No{{/if}}</span>
+                    <button on-click="toggle_public:{{@index}}" style="visibility:hidden" class="button big_button" id="public-revision-button-{{@index}}">
+                        {{#if public}}Public{{else}}Private{{/if}}
+                    </button>
+                </td>
                 <td id="delete-revision-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"revision"}},{{@index}}">Delete</button></td>
             </tr>
             {{/revisions}}

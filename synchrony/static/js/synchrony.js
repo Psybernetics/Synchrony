@@ -94,6 +94,7 @@ App.Router = Backbone.Router.extend({
         'user/:username':      'userview',
         'peers':               'peersview',
         'settings':            'settingsview',
+        'settings/:network':   'networksettingsview',
         'chat':                'chatview',
         'login':               'loginview',
         'logout':              'logout',
@@ -102,15 +103,16 @@ App.Router = Backbone.Router.extend({
     },
 
 //    Attributes -> functions in the environment
-    index:              indexView,
+    index:                 indexView,
 //    requestindex:       requestIndex,
 //    requestresource:    requestView,
-    userview:           userView,
-    peersview:          peersView,
-    settingsview:       settingsView,
-    chatview:           chatView,
-    loginview:          loginView,
-    logout:             logout,
+    userview:              userView,
+    peersview:             peersView,
+    settingsview:          settingsView,
+    networksettingsview:   networkSettingsView,
+    chatview:              chatView,
+    loginview:             loginView,
+    logout:                logout,
 
 //    Any pre-post render behaviors
     before: function() {
@@ -728,8 +730,54 @@ function userView(username, params){
                 } else {
                     c.style.visibility = "hidden";
                 }
+                // Also show the toggle_public button for revisions
+                if (type === "revision") {
+                    if ($('#public-' + type + '-button-' + index).css('visibility') === "hidden") {
+                        $('#public-' + type + '-button-' + index).css('visibility', '');
+                        $('#public-' + type + '-text-'   + index).css('display',    'none');
+                    } else {
+                        $('#public-' + type + '-button-' + index).css('visibility', 'hidden');
+                        $('#public-' + type + '-text-'   + index).css('display',    'initial');
+                    }
+                }
             },
-            delete:  function(event, type, index){
+            toggle_public: function(event, index){
+                var revisions = this.get('revisions');
+                var revision = revisions[index];
+                console.log(revision);
+                if (revision.public) {
+                    $.ajax({
+                        url: '/v1/revisions/' + revision.hash,
+                        type: "POST",
+                        data: {"public": null},
+                        success: function(response){
+                            // Replace current array at index in place.
+                            console.log(response);
+                            revisions[index] = response;
+                            App.Views.userpage.set("revisions", revisions);
+                        },
+                        error: function(response){
+                            console.log(response);
+                        }
+                    });
+                } else {
+                    $.ajax({
+                        url: '/v1/revisions/' + revision.hash,
+                        type: "POST",
+                        data: {"public": true},
+                        success: function(response){
+                            // Replace current array at index in place.
+                            console.log(response);
+                            revisions[index] = response;
+                            App.Views.userpage.set("revisions", revisions);
+                         },
+                        error: function(response){
+                            console.log(response);
+                        }
+                     });
+                 }
+            }, 
+            delete:        function(event, type, index){
                 if        (type === "revision") {
                     var revision = this.get('revisions')[index];
                     console.log(revision);
@@ -1230,7 +1278,7 @@ function settingsView() {
         });
     }).then(function(components){
 
-        // Return immediately if the user can't see_all
+        // Return immediately if no user or they can't see_all
         if (!App.Config.user) {
             location.hash = "login";
             return;
@@ -1255,7 +1303,7 @@ function settingsView() {
         $.when(
             $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks',
             function(response){
-                App.Views.settings.set("peers_permitted", response);
+                App.Views.settings.set("networks_permitted", response);
             }),
             $.get('/v1/users/' + App.Config.user.username + '?can=browse_peer_nodes',
             function(response){
@@ -1267,13 +1315,13 @@ function settingsView() {
             })
         ).done(function(){
             // Navigate away from the view if neither section is permitted
-            if (App.Views.settings.get("peers_permitted") != true &&
-                App.Views.settings.get("downloads_permitted") != true) {
-                window.location.hash = "#";
-            }
+//           if (App.Views.settings.get("peers_permitted") != true &&
+//               App.Views.settings.get("downloads_permitted") != true) {
+//               window.location.hash = "#";
+//           }
         });
 
-        // Pretty ugly but has to be done. Fill the buttons in.
+        // Ugly but has to be done.
         App.Views.settings.set("accounts_button", "Show");
         App.Views.settings.set("groups_button",   "Show");
         App.Views.settings.set("networks_button", "Show");
@@ -1293,8 +1341,11 @@ function settingsView() {
 //        });
 
         $.get('/v1/revisions/downloads', function(response){
-            console.log(response.data);
             App.Views.settings.set("downloads", response.data);
+        });
+
+        $.get('/v1/networks', function(response){
+            App.Views.settings.set("networks", response.data);
         });
 
 //       if (App.Views.settings.get("showing_peers") === undefined) {
@@ -1361,6 +1412,23 @@ function settingsView() {
 //                   $('#' + type + '-' + index).css('visibility','hidden')
 //               }
             },
+            add_network: function(event){
+                if (event.original.keyCode == 13){
+                    event.original.preventDefault();
+                    var name = this.get("network_name");
+                    $.ajax({
+                        url: "/v1/networks",
+                        type: "PUT",
+                        data: {"name": name},
+                        success: function(response){
+                            var networks = App.Views.settings.get("networks");
+                            networks.push(response)
+                            App.Views.settings.set("networks", networks);
+                        },
+                        error:   function(response){}
+                    });
+                }
+            },
             // clicking a hash to mark as improper
             decrement: function(event, hash){
                 var selection = App.Views.settings.get("selection");
@@ -1387,5 +1455,35 @@ function settingsView() {
                 });
             },
        });
+    });
+}
+
+function networkSettingsView(network){
+    console.log(network);
+    document.title = "Network Settings for " + network + App.title;
+    Ractive.load({networksettings: 'networksettings.tmpl'}).then(function(components){
+        App.Views['networksettings'] = new components.networksettings({
+            el: $('.main'),
+            data: App.Config,
+            adaptor: ['Backbone']
+        });
+    }).then(function(components){
+
+        // Return immediately if no user or they can't see_all
+        if (!App.Config.user) {
+            location.hash = "login";
+            return;
+        }
+
+        $.when(
+            $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks', function(response){
+                App.Views.networksettings.set("permitted", response);
+            })
+        ).done(function(){
+            if (App.Views.networksettings.get("permitted") != true) {
+                window.location.hash = "#";
+                return;
+            }
+        });
     });
 }
