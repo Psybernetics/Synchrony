@@ -1,8 +1,77 @@
 <div class="view">
     <h1>Node Settings</h1>
     <hr />
-    <h2>Accounts</h2>
-    <h2>Groups</h2>
-    <h2>Networks</h2>
-    <h2>Open Proxy</h2>
-</div>
+    <h2>Accounts <button on-click="toggle:{{"accounts"}}" class="button big_button pull-right">{{accounts_button}}</button></h2>
+    {{#showing_accounts}}
+    {{/showing_accounts}}
+    <h2>Groups <button on-click="toggle:{{"groups"}}" class="button big_button pull-right">{{groups_button}}</button></h2>
+    {{#showing_groups}}
+    {{/showing_groups}}
+    <h2>Networks <button on-click="toggle:{{"networks"}}" class="button big_button pull-right">{{networks_button}}</button></h2>
+    {{#showing_networks}}
+    {{/showing_networks}}
+    {{#downloads_permitted}}
+    <h2>Downloads<button on-click="toggle:{{"downloads"}}" class="button big_button pull-right">{{downloads_button}}</button></h2>
+    {{#showing_downloads}}
+    {{#selection}}
+    <div class="selection">
+        <table>
+            <tbody>
+                <tr>
+                    <td>Network:</td>
+                    <td>{{this.network}}</td>
+                </tr>
+                <tr>
+                    <td>URL:</td>
+                    <td>{{this.url}}</td>
+                </tr>
+            </tbody>
+        </table>
+        {{#this.hashes}}
+        <table>
+            <tbody>
+                <tr> 
+                    <td>Version:<td>
+                    <td on-click="decrement:{{hash}}" class="clickable red">{{hash}}</td>
+                    {{#peers}}
+                    <td>{{this}}</td>
+                    {{/peers}}
+                </tr>
+            </tbody>
+        </table>
+        {{/this.hashes}}
+        <div class="advice">
+        Please be aware that marking a revision (and by extension the peer who served it) as bad
+        has network-wide consequences for the serving peer.<br />
+        This feedback is not taken lightly and
+        cannot be undone too easily. Please exercise caution when marking a peer as untrustworthy.
+        </div>
+        {{decrement_error}}
+    </div>
+    {{/selection}}
+
+    Click or tap a URL to display versions from the overlay network.<br />
+    {{! "downloads" is an array of [network-name, [{url:{hash:[peers]} }]] mappings}}
+    {{! not particularly suited for being reasoned about in Moustache templates.}}
+    {{#downloads}}
+        <table>
+            <span class="green">{{this.network}}</span><br />
+        <tbody id="{{@index}}">
+                {{#this.downloads}}
+                    {{#this:url}}
+                        {{! Things like id="{ { url } }" produces invalid selectors. Selection has to happen by function instead. }}
+                        <tr>
+                            <td class="clickable blue" on-mouseover="select:{{"url"}},{{url}}">{{url}}</td>
+                            <td></td>
+                        </tr>
+                    {{/this}}
+                {{/this.downloads}}
+            </tbody>
+        </table>
+    {{/downloads}}
+    {{/showing_downloads}}
+    {{/downloads_permitted}}
+    <h2>Open Proxy <button on-click="toggle:{{"open"}}" class="button big_button pull-right">{{open_button}}</button></h2>
+    {{#showing_open}}
+    {{/showing_open}}
+ </div>
