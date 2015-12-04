@@ -26,7 +26,10 @@ class UserCollection(restful.Resource):
         args = parser.parse_args()
 
         if args.me:
-            return user.jsonify()
+            s = Session.query.filter(Session.session_id == session['session']).first()
+            response            = user.jsonify()
+            response['session'] = s.jsonify()
+            return response
 
         if not user.can("see_all"):
             return {}, 403
@@ -269,8 +272,8 @@ class UserFriendsCollection(restful.Resource):
         user = auth(session, required=True)
 
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
         args = parser.parse_args()  
 
         if user.username != username and not user.can("see_all"):
@@ -290,8 +293,9 @@ class UserFriendsCollection(restful.Resource):
         user = auth(session, required=True)
 
         parser = reqparse.RequestParser()
-        parser.add_argument("add", type=str)
-        parser.add_argument("remove", type=str)
+        parser.add_argument("add",     type=bool)
+        parser.add_argument("remove",  type=bool)
+        parser.add_argument("address", type=str, required=True)
         args = parser.parse_args()
 
         return {}

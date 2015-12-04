@@ -94,13 +94,6 @@ App.Router = Backbone.Router.extend({
         'user/:username':      'userview',
         'peers':               'peersview',
         'settings':            'settingsview',
-        'sessions':            'sessionsview',
-        'account/objects':     'accountobjects',
-        'account/pages/groups':'accountpagegroups',
-        'manage':              'manageview',
-        'manage/pages':        'managepages',
-        'manage/pages/groups': 'managepagegroups',
-        'manage/users':        'manageusers',
         'chat':                'chatview',
         'login':               'loginview',
         'logout':              'logout',
@@ -115,13 +108,6 @@ App.Router = Backbone.Router.extend({
     userview:           userView,
     peersview:          peersView,
     settingsview:       settingsView,
-    sessionsview:       sessionsView,
-    accountobjects:     accountObjects,
-    accountpagegroups:  accountPageGroups,
-    manageview:         manageView,
-    managepages:        managePages,
-    managepagegroups:   managePageGroups,
-    manageusers:        manageUsers,
     chatview:           chatView,
     loginview:          loginView,
     logout:             logout,
@@ -225,7 +211,7 @@ function update_synchrony(){
     if (App.Views.synchrony === undefined) { return; }
 
     $.get('/v1/networks', function(r){
-        App.Views.synchrony.set({peers: r.data[0].peers});
+        App.Views.synchrony.set({peers: r.peers});
     });
     
     $.get('/v1/domains/count', function(r){
@@ -500,6 +486,27 @@ function peersView(){
 
         // Populate the page.
         // Should be /v1/networks/<name>/peers
+        // We use two variables here, peers_permitted and downloads_permitted
+        // to determine which sections to display and whether to just navigate
+        // away from the view.
+        $.when(
+            $.get('/v1/users/' + App.Config.user.username + '?can=browse_peer_nodes',
+            function(response){
+                App.Views.peers.set("peers_permitted", response);
+            }),
+            $.get('/v1/users/' + App.Config.user.username + '?can=review_downloads',
+            function(response){
+                App.Views.peers.set("downloads_permitted", response);
+            })
+        ).done(function(){
+            // Navigate away from the view if neither section is permitted
+            if (App.Views.peers.get("peers_permitted") != true &&
+                App.Views.peers.get("downloads_permitted") != true) {
+                window.location.hash = "#";
+                return;
+            }
+        });
+
         $.get('/v1/peers', function(response){
             console.log(response.data);
             App.Views.peers.set("peers", response.data);
@@ -832,7 +839,7 @@ Ractive.load({
     App.Views.content.socket = io.connect('/documents', {resource: "stream"})
     App.Views.content.socket.emit('subscribe', 'public')
     App.Views.content.socket.on("fragment", function(data){
-        // Someone is sending us a document.
+        // Someone is sending us some DOM nodes.
         console.log(data);
         parser = new DOMParser();
         doc = parser.parseFromString(data.document, "text/xml");
@@ -1209,19 +1216,6 @@ function loginView() {
             },
         });
     });
-    
-}
-
-function accountPageGroups(){
-    document.title = "Page groups" + App.title;
-    console.log("System management.");
-    Ractive.load({accountpagegroups: 'accountpagegroups.tmpl'}).then(function(components){
-        App.Views['accountpagegroups'] = new components.accountpagegroups({
-            el: $('.original'),
-            adaptor: ['Backbone']
-        });
-    });
-    
 }
 
 function settingsView() {
@@ -1232,45 +1226,21 @@ function settingsView() {
             data: App.Config,
             adaptor: ['Backbone']
         });
-    });
-}
-function sessionsView() {
-    document.title = "Sessions" + App.title;
-    Ractive.load({sessions: 'sessions.tmpl'}).then(function(components){
-        App.Views['sessions'] = new components.sessions({
-            el: $('.main'),
-            data: App.Config,
-            adaptor: ['Backbone']
-        });
-    });
-}
-function manageView() {
-    document.title = "Site management" + App.title;
-    console.log("System management.");
-    Ractive.load({manage: 'manage.tmpl'}).then(function(components){
-        App.Views['manage'] = new components.manage({
-            el: $('.original'),
-            adaptor: ['Backbone']
-        });
-    });
-}
-
-function managePages(){}
-function managePageGroups(){}
-function manageUsers(){
-    document.title = "User management" + App.title;
-    console.log("User management.");
-    Ractive.load({manageusers: 'manage-users.tmpl'}).then(function(components){
-        App.Views['manageusers'] = new components.manageusers({
-            el: $('.original'),
-            adaptor: ['Backbone']
-        });
     }).then(function(components){
-        console.log(App.Views);
 
-        $.get('/v1/users', function(response){
-            App.Views.manageusers.set({users:response});
+        // Return immediately if the user can't see_all
+        $.when(
+            $.get('/v1/users/' + App.Config.user.username + '?can=see_all', function(response){
+                App.Views.settings.set("permitted", response);
+            })
+        ).done(function(){
+            if (App.Views.settings.get("permitted") != true) {
+                window.location.hash = "#";
+                return;
+            }
         });
-    });
 
+    
+    
+    });
 }
