@@ -813,6 +813,11 @@ class SynchronyProtocol(object):
         gevent.joinall(threads)
         threads = [t.value for t in threads]
         for response in threads:
+            # Every type of scenario here is useful
+            # If a peer was unresponsive then it tells us we have a peer to remove,
+            # if a peer serves content that doesn't match the hash we went for then
+            # there's a trust rating to adjust
+            # and if we hit upon the content we're after then the sooner the better.
             if response and response.status_code != 200:
                 continue
             revision = Revision()

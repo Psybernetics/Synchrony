@@ -1,7 +1,7 @@
 <div class="view">
     <h1>Peers and Downloads</h1>
     <hr />
-    {{#peers.length}}
+    {{#peers_permitted}}
     <h2>Peer Browser<button on-click="toggle:{{"peers"}}" class="button big_button pull-right">{{peers_button}}</button></h2>
     {{#showing_peers}}
             <table>
@@ -16,8 +16,9 @@
                 </tbody>
             </table>
     {{/showing_peers}}
-    {{/peers.length}}
+    {{/peers_permitted}}
 
+    {{#downloads_permitted}}
     <h2>Downloads<button on-click="toggle:{{"downloads"}}" class="button big_button pull-right">{{downloads_button}}</button></h2>
     {{#showing_downloads}}
     {{#selection}}
@@ -77,4 +78,5 @@
         </table>
     {{/downloads}}
     {{/showing_downloads}}
+    {{/downloads_permitted}}
 </div>

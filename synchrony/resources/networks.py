@@ -17,8 +17,16 @@ class NetworkCollection(restful.Resource):
         parser.add_argument("per_page", type=int, required=False, default=10)
         args = parser.parse_args()
 
-        pages = Pagination(app.routes.values(), args.page, args.per_page)
-        return make_response(request.url, pages)
+        routes      = app.routes.values()
+        pages       = Pagination(routes, args.page, args.per_page)
+        response    = make_response(request.url, pages)
+        peer_count  = 0
+
+        for router in routes:
+            peer_count   += len(router)
+        response['peers'] = peer_count
+
+        return response
 
         # If you're here because you're wondering what the "private" attribute
         # in the responses means: It's for networks composed of nodes who all

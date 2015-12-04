@@ -26,11 +26,13 @@ def init_user_groups():
     """
     # Bans happen by setting User.active to False and clearing their existing sessions.
     groups = ["Administrators", "Users"]
-    privs  = [ "see_all", "delete_at_will", "reset_user_pw", "modify_usergroup",
-               "deactivate", "manage_networks", "review_downloads", 
-               "create_revision_group", "delete_revision_group", "chat",
-               "initiate_rtc", "create_revision", "retrieve_from_dht", 
-               "browse_peer_nodes", "retrieve_resource", "stream_document"]
+    admin_privs  = [ "see_all", "delete_at_will", "reset_user_pw", "modify_usergroup",
+                     "deactivate", "manage_networks", "review_downloads"] 
+    privs        = [ "create_revision_group", "delete_revision_group", "chat",
+                     "initiate_rtc", "create_revision", "retrieve_from_dht", 
+                     "browse_peer_nodes", "retrieve_resource", "stream_document"]
+
+    privs.extend(admin_privs)
 
     if not Priv.query.first():
         log("Creating privileges.")
@@ -47,9 +49,7 @@ def init_user_groups():
         if not g:
             g = UserGroup(name=group)
             for p in Priv.query.all():
-                if group != "Administrators" and p.name in \
-                        ["see_all", "delete_at_will", "reset_user_pw", "modify_usergroup",
-                         "deactivate", "manage_networks", "review_downloads"]:
+                if group != "Administrators" and p.name in admin_privs:
                     continue
                 a         = Acl()
                 a.group   = g
