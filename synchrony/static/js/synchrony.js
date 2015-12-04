@@ -94,6 +94,7 @@ App.Router = Backbone.Router.extend({
         'user/:username':      'userview',
         'peers':               'peersview',
         'settings':            'settingsview',
+        'settings/:network':   'networksettingsview',
         'chat':                'chatview',
         'login':               'loginview',
         'logout':              'logout',
@@ -102,15 +103,16 @@ App.Router = Backbone.Router.extend({
     },
 
 //    Attributes -> functions in the environment
-    index:              indexView,
+    index:                 indexView,
 //    requestindex:       requestIndex,
 //    requestresource:    requestView,
-    userview:           userView,
-    peersview:          peersView,
-    settingsview:       settingsView,
-    chatview:           chatView,
-    loginview:          loginView,
-    logout:             logout,
+    userview:              userView,
+    peersview:             peersView,
+    settingsview:          settingsView,
+    networksettingsview:   networkSettingsView,
+    chatview:              chatView,
+    loginview:             loginView,
+    logout:                logout,
 
 //    Any pre-post render behaviors
     before: function() {
@@ -1230,7 +1232,7 @@ function settingsView() {
         });
     }).then(function(components){
 
-        // Return immediately if the user can't see_all
+        // Return immediately if no user or they can't see_all
         if (!App.Config.user) {
             location.hash = "login";
             return;
@@ -1255,7 +1257,7 @@ function settingsView() {
         $.when(
             $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks',
             function(response){
-                App.Views.settings.set("peers_permitted", response);
+                App.Views.settings.set("networks_permitted", response);
             }),
             $.get('/v1/users/' + App.Config.user.username + '?can=browse_peer_nodes',
             function(response){
@@ -1267,13 +1269,13 @@ function settingsView() {
             })
         ).done(function(){
             // Navigate away from the view if neither section is permitted
-            if (App.Views.settings.get("peers_permitted") != true &&
-                App.Views.settings.get("downloads_permitted") != true) {
-                window.location.hash = "#";
-            }
+//           if (App.Views.settings.get("peers_permitted") != true &&
+//               App.Views.settings.get("downloads_permitted") != true) {
+//               window.location.hash = "#";
+//           }
         });
 
-        // Pretty ugly but has to be done. Fill the buttons in.
+        // Ugly but has to be done.
         App.Views.settings.set("accounts_button", "Show");
         App.Views.settings.set("groups_button",   "Show");
         App.Views.settings.set("networks_button", "Show");
@@ -1293,8 +1295,11 @@ function settingsView() {
 //        });
 
         $.get('/v1/revisions/downloads', function(response){
-            console.log(response.data);
             App.Views.settings.set("downloads", response.data);
+        });
+
+        $.get('/v1/networks', function(response){
+            App.Views.settings.set("networks", response.data);
         });
 
 //       if (App.Views.settings.get("showing_peers") === undefined) {
@@ -1387,5 +1392,35 @@ function settingsView() {
                 });
             },
        });
+    });
+}
+
+function networkSettingsView(network){
+    console.log(network);
+    document.title = "Network Settings for " + network + App.title;
+    Ractive.load({networksettings: 'networksettings.tmpl'}).then(function(components){
+        App.Views['networksettings'] = new components.networksettings({
+            el: $('.main'),
+            data: App.Config,
+            adaptor: ['Backbone']
+        });
+    }).then(function(components){
+
+        // Return immediately if no user or they can't see_all
+        if (!App.Config.user) {
+            location.hash = "login";
+            return;
+        }
+
+        $.when(
+            $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks', function(response){
+                App.Views.networksettings.set("permitted", response);
+            })
+        ).done(function(){
+            if (App.Views.networksettings.get("permitted") != true) {
+                window.location.hash = "#";
+                return;
+            }
+        });
     });
 }

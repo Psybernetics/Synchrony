@@ -3,12 +3,45 @@
     <hr />
     <h2>Accounts <button on-click="toggle:{{"accounts"}}" class="button big_button pull-right">{{accounts_button}}</button></h2>
     {{#showing_accounts}}
+    <ul>
+        <li>Toggle permit new signups</li>
+        <li>List users (toggle active, delete)</li>
+    </ul>
     {{/showing_accounts}}
     <h2>Groups <button on-click="toggle:{{"groups"}}" class="button big_button pull-right">{{groups_button}}</button></h2>
     {{#showing_groups}}
+    <ul>
+        <li>Show groups</li>
+        <li>Move privs between groups</li>
+        <li>Move users between groups</li>
+        <li>Delete groups</li>
+    </ul>
     {{/showing_groups}}
     <h2>Networks <button on-click="toggle:{{"networks"}}" class="button big_button pull-right">{{networks_button}}</button></h2>
     {{#showing_networks}}
+    <table>
+        <tbody>
+            <tr>
+                <td>Name</td>
+                <td>Node ID</td>
+                <td>Peers</td>
+                <td>Private</td>
+            </tr>
+    {{#networks}}
+            <tr>
+                <td><a href="/#settings/{{name}}">{{name}}</a></td>
+                <td>{{node_id}}</td>
+                <td>{{peers}}</td>
+                <td>{{#if private}}Yes{{else}}No{{/if}}</td>
+            </tr>
+    {{/networks}}
+        </tbody>
+    </table>
+
+    
+    <h4>Create a new network</h4>
+    <input class="main_addressbar" on-keydown="add_friend" value="{{network_name}}" spellcheck="false" placeholder="Name">
+  
     {{/showing_networks}}
     {{#downloads_permitted}}
     <h2>Downloads<button on-click="toggle:{{"downloads"}}" class="button big_button pull-right">{{downloads_button}}</button></h2>
