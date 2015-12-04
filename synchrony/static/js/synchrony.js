@@ -742,7 +742,7 @@ function userView(username, params){
                 }
             },
             toggle_public: function(event, index){
-                var revisions = this.get('revisions')
+                var revisions = this.get('revisions');
                 var revision = revisions[index];
                 console.log(revision);
                 if (revision.public) {
@@ -1411,6 +1411,23 @@ function settingsView() {
 //               } else {
 //                   $('#' + type + '-' + index).css('visibility','hidden')
 //               }
+            },
+            add_network: function(event){
+                if (event.original.keyCode == 13){
+                    event.original.preventDefault();
+                    var name = this.get("network_name");
+                    $.ajax({
+                        url: "/v1/networks",
+                        type: "PUT",
+                        data: {"name": name},
+                        success: function(response){
+                            var networks = App.Views.settings.get("networks");
+                            networks.push(response)
+                            App.Views.settings.set("networks", networks);
+                        },
+                        error:   function(response){}
+                    });
+                }
             },
             // clicking a hash to mark as improper
             decrement: function(event, hash){
