@@ -7,16 +7,16 @@
     <table>
        <tbody>
             <tr>
-                <td>url</td>
-                <td>mime</td>
+                <td>URL</td>
+                <td>MIME</td>
                 <td></td>
-                <td>bytes</td>
-                <td>public</td>
+                <td>Bytes</td>
+                <td>Public</td>
                 <td></td>
             </tr>
             {{#revisions}}
             <tr on-mouseover="select:{{"revision"}},{{@index}}" on-mouseout="select:{{"revision"}},{{@index}}" id="revision-{{@index}}">
-                <td><a href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
+                <td><a class="blue" href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
                 <td>{{mimetype}}</td>
                 <td>{{network}}</td>
                 <td>{{size}}</td>
