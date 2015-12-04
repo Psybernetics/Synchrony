@@ -5,7 +5,8 @@ see as legitimate.
 from synchrony import app
 import flask_restful as restful
 from flask import session, request
-from synchrony.controllers.auth import auth
+from synchrony.controllers.auth  import auth
+from synchrony.controllers.dht   import RoutingTable, log
 from synchrony.controllers.utils import Pagination, make_response
 
 class NetworkCollection(restful.Resource):
@@ -34,6 +35,29 @@ class NetworkCollection(restful.Resource):
         # who can decrypt for that key. This is useful for guaranteeing that
         # nodes using --autoreplicate only replicate for your instances.
 
+    def put(self):
+        user = auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("name", type=str, required=True)
+        args = parser.parse_args()
+
+        if not user.can("manage_networks"):
+            return {}, 403
+
+        if app.routes.get(args.name, None):
+            return {}, 409
+
+        log('%s is creating a network named "%s".' % (user.username, args.name))
+
+        # Derive settings from the default routing table
+        settings = app.routes._default
+        pubkey   = app.key.publickey().exportKey()
+        ip       = settings.node.ip
+        port     = settings.node.port
+        router   = RoutingTable(ip, port, pubkey, settings.httpd, network=args.name)
+
+        app.routes.append(router)
+        return router.jsonify()
 
 class NetworkResource(restful.Resource):
     """
@@ -42,10 +66,7 @@ class NetworkResource(restful.Resource):
     def get(self, network):
         auth(session, required=True)
         network = app.routes.get(network, None)
-        if network == None:
-            return {}, 404
-
-        return network.jsonify()
+        return network.jsonify() if network else {}, 404
 
 class NetworkPeerCollection(restful.Resource):
     """
