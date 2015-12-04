@@ -730,8 +730,54 @@ function userView(username, params){
                 } else {
                     c.style.visibility = "hidden";
                 }
+                // Also show the toggle_public button for revisions
+                if (type === "revision") {
+                    if ($('#public-' + type + '-button-' + index).css('visibility') === "hidden") {
+                        $('#public-' + type + '-button-' + index).css('visibility', '');
+                        $('#public-' + type + '-text-'   + index).css('display',    'none');
+                    } else {
+                        $('#public-' + type + '-button-' + index).css('visibility', 'hidden');
+                        $('#public-' + type + '-text-'   + index).css('display',    'initial');
+                    }
+                }
             },
-            delete:  function(event, type, index){
+            toggle_public: function(event, index){
+                var revisions = this.get('revisions')
+                var revision = revisions[index];
+                console.log(revision);
+                if (revision.public) {
+                    $.ajax({
+                        url: '/v1/revisions/' + revision.hash,
+                        type: "POST",
+                        data: {"public": null},
+                        success: function(response){
+                            // Replace current array at index in place.
+                            console.log(response);
+                            revisions[index] = response;
+                            App.Views.userpage.set("revisions", revisions);
+                        },
+                        error: function(response){
+                            console.log(response);
+                        }
+                    });
+                } else {
+                    $.ajax({
+                        url: '/v1/revisions/' + revision.hash,
+                        type: "POST",
+                        data: {"public": true},
+                        success: function(response){
+                            // Replace current array at index in place.
+                            console.log(response);
+                            revisions[index] = response;
+                            App.Views.userpage.set("revisions", revisions);
+                         },
+                        error: function(response){
+                            console.log(response);
+                        }
+                     });
+                 }
+            }, 
+            delete:        function(event, type, index){
                 if        (type === "revision") {
                     var revision = this.get('revisions')[index];
                     console.log(revision);

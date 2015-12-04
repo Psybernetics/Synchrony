@@ -46,7 +46,7 @@ class RevisionResource(restful.Resource):
         user = auth(session, required=True)
 
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("public",type=bool, help="", required=False, default=None)
+        parser.add_argument("public", type=bool, help="", required=True, default=None)
         args = parser.parse_args()  
 
         rev  = Revision.query.filter(and_(Revision.hash == hash, Revision.user == user)).first()
