@@ -383,7 +383,10 @@ function indexView(page){
                 populate_revision_table(url[0] + 'page=' + page);
             },
             // index template addressbar
-            request: request, // globally available request function
+            request: request,
+            filter: function(event){
+               console.log(event);
+            }
        });
     });
 }
@@ -503,7 +506,6 @@ function peersView(){
             if (App.Views.peers.get("peers_permitted") != true &&
                 App.Views.peers.get("downloads_permitted") != true) {
                 window.location.hash = "#";
-                return;
             }
         });
 
@@ -534,20 +536,20 @@ function peersView(){
             // button for show/hide section
             toggle:  function(event, section){
                 var button = section + "_button";
-                var showing = this.get("showing_" + section);
+                var showing = App.Views.peers.get("showing_" + section);
                 if (showing === undefined) {
-                    this.set(button, "Hide");
-                    this.set("showing_" + section, true);
+                    App.Views.peers.set(button, "Hide");
+                    App.Views.peers.set("showing_" + section, true);
                 } else {
-                    this.set(button, "Show");
-                    this.set("showing_" + section, undefined);
+                    App.Views.peers.set(button, "Show");
+                    App.Views.peers.set("showing_" + section, undefined);
                 }
             },
             // mouseover a url
             select: function(event, type, index){
                 if (type === "url") {
                     var index = event.node.parentElement.parentElement.id;
-                    var network = this.get("downloads." + index);
+                    var network = App.Views.peers.get("downloads." + index);
 //                    console.log(network);
                     for (i in network.downloads) {
                         var downloads = network.downloads[i];
@@ -567,7 +569,7 @@ function peersView(){
                             "url":  url,
                             "hashes": hashes,
                         };
-                        this.set("selection", selection);
+                        App.Views.peers.set("selection", selection);
                     }
                 } else if (type === "peer") {
 //                    var row = $('#' + type + '-' + index);
@@ -584,7 +586,7 @@ function peersView(){
             },
             // clicking a hash to mark as improper
             decrement: function(event, hash){
-                var selection = this.get("selection");
+                var selection = App.Views.peers.get("selection");
                 console.log(selection);
                 $.ajax({
                     url: "/v1/revisions/downloads/" + selection.network,
@@ -603,7 +605,7 @@ function peersView(){
                     },
                     error: function(response){
                         var m = "Couldn't contact the server. Please try again later.";
-                        this.set("decrement_error", m);
+                        App.Views.peers.set("decrement_error", m);
                     },
                 });
             },
@@ -1081,12 +1083,12 @@ function chatView() {
                         App.Views.chat.socket.emit('cmd', message.substring(1));
                         console.log(this.get("message"));
                         $('#chat-input').val('');
-                        this.set("message", '');
+                        App.Views.chat.set("message", '');
                     } else {
                         App.Views.chat.socket.emit('msg', message);
                         console.log(this.get("message"));
                         $('#chat-input').val('');
-                        this.set("message", '');
+                        App.Views.chat.set("message", '');
                     }
                 }
             },
@@ -1118,7 +1120,7 @@ function chatView() {
                         var line = App.Views.chat.doskeys[
                             App.Views.chat.doskeys.length - App.Views.chat.current_doskey
                         ];
-                        this.set({message:line});
+                        App.Views.chat.set({message:line});
                         App.Views.chat.current_doskey += 1;
                     }
 
@@ -1131,7 +1133,7 @@ function chatView() {
                         var line = App.Views.chat.doskeys[
                             App.Views.chat.doskeys.length - App.Views.chat.current_doskey
                         ];
-                        this.set({message:line});
+                        App.Views.chat.set({message:line});
                     }
                 }
             },
@@ -1164,7 +1166,7 @@ function loginView() {
                 event.original.preventDefault();
 
                 var username = this.get("username0");
-                var pass1 = this.get("pass0");
+                var pass1    = this.get("pass0");
                 App.Views.login.set("message", "Logging in...");
                 // Use jQuery to make a PUT to /v1/users/:username/sessions
                 $.ajax({
@@ -1229,6 +1231,11 @@ function settingsView() {
     }).then(function(components){
 
         // Return immediately if the user can't see_all
+        if (!App.Config.user) {
+            location.hash = "login";
+            return;
+        }
+
         $.when(
             $.get('/v1/users/' + App.Config.user.username + '?can=see_all', function(response){
                 App.Views.settings.set("permitted", response);
@@ -1240,7 +1247,145 @@ function settingsView() {
             }
         });
 
-    
-    
+        // Populate the page.
+        // Should be /v1/networks/<name>/peers
+        // We use two variables here, peers_permitted and downloads_permitted
+        // to determine which sections to display and whether to just navigate
+        // away from the view.
+        $.when(
+            $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks',
+            function(response){
+                App.Views.settings.set("peers_permitted", response);
+            }),
+            $.get('/v1/users/' + App.Config.user.username + '?can=browse_peer_nodes',
+            function(response){
+                App.Views.settings.set("peers_permitted", response);
+            }),
+            $.get('/v1/users/' + App.Config.user.username + '?can=review_downloads',
+            function(response){
+                App.Views.settings.set("downloads_permitted", response);
+            })
+        ).done(function(){
+            // Navigate away from the view if neither section is permitted
+            if (App.Views.settings.get("peers_permitted") != true &&
+                App.Views.settings.get("downloads_permitted") != true) {
+                window.location.hash = "#";
+            }
+        });
+
+        // Pretty ugly but has to be done. Fill the buttons in.
+        App.Views.settings.set("accounts_button", "Show");
+        App.Views.settings.set("groups_button",   "Show");
+        App.Views.settings.set("networks_button", "Show");
+        App.Views.settings.set("open_button",     "Show");
+
+        // Closes the sections if we left some open previously
+        App.Views.settings.set("showing_accounts",  undefined);
+        App.Views.settings.set("showing_groups",    undefined);
+        App.Views.settings.set("showing_networks",  undefined);
+        App.Views.settings.set("showing_downloads", undefined);
+        App.Views.settings.set("showing_open",      undefined);
+
+        // Populate the view
+//        $.get('/v1/peers', function(response){
+//            console.log(response.data);
+//            App.Views.peers.set("peers", response.data);
+//        });
+
+        $.get('/v1/revisions/downloads', function(response){
+            console.log(response.data);
+            App.Views.settings.set("downloads", response.data);
+        });
+
+//       if (App.Views.settings.get("showing_peers") === undefined) {
+//           App.Views.settings.set("peers_button","Hide");
+//           App.Views.settings.set("showing_peers",true);
+//       }
+
+        if (App.Views.settings.get("showing_downloads") === undefined) {
+            App.Views.settings.set("downloads_button", "Show");
+        } else {
+            App.Views.settings.set("downloads_button", "Hide");
+        }
+
+        // POST /v1/revisions/downloads/<network>
+        // {reason: integer_severity_level}
+        App.Views.settings.on({
+            // button for show/hide section
+            toggle:  function(event, section){
+                var button = section + "_button";
+                var showing = App.Views.settings.get("showing_" + section);
+                if (showing === undefined) {
+                    App.Views.settings.set(button, "Hide");
+                    App.Views.settings.set("showing_" + section, true);
+                } else {
+                    App.Views.settings.set(button, "Show");
+                    App.Views.settings.set("showing_" + section, undefined);
+                }
+            },
+            // mouseover a url
+            select: function(event, type, index){
+                if (type === "url") {
+                    var index = event.node.parentElement.parentElement.id;
+                    var network = App.Views.settings.get("downloads." + index);
+                    for (i in network.downloads) {
+                        var downloads = network.downloads[i];
+                        var url = Object.keys(downloads)[0];
+//                        console.log(downloads[url]);
+
+                        var hashes = new Array();
+
+                        for (k in Object.keys(downloads[url])) {
+                            var hash = Object.keys(downloads[url]);
+//                            console.log(hash[k]);
+//                            console.log(hash);
+                            hashes.push({"hash": hash[k], "peers": downloads[url][hash[k]]});
+                        }
+                        var selection = {
+                            "network": network.network,
+                            "url":  url,
+                            "hashes": hashes,
+                        };
+                        App.Views.settings.set("selection", selection);
+                    }
+                } else if (type === "peer") {
+//                    var row = $('#' + type + '-' + index);
+                }
+/*              console.log(c);
+                var c = row.children();
+                console.log(c);
+                c = c[c.length -1]; */
+//               if ($('#' + type + '-' + index).css('visibility') === "hidden") {
+//                   $('#' + type + '-' + index).css('visibility','')
+//               } else {
+//                   $('#' + type + '-' + index).css('visibility','hidden')
+//               }
+            },
+            // clicking a hash to mark as improper
+            decrement: function(event, hash){
+                var selection = App.Views.settings.get("selection");
+                console.log(selection);
+                $.ajax({
+                    url: "/v1/revisions/downloads/" + selection.network,
+                    type: "POST",
+                    data: {
+                        "url":  selection.url,
+                        "hash": hash,
+                        "severity": 1
+                    },
+                    success: function(response){
+                        $.get('/v1/peers', function(response){
+                            console.log(response.data);
+                            App.Views.settings.set("peers", response.data);
+                        });
+                        console.log(response);
+                    },
+                    error: function(response){
+                        var m = "Couldn't contact the server. Please try again later.";
+                        App.Views.settings.set("decrement_error", m);
+                    },
+                });
+            },
+       });
     });
 }
