@@ -846,3 +846,15 @@ a {
 .blue {
     color: #1252DA;
 }
+
+.network_heading {
+    position: inherit;
+    display: table;
+    margin: 0px 0px -2px 0px;
+}
+
+.network_status_holder {
+    padding: 5px;
+    display: table-cell;
+    vertical-align: middle;
+}

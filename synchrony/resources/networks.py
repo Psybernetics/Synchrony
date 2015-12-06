@@ -66,29 +66,32 @@ class NetworkResource(restful.Resource):
     def get(self, network):
         auth(session, required=True)
         network = app.routes.get(network, None)
-        return network.jsonify() if network else {}, 404
+        return network.jsonify() if network else ({}, 404)
 
 class NetworkPeerCollection(restful.Resource):
     """
     Retrieve the peer nodes we know of for a specific network.
+
+    Node IDs are changed to strings to represent them without change on the
+    frontend.
     """
     def get(self, network):
-        """
-        Currently returns /all/ peers we know of,
-        but it should be a paginated resource.
-        """
         auth(session, required=True)
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",     type=int, required=False, default=1)
-        parser.add_argument("per_page", type=int, required=False, default=10)
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
         args = parser.parse_args()
 
         routes = app.routes.get(network, None)
         if not routes:
             return {}, 404
  
-        peers = [peer for peer in routes]
-        pages = Pagination(peers, args.page, args.per_page)
-        return make_response(request.url, pages)
+        peers       = [peer for peer in routes]
+        pages       = Pagination(peers, args.page, args.per_page)
+        pages.items = [p.jsonify() for p in pages.items]
 
+        # Would like to make the following more elegant.
+        for i, j in enumerate(pages.items):
+            pages.items[i]['node'] = (str(j['node'][0]), j['node'][1], j['node'][2])
 
+        return make_response(request.url, pages, jsonify=False)

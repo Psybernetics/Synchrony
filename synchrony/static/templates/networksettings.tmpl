@@ -1,7 +1,35 @@
 <div class="view">
+    {{#network}}
+    <div on-mouseover="select:{{"heading"}}" on-mouseout="select:{{"heading"}}" class="network_heading_container">
+        <div class="network_heading">
+            <span class="title">{{network.name}}</span>
+            <div class="network_status_holder">
+            {{network.peers}} peers.<br />
+            {{#if network.private}}Private.{{else}}Public.{{/if}}
+             </div>
+        </div>
+        <span>
+            Node ID: {{network.node_id}}
+            {{#can_manage_networks}}
+            <button class="button pull-right">Delete</button>
+            {{/can_manage_networks}}
+        </span>
+    </div>
+    <br />
+    {{/network}}
+
+    {{#peers}}
+    {{#node:n}}
+        {{this}} <br />
+    {{/node}}
+    {{pubkey}}
+    {{trust}}
+    {{last_seen}}
+    {{/peers}}
     <ul>
         <li>Delete network</li>
         <li>Show peers (toggle remove)</li>
         <li>Bootstrap a peer to the network</li>
     </ul>
+ 
 </div>
