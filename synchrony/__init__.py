@@ -128,6 +128,7 @@ def init():
     api.add_resource(users.UserRevisionCollection,          "/users/<string:username>/revisions")
 
     api.add_resource(peers.PeerCollection,                  "/peers")
+    api.add_resource(peers.PeerNetworkResource,             "/peers/<string:network>")
     api.add_resource(peers.PeerResource,                    "/peers/<string:network>/<int:node_id>")
     api.add_resource(peers.PublicRevisionCollection,        "/peers/revisions")
     api.add_resource(peers.PublicRevisionResource,          "/peers/revisions/<string:content_hash>")
