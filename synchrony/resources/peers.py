@@ -106,6 +106,29 @@ class PeerCollection(restful.Resource):
 
         return response
 
+class PeerNetworkResource(restful.Resource):
+    """
+    A paginated collection of peers via network name.
+    """
+
+    def get(self, network):
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
+        args = parser.parse_args()
+
+        routes = app.routes.get(network, None)
+        if not routes:
+            return {}, 404
+
+        peers    = [peer for peer in routes]
+        pages    = Pagination(peers, args.page, args.per_page)
+        response = routes.jsonify()
+
+        response.update(make_response(request.url, pages))
+
+        return response
+
 class PeerResource(restful.Resource):
     """
     Defines a resource for returning a specific peer by node ID.
