@@ -109,6 +109,9 @@ class NetworkPeerCollection(restful.Resource):
         if not routes:
             return {}, 404
 
+        if not user.can("manage_networks"):
+            return {}, 403
+
         # Get hosts as a list of "ip:port" strings
         hosts = args.hosts.replace(" ", "").split(',')
         def tuplify(host):
