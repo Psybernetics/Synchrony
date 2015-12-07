@@ -95,3 +95,29 @@ class NetworkPeerCollection(restful.Resource):
             pages.items[i]['node'] = (str(j['node'][0]), j['node'][1], j['node'][2])
 
         return make_response(request.url, pages, jsonify=False)
+
+    def post(self, network):
+        """
+        Hosts here is a comma-seperated list of ip:port pairs.
+        """
+        auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("hosts", type=str)
+        args = parser.parse_args()
+
+        routes = app.routes.get(network, None)
+        if not routes:
+            return {}, 404
+
+        # Get hosts as a list of "ip:port" strings
+        hosts = args.hosts.replace(" ", "").split(',')
+        def tuplify(host):
+            host = host.split(':')
+            return tuple([h[0], int(h[1])])
+        hosts = [tuplify(h) for h in hosts]
+
+        # Emulate RoutingTable.bootstrap
+        for host in hosts:
+            log("Pinging %s:%i" % host)
+            routes.protocol.rpc_ping(host)
+ 
