@@ -511,7 +511,7 @@ function peersView(){
             }
         });
 
-        $.get('/v1/peers', function(response){
+        $.get('/v1/networks', function(response){
             console.log(response.data);
             App.Views.peers.set("peers", response.data);
         });
@@ -1478,13 +1478,31 @@ function networkSettingsView(network){
 
         $.when(
             $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks', function(response){
-                App.Views.networksettings.set("permitted", response);
+                App.Views.networksettings.set("can_manage_networks", response);
+            }),
+            $.get('/v1/users/' + App.Config.user.username + '?can=browse_peers', function(response){
+                App.Views.networksettings.set("can_browse_peers", response);
             })
-        ).done(function(){
-            if (App.Views.networksettings.get("permitted") != true) {
+         ).done(function(){
+            if (App.Views.networksettings.get("can_manage_networks") != true) {
                 window.location.hash = "#";
                 return;
             }
         });
-    });
+
+        $.get("/v1/networks/" + network + "/peers", function(response){
+            console.log(response);
+            App.Views.networksettings.set("peers", response.data); 
+        });
+        $.get("/v1/networks/" + network, function(response){
+            console.log(response);
+            App.Views.networksettings.set("network", response); 
+        });
+        App.Views.networksettings.on({
+            select:  function(event, section){
+                console.log("hello.");
+            
+            }
+        });
+     });
 }
