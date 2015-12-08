@@ -1402,15 +1402,6 @@ function settingsView() {
                 } else if (type === "peer") {
 //                    var row = $('#' + type + '-' + index);
                 }
-/*              console.log(c);
-                var c = row.children();
-                console.log(c);
-                c = c[c.length -1]; */
-//               if ($('#' + type + '-' + index).css('visibility') === "hidden") {
-//                   $('#' + type + '-' + index).css('visibility','')
-//               } else {
-//                   $('#' + type + '-' + index).css('visibility','hidden')
-//               }
             },
             add_network: function(event){
                 if (event.original.keyCode == 13){
@@ -1499,10 +1490,54 @@ function networkSettingsView(network){
             App.Views.networksettings.set("network", response); 
         });
         App.Views.networksettings.on({
-            select:  function(event, section){
+            select:  function(event, type, index){
+                var row = $('#' + type + '-' + index);
+                var c = row.children();
+                c = c[c.length -1];
+                if ($('#delete-' + type + '-' + index).css('visibility') === "hidden") {
+                    $("#delete-" + type + "-" + index).css("visibility","");
+                } else {
+                    $("#delete-" + type + "-" + index).css("visibility","hidden");
+                }
+                // Also show the public key for this node.
+                if (type === "peer") {
+                    if ($('#pubkey-' + index).css('display') === "none") {
+                        $('#pubkey-' + index).css('display', 'inline');
+                    } else {
+                        $('#pubkey-' + index).css('display', 'none');
+                    }
+                }
                 console.log("hello.");
-            
-            }
+            },
+            delete: function(event, type, id) {
+                console.log(type);
+                console.log(id);
+            },
+            add_hosts: function(event) {
+                if (event.original.keyCode == 13) {
+                    event.original.preventDefault();
+                    var hosts   = this.get("hosts");
+                    var network = this.get("network");
+                    console.log(hosts);
+                    // post some hosts
+                    $.ajax({
+                        url:     "/v1/networks/" + network.name + "/peers",
+                        type:    "POST",
+                        data:    {"hosts": hosts},
+                        success: function(response){
+                            console.log(response)
+                            var peers = App.Views.networksettings.get("peers");
+                            if (peers === undefined) { peers = []; }
+                            peers = peers.concat(response);
+                            network.peers += response.length;
+                            App.Views.networksettings.set("hosts", "");
+                            App.Views.networksettings.set("peers", peers);
+                            App.Views.networksettings.set("network.peers", network.peers);
+                        },
+                        error:   function(response){}
+                    });
+                }
+            },
         });
      });
 }

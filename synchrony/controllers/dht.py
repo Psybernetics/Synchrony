@@ -545,9 +545,10 @@ class SynchronyProtocol(object):
             for peer in data['peers']:
                 if peer['node'][0] == self.source_node.long_id:
                     continue
-                node = Node(*peer['node'], pubkey=peer['pubkey'])
-                self.router.add_contact(node)
+                peer = Node(*peer['node'], pubkey=peer['pubkey'])
+                self.router.add_contact(peer)
 #                self.rpc_ping(node)
+        return node
 
     def rpc_chat(self, node, data):
         """
@@ -1065,12 +1066,16 @@ class Node(object):
         if other is None: return False
         return self.ip == other.ip and self.port == other.port 
 
-    def jsonify(self):
+    def jsonify(self, string_id=False):
         res = {}
         res['node']      = self.threeple
         res['trust']     = self.trust
         res['pubkey']    = self.pubkey
         res['last_seen'] = self.last_seen
+        if string_id:
+            res['node']    = list(res['node'])
+            res['node'][0] = str(res['node'][0])
+            res['node']    = tuple(res['node'])
         return res
 
 class NodeHeap(object):

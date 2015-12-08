@@ -1,6 +1,6 @@
 """
-Defines a paginated view of overlay networks the application is configured to
-see as legitimate.
+Defines network-related endpoints used in the settings and network settings
+views.
 """
 from synchrony import app
 import flask_restful as restful
@@ -66,7 +66,9 @@ class NetworkResource(restful.Resource):
     def get(self, network):
         auth(session, required=True)
         network = app.routes.get(network, None)
-        return network.jsonify() if network else ({}, 404)
+        if network == None:
+            return {}, 404
+        return network.jsonify()
 
 class NetworkPeerCollection(restful.Resource):
     """
@@ -88,11 +90,11 @@ class NetworkPeerCollection(restful.Resource):
  
         peers       = [peer for peer in routes]
         pages       = Pagination(peers, args.page, args.per_page)
-        pages.items = [p.jsonify() for p in pages.items]
+        pages.items = [p.jsonify(string_id=True) for p in pages.items]
 
         # Would like to make the following more elegant.
-        for i, j in enumerate(pages.items):
-            pages.items[i]['node'] = (str(j['node'][0]), j['node'][1], j['node'][2])
+#        for i, j in enumerate(pages.items):
+#            pages.items[i]['node'] = (str(j['node'][0]), j['node'][1], j['node'][2])
 
         return make_response(request.url, pages, jsonify=False)
 
@@ -100,13 +102,13 @@ class NetworkPeerCollection(restful.Resource):
         """
         Hosts here is a comma-seperated list of ip:port pairs.
         """
-        auth(session, required=True)
+        user   = auth(session, required=True)
         parser = restful.reqparse.RequestParser()
         parser.add_argument("hosts", type=str)
-        args = parser.parse_args()
+        args   = parser.parse_args()
 
         routes = app.routes.get(network, None)
-        if not routes:
+        if routes == None:
             return {}, 404
 
         if not user.can("manage_networks"):
@@ -115,12 +117,22 @@ class NetworkPeerCollection(restful.Resource):
         # Get hosts as a list of "ip:port" strings
         hosts = args.hosts.replace(" ", "").split(',')
         def tuplify(host):
+            if not ':' in host:
+                return
             host = host.split(':')
-            return tuple([h[0], int(h[1])])
+            return tuple([host[0], int(host[1])])
         hosts = [tuplify(h) for h in hosts]
 
         # Emulate RoutingTable.bootstrap
+        nodes = []
         for host in hosts:
+            if host == None: continue
             log("Pinging %s:%i" % host)
-            routes.protocol.rpc_ping(host)
- 
+            nodes.append(routes.protocol.rpc_ping(host))
+        
+        response = []
+        for node in nodes:
+            if node:
+               response.append(node.jsonify(string_id=True))
+
+        return response
