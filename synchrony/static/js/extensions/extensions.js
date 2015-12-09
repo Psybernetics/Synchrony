@@ -86,8 +86,4 @@ function timeStamp() {
 }
 */
 
-function timeStamp(ts) {
-	var m = moment.unix(ts);
-	return m.format('MMMM Do YYYY, h:mm:ss A');
 
-}

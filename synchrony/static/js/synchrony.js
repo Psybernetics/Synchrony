@@ -155,14 +155,20 @@ function linkUser(username){
     return '<a href="/#user/' + username + '">' + username + '</a>';
 }
 
-// Return a collection of documents with their modification times in english
-function upDate(docs){
-    var docs_copy = docs.slice(0);
-    for (var i = 0; i < docs.length; i++){
-        var ts = docs[i].modified;
-        docs_copy[i].modified = timeStamp(ts);
+function timeStamp(ts) {
+	var m = moment.unix(ts);
+	return m.format('MMMM Do YYYY, h:mm:ss A');
+}
+
+// Take an array and modify a timestamp field with momentjs
+function upDate(array, field){
+    var array_copy = array.slice(0);
+    for (var i = 0; i < array.length; i++){
+        var ts = array[i][field];
+        if (typeof ts != "number") { continue; }
+        array_copy[i][field] = timeStamp(ts);
     }
-    return docs_copy;
+    return array;
 }
 
 function pulseChat(){
@@ -1338,14 +1344,19 @@ function networkSettingsView(network){
             }
         });
 
+        // Get peers
         $.get("/v1/networks/" + network + "/peers", function(response){
             console.log(response);
-            App.Views.networksettings.set("peers", response.data); 
+            var peers = upDate(response.data, "last_seen")
+            App.Views.networksettings.set("peers", peers); 
         });
+
+        // Get network metadata
         $.get("/v1/networks/" + network, function(response){
             console.log(response);
             App.Views.networksettings.set("network", response); 
         });
+
         App.Views.networksettings.on({
             select:  function(event, type, index){
                 var row = $('#' + type + '-' + index);
@@ -1366,11 +1377,10 @@ function networkSettingsView(network){
                 }
             },
             delete: function(event, type, id) {
-                console.log(type);
-                console.log(id);
                 if (type === "network") {
+
                     var network = this.get("network");
-                    console.log(network);
+                    
                     $.ajax({
                         url:  "/v1/networks/" + network.name,
                         type: "DELETE",
@@ -1380,6 +1390,25 @@ function networkSettingsView(network){
                         error:   function(response){
                             console.log(response);
                         }
+                    });
+
+                } else if (type === "peer") {
+                    var peer    = this.get("peers")[id];
+                    var network = this.get("network.name");
+                    if (peer.node === undefined) { return; }
+                    $.ajax({
+                        url: "/v1/networks/" + network + "/peers",
+                        type: "DELETE",
+                        data: {
+                            id:   peer.node[0],
+                            ip:   peer.node[1],
+                            port: peer.node[2]
+                        },
+                        success: function(response){
+                            $('#pubkey-' + id).remove();
+                            $('#' + type + '-' + id).remove();
+                        },
+                        error:   function(response){}
                     });
                 }
             },
@@ -1399,6 +1428,7 @@ function networkSettingsView(network){
                             var peers = App.Views.networksettings.get("peers");
                             if (peers === undefined) { peers = []; }
                             peers = peers.concat(response);
+                            peers = upDate(peers, "last_seen");
                             network.peers += response.length;
                             App.Views.networksettings.set("hosts", "");
                             App.Views.networksettings.set("peers", peers);
