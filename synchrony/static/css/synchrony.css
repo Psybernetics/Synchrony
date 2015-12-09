@@ -844,5 +844,37 @@ a {
 }
 
 .blue {
-    color: #1252DA;
+/*  color: #1252DA; */
+    color: #275CCE;
+}
+
+.network_heading_container {
+    margin: 0 0 20px 0;
+}
+
+.network_heading {
+    position: inherit;
+    display: table;
+    margin: 0px 0px -2px 0px;
+}
+
+.network_status_holder {
+    padding: 5px;
+    display: table-cell;
+    vertical-align: middle;
+    line-height: 14px;
+}
+
+/* The button for deleting a network is
+ * always the zeroth if its type.
+ * Make it a foreboding dark red.*/
+#delete-network-0 {
+/*  background-color: #921B1B; */
+    background-color: #C70404;
+}
+
+.pubkey {
+    float: left;
+    text-align: center;
+    width: 190px;
 }

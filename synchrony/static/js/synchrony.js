@@ -92,7 +92,6 @@ App.Router = Backbone.Router.extend({
 //        'request':             'requestindex',
 //        'request/:resource':   'requestpage',
         'user/:username':      'userview',
-        'peers':               'peersview',
         'settings':            'settingsview',
         'settings/:network':   'networksettingsview',
         'chat':                'chatview',
@@ -107,7 +106,6 @@ App.Router = Backbone.Router.extend({
 //    requestindex:       requestIndex,
 //    requestresource:    requestView,
     userview:              userView,
-    peersview:             peersView,
     settingsview:          settingsView,
     networksettingsview:   networkSettingsView,
     chatview:              chatView,
@@ -471,147 +469,6 @@ function accountObjects(params){
             },
         });
 
-    });
-}
-
-function peersView(){
-    document.title = "Peer Browser" + App.title;
-    Ractive.load({
-        peers: 'peers.tmpl',
-    }).then(function(components){
-        if (!App.Config.user) {
-            location.hash = "login";
-        }
-
-        App.Views['peers'] = new components.peers({
-            el: $('.main'),
-            data: App.Config,
-            adaptor: ['Backbone'],
-        });
-
-        // Populate the page.
-        // Should be /v1/networks/<name>/peers
-        // We use two variables here, peers_permitted and downloads_permitted
-        // to determine which sections to display and whether to just navigate
-        // away from the view.
-        $.when(
-            $.get('/v1/users/' + App.Config.user.username + '?can=browse_peer_nodes',
-            function(response){
-                App.Views.peers.set("peers_permitted", response);
-            }),
-            $.get('/v1/users/' + App.Config.user.username + '?can=review_downloads',
-            function(response){
-                App.Views.peers.set("downloads_permitted", response);
-            })
-        ).done(function(){
-            // Navigate away from the view if neither section is permitted
-            if (App.Views.peers.get("peers_permitted") != true &&
-                App.Views.peers.get("downloads_permitted") != true) {
-                window.location.hash = "#";
-            }
-        });
-
-        $.get('/v1/peers', function(response){
-            console.log(response.data);
-            App.Views.peers.set("peers", response.data);
-        });
-
-        $.get('/v1/revisions/downloads', function(response){
-            console.log(response.data);
-            App.Views.peers.set("downloads", response.data);
-        });
-
-        if (App.Views.peers.get("showing_peers") === undefined) {
-            App.Views.peers.set("peers_button","Hide");
-            App.Views.peers.set("showing_peers",true);
-        }
-
-        if (App.Views.peers.get("showing_downloads") === undefined) {
-            App.Views.peers.set("downloads_button", "Show");
-        } else {
-            App.Views.peers.set("downloads_button", "Hide");
-        }
-
-        // POST /v1/revisions/downloads/<network>
-        // {reason: integer_severity_level}
-        App.Views.peers.on({
-            // button for show/hide section
-            toggle:  function(event, section){
-                var button = section + "_button";
-                var showing = App.Views.peers.get("showing_" + section);
-                if (showing === undefined) {
-                    App.Views.peers.set(button, "Hide");
-                    App.Views.peers.set("showing_" + section, true);
-                } else {
-                    App.Views.peers.set(button, "Show");
-                    App.Views.peers.set("showing_" + section, undefined);
-                }
-            },
-            // mouseover a url
-            select: function(event, type, index){
-                if (type === "url") {
-                    var index = event.node.parentElement.parentElement.id;
-                    var network = App.Views.peers.get("downloads." + index);
-//                    console.log(network);
-                    for (i in network.downloads) {
-                        var downloads = network.downloads[i];
-                        var url = Object.keys(downloads)[0];
-//                        console.log(downloads[url]);
-
-                        var hashes = new Array();
-
-                        for (k in Object.keys(downloads[url])) {
-                            var hash = Object.keys(downloads[url]);
-//                            console.log(hash[k]);
-//                            console.log(hash);
-                            hashes.push({"hash": hash[k], "peers": downloads[url][hash[k]]});
-                        }
-                        var selection = {
-                            "network": network.network,
-                            "url":  url,
-                            "hashes": hashes,
-                        };
-                        App.Views.peers.set("selection", selection);
-                    }
-                } else if (type === "peer") {
-//                    var row = $('#' + type + '-' + index);
-                }
-/*              console.log(c);
-                var c = row.children();
-                console.log(c);
-                c = c[c.length -1]; */
-//               if ($('#' + type + '-' + index).css('visibility') === "hidden") {
-//                   $('#' + type + '-' + index).css('visibility','')
-//               } else {
-//                   $('#' + type + '-' + index).css('visibility','hidden')
-//               }
-            },
-            // clicking a hash to mark as improper
-            decrement: function(event, hash){
-                var selection = App.Views.peers.get("selection");
-                console.log(selection);
-                $.ajax({
-                    url: "/v1/revisions/downloads/" + selection.network,
-                    type: "POST",
-                    data: {
-                        "url":  selection.url,
-                        "hash": hash,
-                        "severity": 1
-                    },
-                    success: function(response){
-                        $.get('/v1/peers', function(response){
-                            console.log(response.data);
-                            App.Views.peers.set("peers", response.data);
-                        });
-                        console.log(response);
-                    },
-                    error: function(response){
-                        var m = "Couldn't contact the server. Please try again later.";
-                        App.Views.peers.set("decrement_error", m);
-                    },
-                });
-            },
-       });
     });
 }
 
@@ -1402,15 +1259,6 @@ function settingsView() {
                 } else if (type === "peer") {
 //                    var row = $('#' + type + '-' + index);
                 }
-/*              console.log(c);
-                var c = row.children();
-                console.log(c);
-                c = c[c.length -1]; */
-//               if ($('#' + type + '-' + index).css('visibility') === "hidden") {
-//                   $('#' + type + '-' + index).css('visibility','')
-//               } else {
-//                   $('#' + type + '-' + index).css('visibility','hidden')
-//               }
             },
             add_network: function(event){
                 if (event.original.keyCode == 13){
@@ -1478,13 +1326,88 @@ function networkSettingsView(network){
 
         $.when(
             $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks', function(response){
-                App.Views.networksettings.set("permitted", response);
+                App.Views.networksettings.set("can_manage_networks", response);
+            }),
+            $.get('/v1/users/' + App.Config.user.username + '?can=browse_peers', function(response){
+                App.Views.networksettings.set("can_browse_peers", response);
             })
-        ).done(function(){
-            if (App.Views.networksettings.get("permitted") != true) {
+         ).done(function(){
+            if (App.Views.networksettings.get("can_manage_networks") != true) {
                 window.location.hash = "#";
                 return;
             }
         });
-    });
+
+        $.get("/v1/networks/" + network + "/peers", function(response){
+            console.log(response);
+            App.Views.networksettings.set("peers", response.data); 
+        });
+        $.get("/v1/networks/" + network, function(response){
+            console.log(response);
+            App.Views.networksettings.set("network", response); 
+        });
+        App.Views.networksettings.on({
+            select:  function(event, type, index){
+                var row = $('#' + type + '-' + index);
+                var c = row.children();
+                c = c[c.length -1];
+                if ($('#delete-' + type + '-' + index).css('visibility') === "hidden") {
+                    $("#delete-" + type + "-" + index).css("visibility","");
+                } else {
+                    $("#delete-" + type + "-" + index).css("visibility","hidden");
+                }
+                // Also show the public key for this node.
+                if (type === "peer") {
+                    if ($('#pubkey-' + index).css('display') === "none") {
+                        $('#pubkey-' + index).css('display', 'inline');
+                    } else {
+                        $('#pubkey-' + index).css('display', 'none');
+                    }
+                }
+            },
+            delete: function(event, type, id) {
+                console.log(type);
+                console.log(id);
+                if (type === "network") {
+                    var network = this.get("network");
+                    console.log(network);
+                    $.ajax({
+                        url:  "/v1/networks/" + network.name,
+                        type: "DELETE",
+                        success: function(response){
+                           window.location.hash = "settings";
+                        },
+                        error:   function(response){
+                            console.log(response);
+                        }
+                    });
+                }
+            },
+            add_hosts: function(event) {
+                if (event.original.keyCode == 13) {
+                    event.original.preventDefault();
+                    var hosts   = this.get("hosts");
+                    var network = this.get("network");
+                    console.log(hosts);
+                    // post some hosts
+                    $.ajax({
+                        url:     "/v1/networks/" + network.name + "/peers",
+                        type:    "POST",
+                        data:    {"hosts": hosts},
+                        success: function(response){
+                            console.log(response)
+                            var peers = App.Views.networksettings.get("peers");
+                            if (peers === undefined) { peers = []; }
+                            peers = peers.concat(response);
+                            network.peers += response.length;
+                            App.Views.networksettings.set("hosts", "");
+                            App.Views.networksettings.set("peers", peers);
+                            App.Views.networksettings.set("network.peers", network.peers);
+                        },
+                        error:   function(response){}
+                    });
+                }
+            },
+        });
+     });
 }

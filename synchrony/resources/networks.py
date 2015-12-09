@@ -1,6 +1,6 @@
 """
-Defines a paginated view of overlay networks the application is configured to
-see as legitimate.
+Defines network-related endpoints used in the settings and network settings
+views.
 """
 from synchrony import app
 import flask_restful as restful
@@ -66,29 +66,105 @@ class NetworkResource(restful.Resource):
     def get(self, network):
         auth(session, required=True)
         network = app.routes.get(network, None)
-        return network.jsonify() if network else {}, 404
+        if network == None:
+            return {}, 404
+        return network.jsonify()
+
+    def delete(self, network):
+        """
+        Remove a network.
+        """
+        user   = auth(session, required=True)
+        routes = app.routes.get(network, None)
+        if routes == None:
+            return {}, 404
+
+        if not user.can("manage_networks"):
+            return {}, 403
+
+        log("%s is removing network \"%s\"." % (user.username, network))
+        app.routes.leave(network)
 
 class NetworkPeerCollection(restful.Resource):
     """
     Retrieve the peer nodes we know of for a specific network.
+
+    Node IDs are changed to strings to represent them without change on the
+    frontend.
     """
     def get(self, network):
-        """
-        Currently returns /all/ peers we know of,
-        but it should be a paginated resource.
-        """
         auth(session, required=True)
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",     type=int, required=False, default=1)
-        parser.add_argument("per_page", type=int, required=False, default=10)
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
         args = parser.parse_args()
 
         routes = app.routes.get(network, None)
         if not routes:
             return {}, 404
  
-        peers = [peer for peer in routes]
-        pages = Pagination(peers, args.page, args.per_page)
-        return make_response(request.url, pages)
+        peers       = [peer for peer in routes]
+        pages       = Pagination(peers, args.page, args.per_page)
+        pages.items = [p.jsonify(string_id=True) for p in pages.items]
 
+        # Would like to make the following more elegant.
+#        for i, j in enumerate(pages.items):
+#            pages.items[i]['node'] = (str(j['node'][0]), j['node'][1], j['node'][2])
+
+        return make_response(request.url, pages, jsonify=False)
+
+    def post(self, network):
+        """
+        Hosts here is a comma-seperated list of ip:port pairs.
+        """
+        user   = auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("hosts", type=str)
+        args   = parser.parse_args()
+
+        routes = app.routes.get(network, None)
+        if routes == None:
+            return {}, 404
+
+        if not user.can("manage_networks"):
+            return {}, 403
+
+        # Get hosts as a list of "ip:port" strings
+        hosts = args.hosts.replace(" ", "").split(',')
+        def tuplify(host):
+            if not ':' in host:
+                return
+            host = host.split(':')
+            return tuple([host[0], int(host[1])])
+        hosts = [tuplify(h) for h in hosts]
+
+        # Emulate RoutingTable.bootstrap
+        nodes = []
+        for host in hosts:
+            if host == None: continue
+            log("Pinging %s:%i" % host)
+            nodes.append(routes.protocol.rpc_ping(host))
+        
+        response = []
+        for node in nodes:
+            if node:
+               response.append(node.jsonify(string_id=True))
+
+        return response
+
+    def delete(self, network):
+        """
+        Remove a peer.
+        """
+        user   = auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("hosts", type=str)
+        args   = parser.parse_args()
+
+        routes = app.routes.get(network, None)
+        if routes == None:
+            return {}, 404
+
+        if not user.can("manage_networks"):
+            return {}, 403
 

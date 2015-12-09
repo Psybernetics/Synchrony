@@ -1,7 +1,69 @@
 <div class="view">
-    <ul>
-        <li>Delete network</li>
-        <li>Show peers (toggle remove)</li>
-        <li>Bootstrap a peer to the network</li>
-    </ul>
-</div>
+    {{#network}}
+    <div on-mouseover="select:{{"network"}},0" on-mouseout="select:{{"network"}},0" class="network_heading_container">
+        <div class="network_heading">
+            <span class="title">{{network.name}}</span>
+            <div class="network_status_holder">
+            {{#if network.private}}Private.{{else}}Public.{{/if}}<br />
+            {{network.peers}} peers.
+            </div>
+        </div>
+        <span>
+            Node ID: {{network.node_id}}
+            {{#can_manage_networks}}
+            <button id="delete-network-0" style="visibility:hidden" class="button pull-right" on-click="delete:{{"network"}}">Delete</button>
+            {{/can_manage_networks}}
+        </span>
+    </div>
+    {{/network}}
+
+    {{#peers.length}}
+    <table>
+        <tbody>
+            <tr>
+                <td>Node ID</td>
+                <td>IP</td>
+                <td>Port</td>
+                <td id="pubkey_heading" style="display:none;">Public Key</td>
+                <td>Trust</td>
+                <td>Last Seen</td>
+                <td></td>
+            </tr>
+            {{#peers}}
+            <tr on-mouseover="select:{{"peer"}},{{@index}}" on-mouseout="select:{{"peer"}},{{@index}}" id="peer-{{@index}}">
+                {{#node}}
+                <td>{{this}}</td>
+                {{/node}}
+                <td>{{trust}}</td>
+                <td>{{last_seen}}</td>
+                <td id="delete-peer-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"peer"}},{{@index}}">Delete</button></td>
+            </tr>
+            <span id="pubkey-{{@index}}" class="pubkey" style="display:none;">{{pubkey}}</span>
+            {{/peers}}
+        </tbody>
+    </table>
+    <div class="center">
+        {{#peers_back_available}}
+        <a on-click="back:{{"peers"}}">Back</a>
+            {{#peers_forward_available}}
+            /
+            {{/peers_forward_available}}
+        {{/peers_back_available}}
+        {{#peers_forward_available}}
+        <a on-click="forward:{{"peers"}}">Forward</a>
+        {{/peers_forward_available}}
+    </div>
+    {{/peers.length}}
+    {{#network}}
+    <h4>Add new peers</h4>
+    <input class="main_addressbar" on-keydown="add_hosts" value="{{hosts}}" spellcheck="false" placeholder="address:port, address:port, ...">
+    {{/network}}
+    {{^network}}
+    <h3>Unknown network.</h3>
+    {{#if can_manage_networks}}
+    Do you want the <a href="/#settings">settings page</a>?
+    {{else}}
+    Probably best to go <a href="/#">home</a>.
+    {{/if}}
+    {{/network}}
+ </div>
