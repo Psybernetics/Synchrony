@@ -155,10 +155,16 @@ class NetworkPeerCollection(restful.Resource):
     def delete(self, network):
         """
         Remove a peer.
+
+        Assembles a nodeple and uses RoutingTable.get_existing_node and
+        RoutingTable.remove_node to remove a peer and stop republishing
+        their keys.
         """
         user   = auth(session, required=True)
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("hosts", type=str)
+        parser.add_argument("id",   type=str, required=True)
+        parser.add_argument("ip",   type=str, required=True)
+        parser.add_argument("port", type=int, required=True)
         args   = parser.parse_args()
 
         routes = app.routes.get(network, None)
@@ -167,4 +173,13 @@ class NetworkPeerCollection(restful.Resource):
 
         if not user.can("manage_networks"):
             return {}, 403
+
+        node = [long(args.id), args.ip, args.port]
+        node = routes.get_existing_node(node)
+        if node == None:
+            return {}, 404
+
+        routes.remove_node(node)
+        return True
+
 

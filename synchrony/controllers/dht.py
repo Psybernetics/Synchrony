@@ -371,7 +371,7 @@ class RoutingTable(object):
         """
         Return a reference to a node if we already have it as a contact.
         """
-        if isinstance(node, list):
+        if isinstance(node, list) or isinstance(node, tuple):
             node = Node(*node)
         if not self.is_new_node(node):
             # Try finding the node by its id
