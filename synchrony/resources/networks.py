@@ -70,6 +70,21 @@ class NetworkResource(restful.Resource):
             return {}, 404
         return network.jsonify()
 
+    def delete(self, network):
+        """
+        Remove a network.
+        """
+        user   = auth(session, required=True)
+        routes = app.routes.get(network, None)
+        if routes == None:
+            return {}, 404
+
+        if not user.can("manage_networks"):
+            return {}, 403
+
+        log("%s is removing network \"%s\"." % (user.username, network))
+        app.routes.leave(network)
+
 class NetworkPeerCollection(restful.Resource):
     """
     Retrieve the peer nodes we know of for a specific network.
@@ -136,3 +151,20 @@ class NetworkPeerCollection(restful.Resource):
                response.append(node.jsonify(string_id=True))
 
         return response
+
+    def delete(self, network):
+        """
+        Remove a peer.
+        """
+        user   = auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("hosts", type=str)
+        args   = parser.parse_args()
+
+        routes = app.routes.get(network, None)
+        if routes == None:
+            return {}, 404
+
+        if not user.can("manage_networks"):
+            return {}, 403
+

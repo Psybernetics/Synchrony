@@ -844,7 +844,8 @@ a {
 }
 
 .blue {
-    color: #1252DA;
+/*  color: #1252DA; */
+    color: #275CCE;
 }
 
 .network_heading_container {

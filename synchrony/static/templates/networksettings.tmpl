@@ -11,7 +11,7 @@
         <span>
             Node ID: {{network.node_id}}
             {{#can_manage_networks}}
-            <button id="delete-network-0" style="visibility:hidden" class="button pull-right">Delete</button>
+            <button id="delete-network-0" style="visibility:hidden" class="button pull-right" on-click="delete:{{"network"}}">Delete</button>
             {{/can_manage_networks}}
         </span>
     </div>
