@@ -317,7 +317,7 @@ class RoutingTable(object):
         for node in self:
             threads.append(gevent.spawn(self.protocol.rpc_leaving, node))
         if threads:
-            log("Telling peers we're leaving the network.")
+            log("%s: Telling peers we're leaving the network." % self.network)
         gevent.joinall(threads)
 
     def split(self, index):
@@ -545,9 +545,10 @@ class SynchronyProtocol(object):
             for peer in data['peers']:
                 if peer['node'][0] == self.source_node.long_id:
                     continue
-                node = Node(*peer['node'], pubkey=peer['pubkey'])
-                self.router.add_contact(node)
+                peer = Node(*peer['node'], pubkey=peer['pubkey'])
+                self.router.add_contact(peer)
 #                self.rpc_ping(node)
+        return node
 
     def rpc_chat(self, node, data):
         """
@@ -1065,12 +1066,16 @@ class Node(object):
         if other is None: return False
         return self.ip == other.ip and self.port == other.port 
 
-    def jsonify(self):
+    def jsonify(self, string_id=False):
         res = {}
         res['node']      = self.threeple
         res['trust']     = self.trust
         res['pubkey']    = self.pubkey
         res['last_seen'] = self.last_seen
+        if string_id:
+            res['node']    = list(res['node'])
+            res['node'][0] = str(res['node'][0])
+            res['node']    = tuple(res['node'])
         return res
 
 class NodeHeap(object):
@@ -1403,7 +1408,7 @@ class TableTraverser(object):
         index = table.get_bucket_for(start_node)
         table.buckets[index].touch_last_updated()
         self.current_nodes = table.buckets[index].get_nodes()
-        self.left_buckets = table.buckets[:index]
+        self.left_buckets  = table.buckets[:index]
         self.right_buckets = table.buckets[(index+1):]
         self.left = True
 
@@ -1491,6 +1496,13 @@ class Routers(object):
     @property
     def routes_available(self):
         return self.routes != {}
+
+    def leave(self, key):
+        router = self.get(key)
+        if router == None:
+            return
+        router.leave_network()
+        del self.routes[key]
 
     def leave_networks(self):
         """
