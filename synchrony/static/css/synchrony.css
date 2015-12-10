@@ -320,6 +320,11 @@ label { display: inline-block; }
     padding: 5px 20px;
 /*  width: 500px; */
 }
+.index_table > tbody > tr > td {
+	border-top: 0px;
+    padding: 0px 0px 5px 0px;
+    width: 85%;
+}
 
 .view table {
     width: 100%;

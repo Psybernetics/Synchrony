@@ -3,8 +3,14 @@
     <hr />
     <h2>Accounts <button on-click="toggle:{{"accounts"}}" class="button big_button pull-right">{{accounts_button}}</button></h2>
     {{#showing_accounts}}
+        {{#toggle_signups_permitted}}
+        <form>
+            <h4>Allow new accounts</h4>
+            <label><input on-click="toggle_signups:{{true}}" type="radio" checked="{{signups_allow}}">Allow</label>
+            <label><input on-click="toggle_signups:{{false}}" type="radio" checked="{{signups_deny}}">Deny</label>
+        </form>
+        {{/toggle_signups_permitted}}
     <ul>
-        <li>Toggle permit new signups</li>
         <li>List users (toggle active, delete)</li>
     </ul>
     {{/showing_accounts}}
@@ -28,11 +34,16 @@
                 <td>Private</td>
             </tr>
     {{#networks}}
-            <tr>
+            <tr on-mouseover="select:{{"network"}},{{@index}}" on-mouseout="select:{{"network"}},{{@index}}" id="network-{{@index}}">
                 <td><a href="/#settings/{{name}}">{{name}}</a></td>
                 <td>{{node_id}}</td>
                 <td>{{peers}}</td>
-                <td>{{#if private}}Yes{{else}}No{{/if}}</td>
+                <td id="public-network-{{@index}}">
+                    <span id="public-network-text-{{@index}}">{{#if private}}Yes{{else}}No{{/if}}</span>
+                    <button on-click="toggle_public:{{@index}}" style="visibility:hidden" class="button big_button" id="public-network-button-{{@index}}">
+                        {{#if private}}Private{{else}}Public{{/if}}
+                    </button>
+                </td>
             </tr>
     {{/networks}}
         </tbody>
@@ -106,5 +117,9 @@
     {{/downloads_permitted}}
     <h2>Open Proxy <button on-click="toggle:{{"open"}}" class="button big_button pull-right">{{open_button}}</button></h2>
     {{#showing_open}}
-    {{/showing_open}}
+     <form action="">
+        <label><input type="radio" name="{{signups}}" value="Allow" checked>Open</label>
+        <label><input type="radio" name="{{signups}}" value="Deny">Closed</label>
+    </form>
+   {{/showing_open}}
  </div>

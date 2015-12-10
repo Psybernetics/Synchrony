@@ -99,11 +99,11 @@ def init():
     init_user_groups()
 
     # Attach HTTP endpoints
-    from synchrony.resources import revisions
-    from synchrony.resources import networks
-    from synchrony.resources import domains
     from synchrony.resources import users
     from synchrony.resources import peers
+    from synchrony.resources import domains
+    from synchrony.resources import networks
+    from synchrony.resources import revisions
 
     api.add_resource(networks.NetworkCollection,            "/networks")
     api.add_resource(networks.NetworkResource,              "/networks/<string:network>")
