@@ -9,8 +9,8 @@
  the process messages go through before being received by
  their counterpart methods in the protocol class.
 
- The basic gist of how this file works is that between it and peers.py it
- implements an overlay network heavily based on a system called Kademlia.
+ The basic gist of how this file works is that between it and peers.py they
+ implement an overlay network heavily based Kademlia.
  If you're coming to this without having read the original paper take a couple
  of days to really grok it, hopefully it won't take that long because you have
  this software.
@@ -458,7 +458,7 @@ class RoutingTable(object):
 
         hashed_url = digest(url)
 
-        log("Adjusting local storage table.")
+        log("Adjusting local reference.")
         self.protocol.storage[hexlify(hashed_url)] = (content_hash, self.node)
 
         def store(nodes):
