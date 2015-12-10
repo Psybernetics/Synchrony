@@ -5,7 +5,7 @@
     {{#showing_accounts}}
         {{#toggle_signups_permitted}}
         <form>
-            <h4>Allow new accounts</h4>
+            <h4>Permit new signups</h4>
             <label><input on-click="toggle_signups:{{true}}" type="radio" checked="{{signups_allow}}">Allow</label>
             <label><input on-click="toggle_signups:{{false}}" type="radio" checked="{{signups_deny}}">Deny</label>
         </form>
@@ -17,10 +17,10 @@
     <h2>Groups <button on-click="toggle:{{"groups"}}" class="button big_button pull-right">{{groups_button}}</button></h2>
     {{#showing_groups}}
     <ul>
-        <li>Show groups</li>
+        <li>Show groups (toggle delete)</li>
+        <li>Create groups</li>
         <li>Move privs between groups</li>
         <li>Move users between groups</li>
-        <li>Delete groups</li>
     </ul>
     {{/showing_groups}}
     <h2>Networks <button on-click="toggle:{{"networks"}}" class="button big_button pull-right">{{networks_button}}</button></h2>
@@ -117,7 +117,9 @@
     {{/downloads_permitted}}
     <h2>Open Proxy <button on-click="toggle:{{"open"}}" class="button big_button pull-right">{{open_button}}</button></h2>
     {{#showing_open}}
-     <form action="">
+    This setting determines whether an account is needed in order to use the /request/&lt;path:url&gt; endpoint
+    on this server.
+    <form>
         <label><input type="radio" name="{{signups}}" value="Allow" checked>Open</label>
         <label><input type="radio" name="{{signups}}" value="Deny">Closed</label>
     </form>

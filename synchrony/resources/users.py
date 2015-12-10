@@ -62,7 +62,7 @@ class UserCollection(restful.Resource):
         
         user = User(args.username, args.password)
 
-        # First user is an admin
+        # Add the first-created  user account to the Administrators group
         if not User.query.first():
             group = UserGroup.query.filter(UserGroup.name == "Administrators").first()
         else:
@@ -85,11 +85,18 @@ class UserCollection(restful.Resource):
     def post(self):
         """
         Modify system behavior in relation to user accounts.
+
+        This method is responsible for toggling the PERMIT_NEW_USER_ACCOUNTS
+        option during runtime.
+
+        This method may also be responsible for toggling OPEN_PROXY during
+        runtime...
         """
         user = auth(session, required=True)
         
         parser = reqparse.RequestParser()
-        parser.add_argument("signups", type=bool, default=None)
+        parser.add_argument("signups",    type=bool, default=None)
+        parser.add_argument("open_proxy", type=bool, default=None)
         args = parser.parse_args()
 
         if args.signups != None:
