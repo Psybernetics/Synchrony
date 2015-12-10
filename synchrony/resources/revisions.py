@@ -136,22 +136,22 @@ class RevisionDownloadsResource(restful.Resource):
         return [f for f in routes.protocol.downloads]
 
     def post(self, network):
-        user = auth(session, required=True)
-
+        """
+        Decrements a peers trust rating and deletes the offending revision.
+        """
+        user   = auth(session, required=True)
         parser = restful.reqparse.RequestParser()
         parser.add_argument("url",      type=str, required=True)
         parser.add_argument("hash",     type=str, required=True)
         parser.add_argument("severity", type=int, required=True)
-        args = parser.parse_args()
-
-        # TODO: delete the revision in question.
+        args   = parser.parse_args()
 
         if not user.can("review_downloads"):
             return {}, 403
 
         routes = app.routes.get(network, None)
         if not routes:
-            return {}, 404
+            return "Network not found.", 404
 
         hashes = routes.protocol.downloads.get(args.url)
         if not hashes:
@@ -159,7 +159,15 @@ class RevisionDownloadsResource(restful.Resource):
 
         addr = hashes.get(args.hash, None)
         if not addr:
-            return {}, 404
+            return "Peer not found.", 404
+
+        # Delete the revision in question by hash
+        revision = Revision.query.filter(Revision.hash == args.hash).first()
+        if not revision:
+            return "Revision not found.", 404
+
+        db.session.delete(revision)
+        db.session.commit()
 
         # Too severe, Enhance Your Calm
         if args.severity > 100:
@@ -168,7 +176,7 @@ class RevisionDownloadsResource(restful.Resource):
         success = routes.protocol.decrement_trust(addr, args.severity)
         # Peer is 410 Gone
         if not success:
-            return {}, 410
+            return "Peer had already left.", 410
 
         return {}, 200
 

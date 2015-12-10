@@ -155,18 +155,19 @@ function linkUser(username){
     return '<a href="/#user/' + username + '">' + username + '</a>';
 }
 
-function timeStamp(ts) {
+function timeStamp(ts, toNow) {
 	var m = moment.unix(ts);
+    if (toNow == true) { return m.toNow(true); }
 	return m.format('MMMM Do YYYY, h:mm:ss A');
 }
 
 // Take an array and modify a timestamp field with momentjs
-function upDate(array, field){
+function upDate(array, field, toNow){
     var array_copy = array.slice(0);
     for (var i = 0; i < array.length; i++){
         var ts = array[i][field];
         if (typeof ts != "number") { continue; }
-        array_copy[i][field] = timeStamp(ts);
+        array_copy[i][field] = timeStamp(ts, toNow);
     }
     return array;
 }
@@ -342,14 +343,15 @@ function indexView(page){
 
         // Get the initial set of visible revisions
         function populate_revision_table(url){
-            $.get(url, function(data){
+            $.get(url, function(response){
                 App.Views.index.set("paging_error", undefined);
-                App.Views.index.set("revisions", data.data);
-                App.Views.index.revisions = data;
+                response.data = upDate(response.data, "created", true);
+                App.Views.index.set("revisions", response.data);
+                App.Views.index.revisions = response;
 
                 // back_available in index.tmpl
-                if (data.links.hasOwnProperty("self")) {
-                    var url = data.links.self.split('page=')[1];
+                if (response.links.hasOwnProperty("self")) {
+                    var url = response.links.self.split('page=')[1];
                     if (url != undefined) {
                         // Change the url hash to reflect subpage
                         window.location.hash = "/" + url;
@@ -362,7 +364,7 @@ function indexView(page){
                 }
 
                 // forward_available in index.tmpl
-                if (data.links.hasOwnProperty("next")) {
+                if (response.links.hasOwnProperty("next")) {
                     App.Views.index.set("forward_available", true);
                 }
             }).fail(function(){
@@ -380,8 +382,7 @@ function indexView(page){
         App.Views.index.on({
 
             forward: function(event){
-                var url = this.revisions.links.next;
-                populate_revision_table(url);
+                populate_revision_table(this.revisions.links.next);
             },
             back:    function(event){
                 var url = this.revisions.links.self.split('page=');
@@ -1071,6 +1072,13 @@ function loginView() {
             adaptor: ['Backbone']
         });
     }).then(function(components){
+
+        
+        // Tell the template whether to display the signup form
+        $.get("/v1/users?signups=1", function(response){
+            App.Views.login.set("new_accounts", response);
+        });
+        
         App.Views.login.on({
             login: function(event){
 
@@ -1164,7 +1172,18 @@ function settingsView() {
         // to determine which sections to display and whether to just navigate
         // away from the view.
         $.when(
-            $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks',
+            $.get("/v1/users?signups=1", function(response){
+                if (response == true) {
+                    App.Views.settings.set({signups_allow: true});
+                } else {
+                    App.Views.settings.set({signups_deny: true});
+                }
+            }),
+            $.get('/v1/users/' + App.Config.user.username + '?can=toggle_signups',
+            function(response){
+                App.Views.settings.set("toggle_signups_permitted", response);
+            }),
+             $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks',
             function(response){
                 App.Views.settings.set("networks_permitted", response);
             }),
@@ -1262,9 +1281,42 @@ function settingsView() {
                         };
                         App.Views.settings.set("selection", selection);
                     }
-                } else if (type === "peer") {
+                } else if (type === "network") {
+                    console.log(type);
+                    console.log(index);
 //                    var row = $('#' + type + '-' + index);
                 }
+            },
+            toggle_signups: function(event, permit){
+                if (permit) {
+                    $.ajax({
+                        url: "/v1/users",
+                        type: "POST",
+                        data: {signups: true},
+                        success: function(response){
+                            App.Views.settings.set({signups_allow: true});
+                            App.Views.settings.set({signups_deny: null});
+                         },
+                        error:   function(response){
+                            App.Views.settings.set({signups_allow: true});
+                            App.Views.settings.set({signups_deny: null});
+                         }
+                    });
+               } else {
+                    $.ajax({
+                        url: "/v1/users",
+                        type: "POST",
+                        data: {signups: null},
+                        success: function(response){
+                            App.Views.settings.set({signups_allow: null});
+                            App.Views.settings.set({signups_deny: true});
+                         },
+                        error:   function(response){
+                            App.Views.settings.set({signups_allow: true});
+                            App.Views.settings.set({signups_deny: null});
+                         }
+                    });
+                 }
             },
             add_network: function(event){
                 if (event.original.keyCode == 13){
@@ -1299,6 +1351,7 @@ function settingsView() {
                     success: function(response){
                         $.get('/v1/peers', function(response){
                             console.log(response.data);
+                            App.Views.settings.set("selection", undefined);
                             App.Views.settings.set("peers", response.data);
                         });
                         console.log(response);
@@ -1330,11 +1383,17 @@ function networkSettingsView(network){
             return;
         }
 
+        // Again, it's handy that the ?can parameter to /v1/users/<username>
+        // returns a truthy response.
         $.when(
-            $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks', function(response){
+            $.get('/v1/users/' + App.Config.user.username + '?can=manage_networks',
+            function(response){
+
                 App.Views.networksettings.set("can_manage_networks", response);
             }),
-            $.get('/v1/users/' + App.Config.user.username + '?can=browse_peers', function(response){
+            $.get('/v1/users/' + App.Config.user.username + '?can=browse_peers',
+            function(response){
+         
                 App.Views.networksettings.set("can_browse_peers", response);
             })
          ).done(function(){

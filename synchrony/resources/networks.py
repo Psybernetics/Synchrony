@@ -21,11 +21,13 @@ class NetworkCollection(restful.Resource):
         routes      = app.routes.values()
         pages       = Pagination(routes, args.page, args.per_page)
         response    = make_response(request.url, pages)
-        peer_count  = 0
 
+        # Calculate the number of unique nodes we know of
+        peers = []
         for router in routes:
-            peer_count   += len(router)
-        response['peers'] = peer_count
+            peers.extend([peer.threeple for peer in router])
+        peers = set(peers)
+        response['peers'] = len(peers)
 
         return response
 
@@ -69,6 +71,25 @@ class NetworkResource(restful.Resource):
         if network == None:
             return {}, 404
         return network.jsonify()
+
+    def post(self, network):
+        """
+        Toggle network attributes
+        """
+        user   = auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("public", type=bool, required=True)
+        args = parser.parse_args()
+
+        routes = app.routes.get(network, None)
+        if routes == None:
+            return {}, 404
+
+        if not user.can("manage_networks"):
+            return {}, 403
+
+        routes.public = args.bool
+        return routes.jsonify()
 
     def delete(self, network):
         """

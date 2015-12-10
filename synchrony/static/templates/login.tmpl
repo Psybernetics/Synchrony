@@ -1,5 +1,5 @@
 <div class="row main_inner dark_text">
-<span class="dark title">Log in or create an account</span>
+<span class="dark title">Log in{{#if new_accounts}} or create an account{{else}} for great success{{/if}}</span>
 <div class="col-md-6">
 <form class="form-horizontal" name="create">
  <div class="form-group">
@@ -20,6 +20,7 @@
   </div>
 </form>
 </div>
+{{#if new_accounts}}
 <div class="col-md-6">
 <form class="form-horizontal" name="create">
   <div class="form-group">
@@ -45,5 +46,6 @@
   </div>
 </form>
 </div>
+{{/if}}
 <div class="login-message">{{message}}</div>
 </div>

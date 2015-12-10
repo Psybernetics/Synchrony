@@ -12,3 +12,6 @@ OPEN_PROXY = True
 # to reduce the time taken before the system decides to check
 # peers and the database:
 HTTP_TIMEOUT = 1.00
+
+# Allow people to register accounts on the login screen
+PERMIT_NEW_ACCOUNTS = True
