@@ -5,12 +5,12 @@
     <input class="main_addressbar" on-keydown="request" value="{{url}}" spellcheck="false" placeholder="URL"/>
 </div>
 <div class="index_overview">
-    <table class="wide table">
+    <table class="index_table">
         <tbody>
             {{#revisions}}
             <tr>
                 <td><a href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
-                <td>{{mimetype}}</td>
+                <td>{{created}} ago</td>
                 <td><a id="dark-text" href="#user/{{user}}">{{user}}</a></td>
             </tr>
             {{/revisions}}

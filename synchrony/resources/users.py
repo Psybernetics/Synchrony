@@ -1,8 +1,8 @@
 # This file defines the API endpoints for users and sessions
 import time
 from sqlalchemy import desc
-from synchrony import db, log
 import flask_restful as restful
+from synchrony import app, db, log
 from flask import request, session
 from flask_restful import reqparse
 from synchrony.controllers.auth import auth
@@ -17,13 +17,20 @@ class UserCollection(restful.Resource):
         """
         Paginated access to users
         """
-        user = auth(session, required=True)
-        
         parser = reqparse.RequestParser()
         parser.add_argument("me", type=bool, default=None)
+        parser.add_argument("signups", type=bool, default=None)
         parser.add_argument("page",type=int, help="", required=False, default=1)
         parser.add_argument("per_page",type=int, help="", required=False, default=10)
         args = parser.parse_args()
+
+        # Let unauthenticated users see if the can register an account
+        if args.signups:
+            if "PERMIT_NEW_ACCOUNTS" in app.config:
+                return app.config["PERMIT_NEW_ACCOUNTS"]
+            return None
+        
+        user = auth(session, required=True)
 
         if args.me:
             s = Session.query.filter(Session.session_id == session['session']).first()
@@ -48,6 +55,10 @@ class UserCollection(restful.Resource):
 
         if User.query.filter(User.username == args.username).first():
             return {'message':"Username already in use."}, 304
+       
+        if "PERMIT_NEW_ACCOUNTS" in app.config and \
+            not app.config["PERMIT_NEW_ACCOUNTS"]:
+            return {"message":"This server isn't allowing new accounts at this time."}, 304
         
         user = User(args.username, args.password)
 
@@ -70,6 +81,22 @@ class UserCollection(restful.Resource):
 
         session['session'] = s.session_id
         return s.jsonify()
+
+    def post(self):
+        """
+        Modify system behavior in relation to user accounts.
+        """
+        user = auth(session, required=True)
+        
+        parser = reqparse.RequestParser()
+        parser.add_argument("signups", type=bool, default=None)
+        args = parser.parse_args()
+
+        if args.signups != None:
+            if not user.can("toggle_signups"):
+                return {}, 403
+            app.config["PERMIT_NEW_ACCOUNTS"] = args.signups
+            return app.config["PERMIT_NEW_ACCOUNTS"]
 
 class UserResource(restful.Resource):
     """
