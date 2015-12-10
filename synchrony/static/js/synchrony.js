@@ -5,9 +5,6 @@
 
 TODO:
 
-DELETE  /v1/users/:name/sessions
-
-/v1/request/:url   Resource status metadata
 /request/:url      Raw resource
 /#request/:url     JavaScript to load /request/:url into .content
 
@@ -32,7 +29,6 @@ We can then monitor events in the iframe.
  Account View (sessions, bio, undelete)
  Account Pages View (search, histories)
  Renaming based on checking availability
- Installation docs
  A favicon.ico
  Compress the javascript includes to a single file.
 
@@ -72,10 +68,10 @@ We can then monitor events in the iframe.
 Ractive.load.baseUrl = '/static/templates/';
 
 // Tell Backbone where our API endpoints are for documents.
-App.Document  = Backbone.Model.extend({urlRoot: '/v1/pages' });
-App.Documents = Backbone.Collection.extend({
+App.Revision  = Backbone.Model.extend({urlRoot: '/v1/revisions' });
+App.Revisions = Backbone.Collection.extend({
     model: App.Document,
-    url: '/v1/pages',
+    url: '/v1/revisions',
     paginate: function(perPage, page) {
         page = page - 1;
         var collection = this;
@@ -90,7 +86,7 @@ App.Router = Backbone.Router.extend({
     routes: {
         '':                    'index',
 //        'request':             'requestindex',
-//        'request/:resource':   'requestpage',
+//        'request/:resource':   'requestresource',
         'user/:username':      'userview',
         'settings':            'settingsview',
         'settings/:network':   'networksettingsview',
@@ -104,7 +100,7 @@ App.Router = Backbone.Router.extend({
 //    Attributes -> functions in the environment
     index:                 indexView,
 //    requestindex:       requestIndex,
-//    requestresource:    requestView,
+//    requestresource:       requestView,
     userview:              userView,
     settingsview:          settingsView,
     networksettingsview:   networkSettingsView,
@@ -417,7 +413,6 @@ function logout(){
         }
     });
 }
-
 
 function accountObjects(params){
 
