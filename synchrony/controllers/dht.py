@@ -142,6 +142,7 @@ import requests
 from io import BytesIO
 from hashlib import sha1
 from copy import deepcopy
+from sqlalchemy import and_
 from gevent import Greenlet
 from synchrony import app, db
 from gevent.coros import RLock
@@ -152,10 +153,9 @@ from gevent.greenlet import Greenlet
 from gevent.event import AsyncResult
 from synchrony.controllers import utils
 from binascii import hexlify, unhexlify
-from synchrony.models import Peer, Revision
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
-
+from synchrony.models import Peer, Revision, User, Friend
 class RoutingTable(object):
     """
     Routing is based on representative members of lists ("buckets") and an XOR
@@ -575,10 +575,10 @@ class SynchronyProtocol(object):
         message = {"rpc_add_friend": {"from": local_uid, "to": remote_uid}}
 
         response = transmit(self.router, node, message)
-        if not isinstance(response, dict) or not "message" in response:
+        if not isinstance(response, dict) or not "response" in response:
             return False
 
-        return response['message']
+        return response['response']
 
     def rpc_chat(self, node, data):
         """
@@ -692,7 +692,7 @@ class SynchronyProtocol(object):
                 ds.append(self.call_store(node, key, value))
         return ds
 
-     # handle_* methods (generally) indicate a request initiated by a peer node.
+    # handle_* methods (generally) indicate a request initiated by a peer node.
 
     def handle_ping(self, data):
         node = self.read_envelope(data)
@@ -700,13 +700,35 @@ class SynchronyProtocol(object):
         return envelope(self.router, {'ping':"pong"})
 
     def handle_add_friend(self, data):
-        if not "rpc_add_friend" in data: return False
-        log(data)
-        request = data['rpc_add_friend']
-        node    = self.read_envelope(data)
-        log(request)
-        log(node)
-        return envelope(self.router, {"message": "Hello!"})
+        """
+        Match to UID and return our Friend instance
+        """
+        if not "rpc_add_friend" in data:
+            return False
+
+        log(data, "debug")
+        request   = data['rpc_add_friend']
+
+        if not "from" in request or not "to" in request:
+            return False
+
+        node         = self.read_envelope(data)
+        user         = User.query.filter(User.uid == request['to']).first()
+        if not user: return None
+        from_addr    = "/".join([self.router.network, str(node.long_id), request['from']])
+        friend       =  Friend.query.filter(
+                            and_(Friend.address == from_addr, Friend.user == user)
+                        ).first()
+        if friend:
+            return envelope(self.router, {"response": friend.jsonify()})
+        
+        friend       = Friend(address=from_addr)
+        friend.state = 1
+        user.friends.append(friend)
+        db.session.add(friend)
+        db.session.add(user)
+        db.session.commit()
+        return envelope(self.router, {"response": friend.jsonify()})
 
     def handle_chat(self, data):
         self.read_envelope(data)

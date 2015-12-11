@@ -443,7 +443,7 @@ class Friend(db.Model):
     id            = db.Column(db.Integer(), primary_key=True)
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
     name          = db.Column(db.String())
-    status        = db.Column(db.Integer(), default=0)
+    state         = db.Column(db.Integer(), default=0)
     address       = db.Column(db.String())
     created       = db.Column(db.DateTime, default=db.func.now())
     states        = {
@@ -454,9 +454,9 @@ class Friend(db.Model):
                     }
 
     def parse_status(self):
-        if not self.status:
+        if not self.state:
             return self.states[0]
-        return self.states.get(self.status, None)
+        return self.states.get(self.state, None)
 
     def __repr__(self):
         if self.address and self.user:

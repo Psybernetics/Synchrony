@@ -356,14 +356,16 @@ class UserFriendsCollection(restful.Resource):
             Friend.user == user)).first():
             return {}, 304
 
-        friend      = Friend(address=args.address)
-        friend.name = args.name
-#        user.friends.append(friend)
+        friend       = Friend(address=args.address)
+        friend.name  = args.name
+        friend.state = 1
+        user.friends.append(friend)
 
-#        db.session.add(user)
-#        db.session.add(friend)
-#        db.session.commit()
+        db.session.add(user)
+        db.session.add(friend)
+        db.session.commit()
 
+        return response, 201
         return friend.jsonify(), 201
 
     def post(self, username):
