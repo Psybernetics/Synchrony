@@ -154,7 +154,8 @@ function linkUser(username){
 function timeStamp(ts, toNow) {
 	var m = moment.unix(ts);
     if (toNow == true) { return m.toNow(true); }
-	return m.format('MMMM Do YYYY, h:mm:ss A');
+	return m.format('MMMM Do YYYY, H:mm:ss');
+//	return m.format('MMMM Do YYYY, h:mm:ss A');
 }
 
 // Take an array and modify a timestamp field with momentjs
@@ -163,7 +164,8 @@ function upDate(array, field, toNow){
     for (var i = 0; i < array.length; i++){
         var ts = array[i][field];
         if (typeof ts != "number") { continue; }
-        array_copy[i][field] = timeStamp(ts, toNow);
+        array_copy[i].timestamp = ts;
+        array_copy[i][field]    = timeStamp(ts, toNow);
     }
     return array;
 }
@@ -656,7 +658,7 @@ function userView(username, params){
                     $.ajax({
                         url:  '/v1/users/' + App.Config.user.username + '/sessions',
                         type: "DELETE",
-                        data: {timestamp: session.created},
+                        data: {timestamp: session.timestamp},
                         success: function(response){
                             // Remove the row on success.
                             $('#' + type + '-' + index).remove();

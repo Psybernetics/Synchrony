@@ -50,13 +50,15 @@
     {{#showing_friends}}
     <table>
        <tbody>
-            <tr>
+<!--
+           <tr>
                 <td>Address</td>
                 <td>Name</td>
                 <td>State</td>
                 <td>Created</td>
                 <td></td>
             </tr>
+            -->
             {{#friends}}
             <tr on-mouseover="select:{{"friend"}},{{@index}}" on-mouseout="select:{{"friend"}},{{@index}}" id="friend-{{@index}}">
                 <td>{{address}}</td>
