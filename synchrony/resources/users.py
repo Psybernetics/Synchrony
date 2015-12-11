@@ -1,7 +1,7 @@
 # This file defines the API endpoints for users and sessions
 import time
-from sqlalchemy import desc
 import flask_restful as restful
+from sqlalchemy import and_, desc
 from synchrony import app, db, log
 from flask import request, session
 from flask_restful import reqparse
@@ -24,7 +24,7 @@ class UserCollection(restful.Resource):
         parser.add_argument("per_page",type=int, help="", required=False, default=10)
         args = parser.parse_args()
 
-        # Let unauthenticated users see if the can register an account
+        # Let unauthenticated users see if they can register an account
         if args.signups:
             if "PERMIT_NEW_ACCOUNTS" in app.config:
                 return app.config["PERMIT_NEW_ACCOUNTS"]
@@ -329,12 +329,42 @@ class UserFriendsCollection(restful.Resource):
         user = auth(session, required=True)
 
         parser = reqparse.RequestParser()
-        parser.add_argument("name",    type=str)
+        parser.add_argument("name",    type=str, default="")
         parser.add_argument("address", type=str, required=True)
         args = parser.parse_args()
 
-        return {}
-        return {}, 201
+        # Parse the address and contact the node in question.
+        # node = NodeSpider(node)
+        # rpc_add_friend      {to: uid, from:uid}
+        # handle_add_friend   {from: uid, to:uid, confirm:true}
+        if args.address.count("/") != 2:
+            return False
+
+        network, node_id, remote_uid = args.address.split("/")
+        router = app.routes.get(network, None)
+        if router == None:
+            return {}, 404
+
+        log("%s is adding a remote friend." % user.username)
+        response = router.protocol.rpc_add_friend(user.uid, args.address)
+
+        if not response:
+            return {}, 404
+        log(response)
+
+        if Friend.query.filter(and_(Friend.address == args.address,
+            Friend.user == user)).first():
+            return {}, 304
+
+        friend      = Friend(address=args.address)
+        friend.name = args.name
+#        user.friends.append(friend)
+
+#        db.session.add(user)
+#        db.session.add(friend)
+#        db.session.commit()
+
+        return friend.jsonify(), 201
 
     def post(self, username):
         """

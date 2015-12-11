@@ -513,6 +513,7 @@ class SynchronyProtocol(object):
         Also requires a storage object.
         Check RoutingTable.__init__ out to see how that looks.
         """
+        self.ksize         = ksize
         self.router        = router
         self.storage       = storage
         self.source_node   = source_node
@@ -549,6 +550,35 @@ class SynchronyProtocol(object):
                 self.router.add_contact(peer)
 #                self.rpc_ping(node)
         return node
+
+    def rpc_add_friend(self, local_uid, addr):
+        """
+        Implements ADD_FRIEND where we find the node in addr and
+        tell them a local user wants to add the remote UID as a friend.
+        """
+        if addr.count("/") != 2: return
+        network, node_id, remote_uid = addr.split("/")
+        node = Node(long(node_id))
+        
+        nearest = self.router.find_neighbours(node)
+        if len(nearest) == 0:
+            log("There are no neighbours to help us add users on %s as friends." % node_id)
+            return False
+        spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
+        nodes   = spider.find()
+
+        if len(nodes) != 1:
+            return False
+
+        node    = nodes[0]
+        log("Found remote instance %s." % node)
+        message = {"rpc_add_friend": {"from": local_uid, "to": remote_uid}}
+
+        response = transmit(self.router, node, message)
+        if not isinstance(response, dict) or not "message" in response:
+            return False
+
+        return response['message']
 
     def rpc_chat(self, node, data):
         """
@@ -668,6 +698,15 @@ class SynchronyProtocol(object):
         node = self.read_envelope(data)
         log("Received rpc_ping from %s." % node)
         return envelope(self.router, {'ping':"pong"})
+
+    def handle_add_friend(self, data):
+        if not "rpc_add_friend" in data: return False
+        log(data)
+        request = data['rpc_add_friend']
+        node    = self.read_envelope(data)
+        log(request)
+        log(node)
+        return envelope(self.router, {"message": "Hello!"})
 
     def handle_chat(self, data):
         self.read_envelope(data)
