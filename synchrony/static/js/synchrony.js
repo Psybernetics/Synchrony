@@ -5,9 +5,6 @@
 
 TODO:
 
-DELETE  /v1/users/:name/sessions
-
-/v1/request/:url   Resource status metadata
 /request/:url      Raw resource
 /#request/:url     JavaScript to load /request/:url into .content
 
@@ -32,7 +29,6 @@ We can then monitor events in the iframe.
  Account View (sessions, bio, undelete)
  Account Pages View (search, histories)
  Renaming based on checking availability
- Installation docs
  A favicon.ico
  Compress the javascript includes to a single file.
 
@@ -72,10 +68,10 @@ We can then monitor events in the iframe.
 Ractive.load.baseUrl = '/static/templates/';
 
 // Tell Backbone where our API endpoints are for documents.
-App.Document  = Backbone.Model.extend({urlRoot: '/v1/pages' });
-App.Documents = Backbone.Collection.extend({
+App.Revision  = Backbone.Model.extend({urlRoot: '/v1/revisions' });
+App.Revisions = Backbone.Collection.extend({
     model: App.Document,
-    url: '/v1/pages',
+    url: '/v1/revisions',
     paginate: function(perPage, page) {
         page = page - 1;
         var collection = this;
@@ -90,7 +86,7 @@ App.Router = Backbone.Router.extend({
     routes: {
         '':                    'index',
 //        'request':             'requestindex',
-//        'request/:resource':   'requestpage',
+//        'request/:resource':   'requestresource',
         'user/:username':      'userview',
         'settings':            'settingsview',
         'settings/:network':   'networksettingsview',
@@ -104,7 +100,7 @@ App.Router = Backbone.Router.extend({
 //    Attributes -> functions in the environment
     index:                 indexView,
 //    requestindex:       requestIndex,
-//    requestresource:    requestView,
+//    requestresource:       requestView,
     userview:              userView,
     settingsview:          settingsView,
     networksettingsview:   networkSettingsView,
@@ -418,7 +414,6 @@ function logout(){
     });
 }
 
-
 function accountObjects(params){
 
     document.title = "Your pages" + App.title;
@@ -508,6 +503,7 @@ function userView(username, params){
             $.get(url, function(data){
                 // Update the DOM on success
                 App.Views.userpage.set(table_type + "_paging_error", undefined);
+                data.data = upDate(data.data, "created");
                 App.Views.userpage.set(table_type, data.data);
                 App.Views.userpage[table_type] = data;
 
@@ -534,14 +530,15 @@ function userView(username, params){
         }
 
         // Populate the user address line
-        $.get('/v1/networks', function(data){
-            if (data.data.length > 0){
-                console.log(data.data);
-                var network = data.data[0].name;
-                var node_id = data.data[0].node_id;
-                App.Views.userpage.set("network", network);
-                App.Views.userpage.set("node_id", node_id);
-                App.Views.userpage.set("uid", App.Config.user.uid);
+        $.get('/v1/networks', function(response){
+            if (response.data.length > 0){
+                var addresses = [];
+                for (var i = 0; i < response.data.length; i++) {
+                    var address = response.data[i].name + "/" + response.data[i].node_id;
+                    address     = address + "/" + App.Config.user.uid;
+                    addresses.push(address);
+                }
+                App.Views.userpage.set("user_addresses", addresses);
             }
         });
 
@@ -561,6 +558,7 @@ function userView(username, params){
             App.Views.userpage.set("showing_password",  undefined);
 
             populate_table("revisions", "/v1/users/" + username + "/revisions");
+            populate_table("friends",   "/v1/users/" + username + "/friends");
             populate_table("sessions",  "/v1/users/" + username + "/sessions");
         }
 
@@ -669,7 +667,27 @@ function userView(username, params){
             add_friend:      function(event){
                 if (event.original.keyCode == 13){
                     event.original.preventDefault();
-                    console.log(this.get("friend_addr"));
+                    var addr   = App.Views.userpage.get("friend_addr");
+                    var count  = (addr.match(/\//g) || []).length;
+                    if (count != 2) {
+                        App.Views.userpage.set("friend_addr", "");
+                        App.Views.userpage.set("add_friend_message", "Invalid address.");
+                        setTimeout(function(){
+                            App.Views.userpage.set("add_friend_message","")
+                        }, 8000);
+                        return;
+                    }
+                    $.ajax({
+                        url: "/v1/users/" + App.Config.user.username + "/friends" ,
+                        type: "PUT",
+                        data: {address: addr},
+                        success: function(response){
+                            console.log(response);
+                        },
+                        error:   function(response){
+                            console.log(response);
+                        }
+                    });
                 }
             },
             change_password: function(event){

@@ -99,5 +99,5 @@ def mock_transmit(routes, addr, data):
                 return
             return rpc_method(data)
 
-def mock_fetch_revision(content_hash, nodes):
+def mock_fetch_revision(url, content_hash, nodes):
     return  Revision.query.filter(Revision.hash == content_hash).first()

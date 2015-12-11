@@ -437,14 +437,42 @@ class Session(db.Model):
 
 class Friend(db.Model):
     """
-    Represents Users' a friend by their uid@node_id address.
+    Represents a Users' friend by their network/node_id/uid address.
     """
     __tablename__ = "friends"
-    id = db.Column(db.Integer(), primary_key=True)
-    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
-    address = db.Column(db.String())
-    name    = db.Column(db.String())
-    created = db.Column(db.DateTime, default=db.func.now())
+    id            = db.Column(db.Integer(), primary_key=True)
+    user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    name          = db.Column(db.String())
+    state         = db.Column(db.Integer(), default=0)
+    address       = db.Column(db.String())
+    created       = db.Column(db.DateTime, default=db.func.now())
+    states        = {
+                        0: "Uninitialised",
+                        1: "Pending",
+                        2: "Added",
+                        3: "Blocked"
+                    }
+
+    def parse_status(self):
+        if not self.state:
+            return self.states[0]
+        return self.states.get(self.state, None)
+
+    def __repr__(self):
+        if self.address and self.user:
+            return "<Friend of %s %s>" % (self.user.username, self.address)
+        return "<Friend>"
+
+    def jsonify(self):
+        response = {}
+        response['name']     = self.name
+        response['status']   = self.parse_status()
+        response['address']  = self.address
+        if self.created:
+            response['created']  = time.mktime(self.created.timetuple())
+        if self.user:
+            response['user'] = self.user.username
+        return response
 
 class Peer(db.Model):
     """
