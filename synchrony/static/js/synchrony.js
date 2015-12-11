@@ -503,6 +503,7 @@ function userView(username, params){
             $.get(url, function(data){
                 // Update the DOM on success
                 App.Views.userpage.set(table_type + "_paging_error", undefined);
+                data.data = upDate(data.data, "created");
                 App.Views.userpage.set(table_type, data.data);
                 App.Views.userpage[table_type] = data;
 
@@ -529,14 +530,15 @@ function userView(username, params){
         }
 
         // Populate the user address line
-        $.get('/v1/networks', function(data){
-            if (data.data.length > 0){
-                console.log(data.data);
-                var network = data.data[0].name;
-                var node_id = data.data[0].node_id;
-                App.Views.userpage.set("network", network);
-                App.Views.userpage.set("node_id", node_id);
-                App.Views.userpage.set("uid", App.Config.user.uid);
+        $.get('/v1/networks', function(response){
+            if (response.data.length > 0){
+                var addresses = [];
+                for (var i = 0; i < response.data.length; i++) {
+                    var address = response.data[i].name + "/" + response.data[i].node_id;
+                    address     = address + "/" + App.Config.user.uid;
+                    addresses.push(address);
+                }
+                App.Views.userpage.set("user_addresses", addresses);
             }
         });
 
@@ -556,6 +558,7 @@ function userView(username, params){
             App.Views.userpage.set("showing_password",  undefined);
 
             populate_table("revisions", "/v1/users/" + username + "/revisions");
+            populate_table("friends",   "/v1/users/" + username + "/friends");
             populate_table("sessions",  "/v1/users/" + username + "/sessions");
         }
 

@@ -48,18 +48,52 @@
 
     <h2>Friends<button on-click="toggle:{{"friends"}}" class="button big_button pull-right">{{friends_button}}</button></h2>
     {{#showing_friends}}
-    <div class="center">Your address: {{network}}/{{node_id}}/{{uid}}</div>
+    <table>
+       <tbody>
+            <tr>
+                <td>Address</td>
+                <td>Name</td>
+                <td>State</td>
+                <td>Created</td>
+                <td></td>
+            </tr>
+            {{#friends}}
+            <tr on-mouseover="select:{{"friend"}},{{@index}}" on-mouseout="select:{{"friend"}},{{@index}}" id="friend-{{@index}}">
+                <td>{{address}}</td>
+                <td>{{name}}</td>
+                <td>{{status}}</td>
+                <td>{{created}}</td>
+                <td id="delete-delete-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"friend"}},{{@index}}">Delete</button></td>
+            </tr>
+            {{/friends}}
+            {{^friends}}:-({{/friends}}
+        </tbody>
+    </table>
+    <div class="center">
+        {{#friends_back_available}}
+        <a on-click="back:{{"revisions"}}">Back</a>
+            {{#friends_forward_available}}
+            /
+            {{/friends_forward_available}}
+        {{/friends_back_available}}
+        {{#friends_forward_available}}
+        <a on-click="forward:{{"revisions"}}">Forward</a>
+        {{/friends_forward_available}}
+    </div>
+    {{#friends_paging_error}}Server unavailable.Try refreshing the page.{{/friends_paging_error}}
+    <br />
     <table>
         <tbody>
-            <tr>
-                <td>{{name}}</td>
-            </tr>
+            {{#user_addresses}}
+            <tr><td>{{#if @index == 0}}Your addresses:{{/if}}</td><td>{{this}}</td></tr>
+            {{/user_addresses}}
         </tbody>
     </table>
     {{!Technically an address bar..}}
     <input class="main_addressbar" on-keydown="add_friend" value="{{friend_addr}}" spellcheck="false" placeholder="Network / Node ID / User ID">
     {{add_friend_message}}
     {{/showing_friends}}
+
     <h2>Sessions<button on-click="toggle:{{"sessions"}}" class="button big_button pull-right">{{sessions_button}}</button></h2>
     {{#showing_sessions}}
     <table>
@@ -68,6 +102,7 @@
             <tr on-mouseover="select:{{"session"}},{{@index}}" on-mouseout="select:{{"session"}},{{@index}}" id="session-{{@index}}">
                 <td>{{ip}}</td>
                 <td>{{user_agent}}</td>
+                <td>{{created}}</td>
                 <td id="delete-session-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"session"}},{{@index}}">Delete</button></td>
             </tr>
             {{/sessions}}
