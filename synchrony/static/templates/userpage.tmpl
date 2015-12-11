@@ -60,7 +60,10 @@
             {{#friends}}
             <tr on-mouseover="select:{{"friend"}},{{@index}}" on-mouseout="select:{{"friend"}},{{@index}}" id="friend-{{@index}}">
                 <td>{{address}}</td>
-                <td>{{name}}</td>
+                <td on-mouseover="toggle_rename:{{"friend"}},{{@index}}" on-mouseout="toggle_rename:{{"friend"}},{{@index}}">
+                    <input id="friend-rename-{{@index}}" style="display:none" on-keydown="rename:{{"friend"}},{{@index}}" value="{{name}}"/>
+                    <span  id="friend-name-{{@index}}">{{name}}</span>
+                </td>
                 <td>{{status}}</td>
                 <td>{{created}}</td>
                 <td id="delete-delete-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"friend"}},{{@index}}">Delete</button></td>
