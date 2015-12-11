@@ -1277,27 +1277,27 @@ function settingsView() {
             // mouseover a url
             select: function(event, type, index){
                 if (type === "url") {
-                    var index = event.node.parentElement.parentElement.id;
-                    var network = App.Views.settings.get("downloads." + index);
-                    for (i in network.downloads) {
+                    var network_index = event.node.parentElement.parentElement.id;
+                    var network       = App.Views.settings.get("downloads." + network_index);
+                    console.log(network.downloads);
+                    for (var i = 0; i < network.downloads.length; i++) {
                         var downloads = network.downloads[i];
                         var url = Object.keys(downloads)[0];
-//                        console.log(downloads[url]);
-
-                        var hashes = new Array();
-
-                        for (k in Object.keys(downloads[url])) {
-                            var hash = Object.keys(downloads[url]);
-//                            console.log(hash[k]);
-//                            console.log(hash);
-                            hashes.push({"hash": hash[k], "peers": downloads[url][hash[k]]});
+                        if (url == index) {
+                            // Get downloaded versions of this url (can be multiple hashes)
+                            var hashes = new Array();
+                            for (j in Object.keys(downloads[url])) {
+                                var hash = Object.keys(downloads[url]);
+                                hashes.push({"hash": hash[j], "peers": downloads[url][hash[j]]});
+                            }
+                            var selection = {
+                                "network": network.network,
+                                "url":  url,
+                                "hashes": hashes,
+                            };
+                            console.log(hashes);
+                            App.Views.settings.set("selection", selection);
                         }
-                        var selection = {
-                            "network": network.network,
-                            "url":  url,
-                            "hashes": hashes,
-                        };
-                        App.Views.settings.set("selection", selection);
                     }
                 } else if (type === "network") {
                     console.log(type);
