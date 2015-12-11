@@ -142,6 +142,7 @@ import requests
 from io import BytesIO
 from hashlib import sha1
 from copy import deepcopy
+from sqlalchemy import and_
 from gevent import Greenlet
 from synchrony import app, db
 from gevent.coros import RLock
@@ -152,10 +153,9 @@ from gevent.greenlet import Greenlet
 from gevent.event import AsyncResult
 from synchrony.controllers import utils
 from binascii import hexlify, unhexlify
-from synchrony.models import Peer, Revision
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
-
+from synchrony.models import Peer, Revision, User, Friend
 class RoutingTable(object):
     """
     Routing is based on representative members of lists ("buckets") and an XOR
@@ -513,6 +513,7 @@ class SynchronyProtocol(object):
         Also requires a storage object.
         Check RoutingTable.__init__ out to see how that looks.
         """
+        self.ksize         = ksize
         self.router        = router
         self.storage       = storage
         self.source_node   = source_node
@@ -549,6 +550,35 @@ class SynchronyProtocol(object):
                 self.router.add_contact(peer)
 #                self.rpc_ping(node)
         return node
+
+    def rpc_add_friend(self, local_uid, addr):
+        """
+        Implements ADD_FRIEND where we find the node in addr and
+        tell them a local user wants to add the remote UID as a friend.
+        """
+        if addr.count("/") != 2: return
+        network, node_id, remote_uid = addr.split("/")
+        node = Node(long(node_id))
+        
+        nearest = self.router.find_neighbours(node)
+        if len(nearest) == 0:
+            log("There are no neighbours to help us add users on %s as friends." % node_id)
+            return False
+        spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
+        nodes   = spider.find()
+
+        if len(nodes) != 1:
+            return False
+
+        node    = nodes[0]
+        log("Found remote instance %s." % node)
+        message = {"rpc_add_friend": {"from": local_uid, "to": remote_uid}}
+
+        response = transmit(self.router, node, message)
+        if not isinstance(response, dict) or not "response" in response:
+            return False
+
+        return response['response']
 
     def rpc_chat(self, node, data):
         """
@@ -662,12 +692,43 @@ class SynchronyProtocol(object):
                 ds.append(self.call_store(node, key, value))
         return ds
 
-     # handle_* methods (generally) indicate a request initiated by a peer node.
+    # handle_* methods (generally) indicate a request initiated by a peer node.
 
     def handle_ping(self, data):
         node = self.read_envelope(data)
         log("Received rpc_ping from %s." % node)
         return envelope(self.router, {'ping':"pong"})
+
+    def handle_add_friend(self, data):
+        """
+        Match to UID and return our Friend instance
+        """
+        if not "rpc_add_friend" in data:
+            return False
+
+        log(data, "debug")
+        request   = data['rpc_add_friend']
+
+        if not "from" in request or not "to" in request:
+            return False
+
+        node         = self.read_envelope(data)
+        user         = User.query.filter(User.uid == request['to']).first()
+        if not user: return None
+        from_addr    = "/".join([self.router.network, str(node.long_id), request['from']])
+        friend       =  Friend.query.filter(
+                            and_(Friend.address == from_addr, Friend.user == user)
+                        ).first()
+        if friend:
+            return envelope(self.router, {"response": friend.jsonify()})
+        
+        friend       = Friend(address=from_addr)
+        friend.state = 1
+        user.friends.append(friend)
+        db.session.add(friend)
+        db.session.add(user)
+        db.session.commit()
+        return envelope(self.router, {"response": friend.jsonify()})
 
     def handle_chat(self, data):
         self.read_envelope(data)

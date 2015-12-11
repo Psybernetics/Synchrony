@@ -664,7 +664,27 @@ function userView(username, params){
             add_friend:      function(event){
                 if (event.original.keyCode == 13){
                     event.original.preventDefault();
-                    console.log(this.get("friend_addr"));
+                    var addr   = App.Views.userpage.get("friend_addr");
+                    var count  = (addr.match(/\//g) || []).length;
+                    if (count != 2) {
+                        App.Views.userpage.set("friend_addr", "");
+                        App.Views.userpage.set("add_friend_message", "Invalid address.");
+                        setTimeout(function(){
+                            App.Views.userpage.set("add_friend_message","")
+                        }, 8000);
+                        return;
+                    }
+                    $.ajax({
+                        url: "/v1/users/" + App.Config.user.username + "/friends" ,
+                        type: "PUT",
+                        data: {address: addr},
+                        success: function(response){
+                            console.log(response);
+                        },
+                        error:   function(response){
+                            console.log(response);
+                        }
+                    });
                 }
             },
             change_password: function(event){
