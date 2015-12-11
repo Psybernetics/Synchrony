@@ -639,8 +639,8 @@ function userView(username, params){
                      });
                  }
             }, 
-            delete:        function(event, type, index){
-                if        (type === "revision") {
+            delete: function(event, type, index){
+                if (type === "revision") {
                     var revision = this.get('revisions')[index];
                     console.log(revision);
                     $.ajax({
@@ -664,7 +664,39 @@ function userView(username, params){
                     });
                   }
             },
-            add_friend:      function(event){
+            rename: function(event, type, index){
+                if (event.original.keyCode == 13){
+                    event.original.preventDefault();
+                    if (type == "friend") {
+                        var friend = App.Views.userpage.get("friends")[index];
+                        console.log(friend);
+                        $.ajax({
+                            url: "/v1/users/" + App.Config.user.username + "/friends",
+                            type: "POST",
+                            data: {
+                                    "address": friend.address,
+                                    "name":    friend.name
+                            },
+                            success: function(response){
+                                console.log(response);
+                            },
+                            error:   function(response){
+                                console.log(response);
+                            }
+                        });
+                    }
+                }
+            },
+            toggle_rename: function(event, type, index){
+                if ($("#friend-rename-" + index).css("display") == "none") {
+                    $("#friend-name-" + index).css("display", "none"); 
+                    $("#friend-rename-" + index).css("display", "inline"); 
+                } else {
+                    $("#friend-name-" + index).css("display", "inline");
+                    $("#friend-rename-" + index).css("display", "none"); 
+                }
+            },
+            add_friend: function(event){
                 if (event.original.keyCode == 13){
                     event.original.preventDefault();
                     var addr   = App.Views.userpage.get("friend_addr");
