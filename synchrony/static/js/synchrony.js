@@ -664,38 +664,50 @@ function userView(username, params){
                             $('#' + type + '-' + index).remove();
                         }
                     });
-                  }
+                }
             },
             rename: function(event, type, index){
                 if (event.original.keyCode == 13){
                     event.original.preventDefault();
                     if (type == "friend") {
-                        var friend = App.Views.userpage.get("friends")[index];
+                        var friends   = App.Views.userpage.get("friends");
+                        var friend    = friends[index];
+                        var new_name = App.Views.userpage.get("new_name");
                         console.log(friend);
                         $.ajax({
                             url: "/v1/users/" + App.Config.user.username + "/friends",
                             type: "POST",
                             data: {
                                     "address": friend.address,
-                                    "name":    friend.name
+                                    "name":    new_name
                             },
                             success: function(response){
+                                friend.name    = new_name;
+                                friends[index] = friend;
+                                App.Views.userpage.set("friends", friends);
                                 console.log(response);
                             },
                             error:   function(response){
-                                console.log(response);
+                                var friends    = App.Views.userpage.get("friends");
+                                friend.name    = "";
+                                friends[index] = friend;
+                                App.Views.userpage.set("friends", friends);
                             }
                         });
                     }
                 }
             },
             toggle_rename: function(event, type, index){
-                if ($("#friend-rename-" + index).css("display") == "none") {
-                    $("#friend-name-" + index).css("display", "none"); 
-                    $("#friend-rename-" + index).css("display", "inline"); 
-                } else {
-                    $("#friend-name-" + index).css("display", "inline");
-                    $("#friend-rename-" + index).css("display", "none"); 
+                if (type == "friend"){
+                    if ($("#friend-rename-" + index).css("display") == "none") {
+                        var friend = App.Views.userpage.get("friends")[index];
+                        App.Views.userpage.set("new_name", friend.name);
+                        $("#friend-name-"   + index).css("display", "none"); 
+                        $("#friend-rename-" + index).css("display", "inline");
+                    } else {
+                        $("#friend-name-" + index).css("display", "inline");
+                        $("#friend-rename-" + index).css("display", "none"); 
+                    }
                 }
             },
             add_friend: function(event){

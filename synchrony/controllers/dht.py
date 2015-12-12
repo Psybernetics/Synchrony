@@ -211,11 +211,11 @@ class RoutingTable(object):
         seed    = "%s:%i:%s" % (addr,port,pubkey)
 
         self.node = Node(id or utils.generate_node_id(seed),
-                         addr,
-                         port,
-                         pubkey)
+                addr,
+                port,
+                pubkey)
 
-#        log(self.node.long_id)
+        #        log(self.node.long_id)
         self.buckets  = [KBucket(0, 2 ** 160, self.ksize)]
         self.protocol = SynchronyProtocol(self, self.node, Storage(), ksize)
 
@@ -235,7 +235,7 @@ class RoutingTable(object):
         """
         Executes on program startup.
         Check for unresponsive nodes and republish keys every 24 hours.
-        
+
         Please note that exceptions raised in any of the functions called here 
         can cause this method to cease recursing if not handled.
         """
@@ -258,16 +258,16 @@ class RoutingTable(object):
             timing = timing / 8
             timing = timing / 3
         # 2 hours:
-        elif peers <= 500:
-            timing = timing / 4
+    elif peers <= 500:
+        timing = timing / 4
             timing = timing / 3
         # 6 hours:
-        elif peers <= 1500:
-            timing = timing / 2
+    elif peers <= 1500:
+        timing = timing / 2
 
         hours = (timing / 60) / 60
         log("Pinging peers and republishing keys in %i hour%s." % \
-            (hours,'s' if hours > 1 else ''))
+                (hours,'s' if hours > 1 else ''))
         self.timer = self.httpd.loop.timer(timing)
         self.timer.start(self.loop)
 
@@ -424,13 +424,13 @@ class RoutingTable(object):
             return None
         # Unfortunately long list of arguments but it helps us map {url: peer_who_served}
         spider = ValueSpider(
-                    self.protocol,
-                    node,
-                    nearest,
-                    self.ksize,
-                    self.alpha,
-                    url
-                 )
+                self.protocol,
+                node,
+                nearest,
+                self.ksize,
+                self.alpha,
+                url
+                )
         # If spider.find() returns a revision object then it's only this method
         # that can associate it with the correct Resource and Domain.
         return spider.find()
@@ -553,13 +553,14 @@ class SynchronyProtocol(object):
 
     def rpc_add_friend(self, local_uid, addr):
         """
+        addr is of the form "network_name/node_id/remote_user_id"
         Implements ADD_FRIEND where we find the node in addr and
         tell them a local user wants to add the remote UID as a friend.
         """
         if addr.count("/") != 2: return
         network, node_id, remote_uid = addr.split("/")
         node = Node(long(node_id))
-        
+
         nearest = self.router.find_neighbours(node)
         if len(nearest) == 0:
             log("There are no neighbours to help us add users on %s as friends." % node_id)
