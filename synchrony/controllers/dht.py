@@ -258,18 +258,18 @@ class RoutingTable(object):
             timing = timing / 8
             timing = timing / 3
         # 2 hours:
-    elif peers <= 500:
-        timing = timing / 4
+        elif peers <= 500:
+            timing = timing / 4
             timing = timing / 3
-        # 6 hours:
-    elif peers <= 1500:
-        timing = timing / 2
-
-        hours = (timing / 60) / 60
-        log("Pinging peers and republishing keys in %i hour%s." % \
-                (hours,'s' if hours > 1 else ''))
-        self.timer = self.httpd.loop.timer(timing)
-        self.timer.start(self.loop)
+            # 6 hours:
+        elif peers <= 1500:
+            timing = timing / 2
+     
+            hours = (timing / 60) / 60
+            log("Pinging peers and republishing keys in %i hour%s." % \
+                    (hours,'s' if hours > 1 else ''))
+            self.timer = self.httpd.loop.timer(timing)
+            self.timer.start(self.loop)
 
     def bootstrap(self, addrs):
         """

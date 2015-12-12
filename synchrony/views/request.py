@@ -24,5 +24,5 @@ class RequestView(BaseView):
         else:
             if 'html' in revision.mimetype:
                 revision.content = parser.parse(revision.content, 'http://' + url)
-        
+
         return revision.as_response

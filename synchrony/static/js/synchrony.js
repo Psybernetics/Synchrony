@@ -982,7 +982,9 @@ function chatView() {
         if (!App.Config.user) {
             location.hash = "login";
         }
-        
+       
+        $('.chat').draggable();
+
         App.Views.chat.visible = false;
 
         // An array of messages typed into the input field.
