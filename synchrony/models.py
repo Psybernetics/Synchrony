@@ -444,7 +444,9 @@ class Friend(db.Model):
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
     name          = db.Column(db.String())
     state         = db.Column(db.Integer(), default=0)
-    address       = db.Column(db.String())
+    address       = db.Column(db.String())  # network/node_id/uid
+    ip            = db.Column(db.String())  # find-once contact-anytime
+    port          = db.Column(db.Integer())
     created       = db.Column(db.DateTime, default=db.func.now())
     states        = {
                         0: "Uninitialised",

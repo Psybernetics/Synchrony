@@ -241,6 +241,11 @@ if __name__ == "__main__":
         if options.write:
             write_revision_to_disk(options)
 
+        for router in app.routes.values():
+            log("DHT: %s: Telling peers of our public revisions." % router.network)
+            for revision in Revision.query.filter(Revision.public == True).all():
+                router[revision] = revision
+
         log("Binding to %s:%s" % (options.address, options.port))
         httpd.serve_forever()
     except KeyboardInterrupt:

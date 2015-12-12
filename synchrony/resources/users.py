@@ -366,7 +366,6 @@ class UserFriendsCollection(restful.Resource):
         db.session.commit()
 
         return response, 201
-        return friend.jsonify(), 201
 
     def post(self, username):
         """
@@ -379,7 +378,18 @@ class UserFriendsCollection(restful.Resource):
         parser.add_argument("address", type=str, required=True)
         args = parser.parse_args()
 
-        return {}
+        friend =  Friend.query.filter(and_(Friend.address == args.address,
+            Friend.user == user)).first()
+
+        if not friend:
+            return {}, 404
+        
+        friend.name = args.name
+        db.session.add(friend)
+        db.session.commit()
+
+        return friend.jsonify(), 202
+
         return {}, 201
 
     def delete(self, username):

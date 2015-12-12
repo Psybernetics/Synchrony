@@ -154,7 +154,8 @@ function linkUser(username){
 function timeStamp(ts, toNow) {
 	var m = moment.unix(ts);
     if (toNow == true) { return m.toNow(true); }
-	return m.format('MMMM Do YYYY, h:mm:ss A');
+	return m.format('MMMM Do YYYY, H:mm:ss');
+//	return m.format('MMMM Do YYYY, h:mm:ss A');
 }
 
 // Take an array and modify a timestamp field with momentjs
@@ -163,7 +164,8 @@ function upDate(array, field, toNow){
     for (var i = 0; i < array.length; i++){
         var ts = array[i][field];
         if (typeof ts != "number") { continue; }
-        array_copy[i][field] = timeStamp(ts, toNow);
+        array_copy[i].timestamp = ts;
+        array_copy[i][field]    = timeStamp(ts, toNow);
     }
     return array;
 }
@@ -639,8 +641,8 @@ function userView(username, params){
                      });
                  }
             }, 
-            delete:        function(event, type, index){
-                if        (type === "revision") {
+            delete: function(event, type, index){
+                if (type === "revision") {
                     var revision = this.get('revisions')[index];
                     console.log(revision);
                     $.ajax({
@@ -656,15 +658,59 @@ function userView(username, params){
                     $.ajax({
                         url:  '/v1/users/' + App.Config.user.username + '/sessions',
                         type: "DELETE",
-                        data: {timestamp: session.created},
+                        data: {timestamp: session.timestamp},
                         success: function(response){
                             // Remove the row on success.
                             $('#' + type + '-' + index).remove();
                         }
                     });
-                  }
+                }
             },
-            add_friend:      function(event){
+            rename: function(event, type, index){
+                if (event.original.keyCode == 13){
+                    event.original.preventDefault();
+                    if (type == "friend") {
+                        var friends   = App.Views.userpage.get("friends");
+                        var friend    = friends[index];
+                        var new_name = App.Views.userpage.get("new_name");
+                        console.log(friend);
+                        $.ajax({
+                            url: "/v1/users/" + App.Config.user.username + "/friends",
+                            type: "POST",
+                            data: {
+                                    "address": friend.address,
+                                    "name":    new_name
+                            },
+                            success: function(response){
+                                friend.name    = new_name;
+                                friends[index] = friend;
+                                App.Views.userpage.set("friends", friends);
+                                console.log(response);
+                            },
+                            error:   function(response){
+                                var friends    = App.Views.userpage.get("friends");
+                                friend.name    = "";
+                                friends[index] = friend;
+                                App.Views.userpage.set("friends", friends);
+                            }
+                        });
+                    }
+                }
+            },
+            toggle_rename: function(event, type, index){
+                if (type == "friend"){
+                    if ($("#friend-rename-" + index).css("display") == "none") {
+                        var friend = App.Views.userpage.get("friends")[index];
+                        App.Views.userpage.set("new_name", friend.name);
+                        $("#friend-name-"   + index).css("display", "none"); 
+                        $("#friend-rename-" + index).css("display", "inline");
+                    } else {
+                        $("#friend-name-" + index).css("display", "inline");
+                        $("#friend-rename-" + index).css("display", "none"); 
+                    }
+                }
+            },
+            add_friend: function(event){
                 if (event.original.keyCode == 13){
                     event.original.preventDefault();
                     var addr   = App.Views.userpage.get("friend_addr");
@@ -936,7 +982,9 @@ function chatView() {
         if (!App.Config.user) {
             location.hash = "login";
         }
-        
+       
+        $('.chat').draggable();
+
         App.Views.chat.visible = false;
 
         // An array of messages typed into the input field.
