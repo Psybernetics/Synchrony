@@ -5,6 +5,7 @@ views.
 from synchrony import app
 import flask_restful as restful
 from flask import session, request
+from synchrony.models import Network
 from synchrony.controllers.auth  import auth
 from synchrony.controllers.dht   import RoutingTable, log
 from synchrony.controllers.utils import Pagination, make_response
@@ -105,6 +106,11 @@ class NetworkResource(restful.Resource):
 
         log("%s is removing network \"%s\"." % (user.username, network))
         app.routes.leave(network)
+
+        # Remove the database representation, too
+        network_in_db = Network.query.filter(Network.name == network).first()
+        if network_in_db != None:
+            network_in_db.delete()
 
 class NetworkPeerCollection(restful.Resource):
     """
