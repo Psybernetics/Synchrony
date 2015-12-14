@@ -306,7 +306,9 @@ function request(event){
                 update_synchrony();
             },
             error: function(data, status){
-                renderError(data.responseJSON.message);
+                var message = "There was an error loading this resource.";
+                message = message + " Consult the logs for further explanation."
+                iframe.contents().find('body').html(message);
             }
         });
     }

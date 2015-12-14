@@ -476,6 +476,38 @@ class Friend(db.Model):
             response['user'] = self.user.username
         return response
 
+class Network(db.Model):
+    """
+    Represents an overlay network and peers. Used for persisting
+    state to the backend database on shutdown and giving the system some sort of
+    hysteresis for restarts, removing reliance on scarce bootstrap nodes once
+    networks acheive a decent size.
+    """
+    __tablename__ = "networks"
+    id      = db.Column(db.Integer(), primary_key=True)
+    name    = db.Column(db.String())
+    peers   = db.relationship("Peer", backref="network")
+    created = db.Column(db.DateTime, default=db.func.now())
+
+    def delete(self):
+        for peer in self.peers:
+            db.session.delete(peer)
+        db.session.delete(self)
+        db.session.commit()
+
+    def __repr__(self):
+        if self.name:
+            return "<Network %s with %i peers>" % (self.name, len(self.peers))
+        return "<Network>"
+
+    def jsonify(self, with_peers=False):
+        response = {}
+        response['name']       = self.name
+        response['peer_count'] = len(self.peers)
+        if with_peers:
+            response['peers'] = [p.jsonify() for p in self.peers]
+        return response
+
 class Peer(db.Model):
     """
     Represents a cached peer node, including their unique ID,
@@ -488,35 +520,34 @@ class Peer(db.Model):
     """
     __tablename__ = "peers"
     id            = db.Column(db.Integer(), primary_key=True)
+    network_id    = db.Column(db.Integer(), db.ForeignKey("networks.id")) 
     long_id       = db.Column(db.Integer())
     ip            = db.Column(db.String())
     port          = db.Column(db.Integer())
     pubkey        = db.Column(db.String())
-    network       = db.Column(db.String())
     name          = db.Column(db.String())
     trust         = db.Column(db.Float(),    default=0.00)
     created       = db.Column(db.DateTime(), default=db.func.now())
-#    revisions     = db.relationship("Revision", backref="peer")
 
-    def load_node(self, network, node):
+    def load_node(self, node):
         self.ip       = node.ip
-        self.network  = network
         self.port     = node.port
         self.trust    = node.trust
         self.pubkey   = node.pubkey
 
     def jsonify(self):
         response = {}
-        response['node']    = [self.long_id, self.ip, self.port]
-        response['pubkey']  = self.pubkey
-        response['trust']  = self.trust
-        response['network'] = self.network
-        response['created'] = time.mktime(self.created.timetuple())
+        response['node']        = [self.long_id, self.ip, self.port]
+        response['pubkey']      = self.pubkey
+        response['trust']       = self.trust
+        if self.network:
+            response['network'] = self.network.name
+        response['name']        = self.name
+        response['created']     = time.mktime(self.created.timetuple())
         return response
 
     def __repr__(self):
-        return "<Peer %s (%i revisions) %.2fT>" % \
-                (self.name if self.name else self.ip+':'+str(self.port),
-                len(self.revisions), self.trust)
+        return "<Peer %s %.2fT>" % \
+                (self.name if self.name else self.ip+':'+str(self.port), self.trust)
  
 local_subnets = ['127', '10.', '192.168', '172']

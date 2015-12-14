@@ -14,8 +14,8 @@ import optparse
 from synchrony import log, app, init
 from synchrony.controllers import dht
 from synchrony.tests.maps import maps
-from synchrony.models import Revision
 from synchrony.controllers import utils
+from synchrony.models import Revision, Network
 
 from Crypto import Random
 from Crypto.PublicKey import RSA
@@ -226,6 +226,7 @@ if __name__ == "__main__":
         else:
             addr = _socket.gethostbyname(_socket.gethostname())
 
+        # Get on the default network
         router = dht.RoutingTable(
                 addr,
                 options.port,
@@ -234,8 +235,19 @@ if __name__ == "__main__":
                 nodes=app.bootstrap_nodes,
                 network=app.default_network
         )
-
         app.routes.append(router)
+
+        # Reload prior networks
+        for network in Network.query.all():
+            if network.name == app.default_network: continue
+            router = dht.RoutingTable(
+                    addr,
+                    options.port,
+                    app.key.publickey().exportKey(),
+                    httpd,
+                    network=network.name
+            )
+            app.routes.append(router)
 
         # Write any specific revisions to disk now that we have some peers:
         if options.write:
