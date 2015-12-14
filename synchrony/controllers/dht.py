@@ -155,7 +155,7 @@ from synchrony.controllers import utils
 from binascii import hexlify, unhexlify
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
-from synchrony.models import Peer, Revision, User, Friend
+from synchrony.models import Revision, User, Friend, Network, Peer
 class RoutingTable(object):
     """
     Routing is based on representative members of lists ("buckets") and an XOR
@@ -223,6 +223,9 @@ class RoutingTable(object):
         # Note that if you use a different storage method then it's up to you
         # to set self.protocol up with any corresponding storage class.
         self.storage_method = self.protocol.rpc_append
+
+        # Introduce previously known nodes 
+        nodes = self.load(nodes)
 
         self.bootstrap(nodes)
 
@@ -308,11 +311,43 @@ class RoutingTable(object):
 #                return
         log("Using node ID " + str(self.node.long_id))
 
+    def load(self, nodes):
+        """
+        Create a unique list of bootstrap nodes given an initial list.
+        """
+        network = Network.query.filter(Network.name == self.network).first()
+        if network:
+            for peer in network.peers:
+                peerple = (peer.ip, peer.port)
+                nodes.append((peer.ip, peer.port))
+            nodes = set(nodes)
+            nodes = list(nodes)
+        return nodes
+
+    def save(self):
+        """
+        Create or update a Network instance of ourselves.
+        """
+        network = Network.query.filter(Network.name == self.network).first()
+        if network == None:
+            network = Network(name=self.network)
+
+        # Persist our peers
+        for node in self:
+            peer = Peer()
+            peer.load_node(node)
+            network.peers.append(peer)
+            db.session.add(peer)
+        
+        db.session.add(network)
+        db.session.commit()
+
     def leave_network(self):
         """
         Create a spider to tell close peers we won't be available to respond
         to requests.
         """
+        self.save()
         threads = []
         for node in self:
             threads.append(gevent.spawn(self.protocol.rpc_leaving, node))
@@ -550,6 +585,11 @@ class SynchronyProtocol(object):
                 self.router.add_contact(peer)
 #                self.rpc_ping(node)
         return node
+
+    def rpc_report_trust(self, node_to_rate, node_to_tell):
+        """
+        """
+        pass
 
     def rpc_add_friend(self, local_uid, addr):
         """
@@ -1572,12 +1612,12 @@ class Routers(object):
         """
         # TODO: Query for Node objects in the database.
         for router in self.routes.values():
-            for node in router:
-                p = Peer()
-                p.load_node(router.network, node)
-                db.session.add(p)
+#            for node in router:
+#                p = Peer()
+#                p.load_node(router.network, node)
+#                db.session.add(p)
             router.leave_network()
-        db.session.commit()
+#        db.session.commit()
         if app.bytes_sent or app.bytes_received:
             log("Replicated {:,} bytes total.".format(app.bytes_sent))
             log("Received {:,} bytes total."\

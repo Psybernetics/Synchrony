@@ -100,4 +100,6 @@ def mock_transmit(routes, addr, data):
             return rpc_method(data)
 
 def mock_fetch_revision(url, content_hash, nodes):
+    # This could definitely be fleshed out to more accurately
+    # model the real fetch_revision.
     return  Revision.query.filter(Revision.hash == content_hash).first()
