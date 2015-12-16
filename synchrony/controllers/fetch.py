@@ -62,6 +62,7 @@ def get(url, user_agent, user=None):
             (url.geturl(), app.routes._default.network))
         revision = app.routes._default[url.netloc + url.path]
         if revision:
+            revision.public = True
             revision.save(user, domain, path)
             return revision
 

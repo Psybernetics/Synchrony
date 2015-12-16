@@ -18,13 +18,16 @@
  These modules make it as easy as possible to participate in multiple networks.
  Telling peers you have data and obtaining data from peers looks like this:
 
+    routes[url] = revision
+    revision = routes[url]
+
+ In the application itself, among multiple routing tables:
+
     app.routes._default[url] = revision
     revision = app.routes._default[url]
 
 
 TODO/NOTES:
- Persist routing and storage tables to the database.
- trust rating is in Node.jsonify which means network trust is in /v1/peers
  Make revision selection strategies plug-and-play.
 
  protocol.copy_routing_table
@@ -34,7 +37,6 @@ TODO/NOTES:
  Tag documents as edits or originals in rpc_append.
  Let users select whether they will accept edits. Default deny.
 
- Remember properties of the networks we engage in.
  A public revision is a public revision.
 
  CORS.
@@ -47,9 +49,7 @@ TODO/NOTES:
 
 
  Tit-for-tat: Forget peers who don't want to share well.
- Every peer will be rated for altruism.
- A peers' rating of its own peers is based on your own rating of that peer.
- A list of trusted peers
+ A list of trusted peers (s/kademlia / trust managers for individual peers)
 
  React to a None return value in protocol.fetch_revision?
 
@@ -268,11 +268,11 @@ class RoutingTable(object):
         elif peers <= 1500:
             timing = timing / 2
      
-            hours = (timing / 60) / 60
-            log("Pinging peers and republishing keys in %i hour%s." % \
-                    (hours,'s' if hours > 1 else ''))
-            self.timer = self.httpd.loop.timer(timing)
-            self.timer.start(self.loop)
+        hours = (timing / 60) / 60
+        log("Pinging peers and republishing keys in %i hour%s." % \
+                (hours,'s' if hours > 1 else ''))
+        self.timer = self.httpd.loop.timer(timing)
+        self.timer.start(self.loop)
 
     def bootstrap(self, addrs):
         """
@@ -588,6 +588,8 @@ class SynchronyProtocol(object):
 
     def rpc_report_trust(self, node_to_rate, node_to_tell):
         """
+        The equivalent is a GET request to /v1/peers/node_id
+
         """
         pass
 
@@ -920,7 +922,7 @@ class SynchronyProtocol(object):
             # If a peer was unresponsive then it tells us we have a peer to remove,
             # if a peer serves content that doesn't match the hash we went for then
             # there's a trust rating to adjust
-            # and if we hit upon the content we're after then the sooner the better.
+            # and if we hit upon the content we're after the sooner the better.
             if response and response.status_code != 200:
                 continue
             revision = Revision()
