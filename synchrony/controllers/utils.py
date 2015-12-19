@@ -340,7 +340,7 @@ def make_response(url, query, jsonify=True):
         response['links']['next'] = update_url(url, {"page": str(query.next_num)})
     return response
 
-def broadcast(httpd, socket_type, message_type, message, priv=None):
+def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
     for connection in httpd.sockets.values():
         if connection.connected and connection.socket_type == socket_type:
             for c in connection.active_ns.values():
@@ -349,6 +349,8 @@ def broadcast(httpd, socket_type, message_type, message, priv=None):
                 if not hasattr(c, "user"):
                     continue
                 if priv and not c.can(priv):
+                    continue
+                if user and c != user:
                     continue
                 c.emit(message_type, message)
 

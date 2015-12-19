@@ -297,18 +297,6 @@ class RoutingTable(object):
                 if node.id == self.node.id and node.threeple != self.node.threeple:
                     log("A peer is already using this node ID.")
                     log("It's probably a stale reference to this instance so don't worry.")
-#                    seed              = '%s:%i:%s' % ()
-#                    self.node.id      = utils.generate_node_id(seed)
-#                    self.node.long_id = long(self.node.id.encode('hex'), 16)
-#                    self.protocol     = SynchronyProtocol(self, self.node, Storage(), self.ksize)
-#                    unique            = False
-#                    break
-
-#            if not unique:
-#                self.leave_network()
-#                self.bootstrap(app.bootstrap_nodes)
-#                self.find_own_id()
-#                return
         log("Using node ID " + str(self.node.long_id))
 
     def load(self, nodes):
@@ -318,15 +306,15 @@ class RoutingTable(object):
         network = Network.query.filter(Network.name == self.network).first()
         if network:
             for peer in network.peers:
-                peerple = (peer.ip, peer.port)
+                if peer.ip == self.node.ip and peer.port == self.node.port:
+                    continue
                 nodes.append((peer.ip, peer.port))
-            nodes = set(nodes)
-            nodes = list(nodes)
+            nodes = list(set(nodes))
         return nodes
 
     def save(self):
         """
-        Create or update a Network instance of ourselves.
+        Create or update a Network model representing this instance.
         """
         network = Network.query.filter(Network.name == self.network).first()
         if network == None:
@@ -334,7 +322,13 @@ class RoutingTable(object):
 
         # Persist our peers
         for node in self:
-            peer = Peer()
+            peer = Peer.query.filter(
+                        and_(Peer.network == network,
+                             Peer.ip      == node.ip,
+                             Peer.port    == node.port)
+                    ).first()
+            if not peer:
+                peer = Peer()
             peer.load_node(node)
             network.peers.append(peer)
             db.session.add(peer)
@@ -599,19 +593,20 @@ class SynchronyProtocol(object):
         Implements ADD_FRIEND where we find the node in addr and
         tell them a local user wants to add the remote UID as a friend.
         """
-        if addr.count("/") != 2: return
+        if addr.count("/") != 2:
+            return False, None
         network, node_id, remote_uid = addr.split("/")
         node = Node(long(node_id))
 
         nearest = self.router.find_neighbours(node)
         if len(nearest) == 0:
             log("There are no neighbours to help us add users on %s as friends." % node_id)
-            return False
+            return False, None
         spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
         nodes   = spider.find()
 
         if len(nodes) != 1:
-            return False
+            return False, None
 
         node    = nodes[0]
         log("Found remote instance %s." % node)
@@ -619,11 +614,11 @@ class SynchronyProtocol(object):
 
         response = transmit(self.router, node, message)
         if not isinstance(response, dict) or not "response" in response:
-            return False
+            return False, None
 
-        return response['response']
+        return response['response'], node
 
-    def rpc_chat(self, node, data):
+    def rpc_chat(self, nodeple, data):
         """
         Implements CHAT where we encrypt a message destined for the user with
         UID on the receiving node.
@@ -633,12 +628,21 @@ class SynchronyProtocol(object):
            'to': 'uid',
            'from': ['uid', 'username'],
            'body': 'message content'
-        }   
+        }
         """
-        data = base64.b64encode(json.dumps(data))
-        key  = RSA.importKey(node.pubkey)
-        data = key.encrypt(data, 32)
-        transmit(self.router, addr, {'rpc_chat': data})
+        node     = self.rpc_ping(nodeple)
+        
+        if node == None:
+            return
+
+        data     = base64.b64encode(json.dumps(data))
+        key      = RSA.importKey(node.pubkey)
+        data     = key.encrypt(data, 32)
+        print data
+        data     = base64.b64encode(data[0])
+        response = transmit(self.router, node, {'rpc_chat': data})
+        log(response)
+        return response
 
     def rpc_edit(self, node, data):
         """
@@ -765,18 +769,41 @@ class SynchronyProtocol(object):
         if friend:
             return envelope(self.router, {"response": friend.jsonify()})
         
-        friend       = Friend(address=from_addr)
-        friend.state = 1
+        node = Node(*data['node'])
+
+        friend          = Friend(address=from_addr)
+        friend.state    = 1
+        friend.received = True
+        friend.ip       = node.ip
+        friend.port     = node.port
         user.friends.append(friend)
         db.session.add(friend)
         db.session.add(user)
         db.session.commit()
+
         return envelope(self.router, {"response": friend.jsonify()})
 
     def handle_chat(self, data):
+        """
+        Move a message from a remote node up to the UI if the recipient
+        UID has an active connection to the chat stream.
+        """
+        log(data)
         self.read_envelope(data)
-        data = app.key.decrypt(data['rpc_chat'])
-        pass
+        message_content = base64.b64decode(data['rpc_chat'])
+        message_content = app.key.decrypt((message_content,))
+        message_data    = json.loads(base64.b64decode(message_content))
+        log(message_content)
+        log(message_data)
+
+        # friend = Friend.query.filter(Friend.address = data['address']).first()
+        # if friend and friend.user:
+        #    utils.broadcast(self.router.httpd,
+        #                    "chat",
+        #                    "msg",
+        #                    msg_content,
+        #                    user=friend.user)
+        return {"m": "Testing."}
 
     def handle_edit(self, data):
         self.read_envelope(data)
@@ -929,7 +956,7 @@ class SynchronyProtocol(object):
             revision.add(response)
             if revision.hash != content_hash:
                 node.trust -= 0.1
-                log("Hash doesn't match content for %s", "warning")
+                log("Hash doesn't match content for %s" % content_hash, "warning")
                 log("Decremented trust rating for %s." % node, "warning")
             else:
                 # Adjust mimetype, set the network and increment bytes_rcvd
@@ -1043,6 +1070,15 @@ class SynchronyProtocol(object):
                 amount = severity / 100.0
                 log("Decrementing trust rating for %s by %f." % (node, amount), "warning")
                 node.trust -= amount
+#               peer = Peer.query.filter(
+#                       and_(Peer.network == self.network,
+#                            Peer.ip      == addr[0],
+#                            Peer.port    == addr[1])
+#                   ).first()
+#               if peer:
+#                   peer.trust -= amount
+#                   db.session.add(peer)
+#                   db.session.commit()
                 return True
 
         return False
@@ -1538,6 +1574,7 @@ class TableTraverser(object):
 
         raise StopIteration
 
+# TODO: Prioritise routes based on their global trust rating.
 class Routers(object):
     """
     Ease access to multiple overlay networks by network name.

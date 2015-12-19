@@ -6,10 +6,11 @@ Consider also WebRTC session initiation.
 """
 from cgi import escape
 from synchrony import app, log
-from synchrony.controllers.auth import auth
-from flask import session, request, Response
 from socketio import socketio_manage
 from socketio.packet import encode, decode
+from synchrony.controllers.dht import Node
+from synchrony.controllers.auth import auth
+from flask import session, request, Response
 from socketio.namespace import BaseNamespace
 from socketio.mixins import RoomsMixin, BroadcastMixin
 
@@ -17,17 +18,22 @@ class AnonUser(object):
     username = "Unknown"
     created = False
 
-# Business logic for chat
+class Channel(object):
+    def __init__(self, name=""):
+        self.name  = name
+        self.topic = ""
+        self.modes = []
+        self.clients = set()
+
 class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
     socket_type = "chat"
 
     def initialize(self):
-        self.user    = None
+        self.user     = None
 #        Access to app.routes for
 #        admin users to access via /eval
-        self.routes  = app.routes
-#        TODO: Make the channels a set
-        self.channel = None
+        self.routes   = app.routes
+        self.channels = {}
 
         # This lets us cycle through stream connections on
         # the httpd and easily determine the session type.
@@ -39,15 +45,14 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
         user = auth(self.request)
         if not user:
             self.request_reconnect()
-#            self.user = AnonUser()
         else:
             log("Received chat connection from %s" % user.username)
             self.user = user
-#            if not can(user.username, "chat"):
-#                body = {"message":"Your user group doesn't have permission to chat"}
-#                self.emit("disconnect", body)
-#                self.send("disconnect")
-#                log("%s isn't permitted to chat." % user.username)
+            if not user.can("chat"):
+                body = {"message":"Your user group doesn't have permission to chat"}
+                self.emit("disconnect", body)
+                self.send("disconnect")
+                log("%s isn't permitted to chat." % user.username)
 
     def request_reconnect(self):
         """
@@ -69,15 +74,35 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
         else:
             log("Received JSON: %s" % str(data))
 
-    def on_join(self, channel):
+    def on_join(self, channel_name):
+        """
+        Join a channel by name. If the channel name is the address of a friend
+        then we initiate an RPC_CHAT session to the remote host.
+        """
         if self.user and self.user.username:
-#            if can(self.user.username, "chat"):
-            log("%s joined %s" % (self.user.username, channel))
-            self.channel = channel
-            self.join(channel)
-#            else:
-#                log("%s tried to join %s" % (self.user.username, channel))
-
+            if self.user.can("chat"):
+                log("%s joined %s" % (self.user.username, channel_name))
+                channel = Channel(name=channel_name)
+                channel.clients.add(self)
+                self.channels['_default']   = channel
+                self.channels[channel_name] = channel
+                self.join(channel_name)
+                if channel_name.count("/") == 2:
+                    network, node_id, uid = channel_name.split("/")
+                    router = self.routes.get(network, None)
+                    if router == None: return
+                    print 2
+                    friend = [f for f in self.user.friends if f.address == channel_name]
+                    if not friend: return
+                    print 3
+                    friend = friend[0]
+                    if not friend.peer: # Return if no known pubkey
+                        return
+                    print 4
+                    data   = {"m": "Hello, world."}
+                    router.protocol.rpc_chat((friend.ip, friend.port), data)
+                    return
+ 
     def on_appear_offline(self, state):
         """
          Flip the boolean self.socket.appearing_offline
@@ -103,30 +128,32 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
             if room_name in socket.session['rooms'] and self.socket != socket \
             and not socket.appearing_offline:
                 socket.send_packet(pkt)
-
                 
     def on_msg(self, msg):
-        if self.user and self.channel:
+        if self.user and self.channels.values():
             if self.user.created:
                 body = {"u":self.user.username,"m":escape(msg)}
             else:
                 body = {"u":self.user.username,"m":escape(msg),"a": True}
-            log("Message to %s from %s: %s" % (self.channel, self.user.username, msg))
-            self.emit_to_room(self.channel, "privmsg", body)
+            channel = self.channels['_default']
+            log("Message to %s from %s: %s" % (channel.name, self.user.username, msg))
+            self.emit_to_room(channel.name, "privmsg", body)
             self.emit("privmsg", body)
         else:
             self.request_reconnect()
 
     def on_cmd(self, command):
-        if self.user and self.channel:
+        if self.user and self.channels.values():
             if command == "help":
-                body = '<strong>Hello and welcome to the help system.</strong>'
+                body  = '<strong>Hello and welcome to the help system.</strong><br >'
+                body += "Available commands:<br />"
+                body += HELP_TABLE # Defined at the end of this file
                 self.emit("response", {"r": body})
             elif command == "usage":
                 import resource
                 rusage_denom = 1024
                 rusage_denom = rusage_denom * rusage_denom
-                mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / rusage_denom
+                mem  = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / rusage_denom
                 body = "<em>Synchrony is currently using <strong>%iMb</strong> of memory.</em>" % mem
                 self.emit("response", {"r":body})
 
@@ -151,3 +178,10 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
     def recv_disconnect(self):
 #        print "received disconnect"
         pass
+
+HELP_TABLE = """<table><tbody>
+                <tr><td>/usage</td><td>Display memory consumption.</td></tr>
+                </tbody></table>"""
+#                <tr><td>/list</td><td>List available channels.</td></tr>
+#                <tr><td>/join</td><td>Join a channel.</td></tr>
+

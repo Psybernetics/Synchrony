@@ -50,15 +50,6 @@
     {{#showing_friends}}
     <table>
        <tbody>
-<!--
-           <tr>
-                <td>Address</td>
-                <td>Name</td>
-                <td>State</td>
-                <td>Created</td>
-                <td></td>
-            </tr>
-            -->
             {{#friends}}
             <tr on-mouseover="select:{{"friend"}},{{@index}}" on-mouseout="select:{{"friend"}},{{@index}}" id="friend-{{@index}}">
                 <td>{{address}}</td>
@@ -68,10 +59,30 @@
                 </td>
                 <td>{{status}}</td>
                 <td>{{created}}</td>
-                <td id="delete-delete-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"friend"}},{{@index}}">Delete</button></td>
+                <td>
+                    <div id="friend-menu-{{@index}}" style="display:none" class="menu">
+                        <ul>
+                            {{#if status == "Added"}}
+                            <li on-click="initiate_collab:{{@index}}">Collaborate</li>
+                            <li on-click="initiate_chat:{{@index}}">Chat</li>
+                            <li on-click="toggle_blocked_friend:{{@index}}">Block</li>
+                            {{/if}}
+                            {{#if received}}
+                                {{#if status == "Pending"}}
+                                <li on-click="accept_friend:{{@index}}">Accept</li>
+                                {{/if}}
+                            {{/if}}
+                            {{#if status == "Blocked"}}
+                            <li on-click="toggle_blocked_friend:{{@index}}">Unblock</li>
+                            {{/if}}
+                            <li on-click="delete:{{"friend"}},{{@index}}">Delete</li>
+                        </ul>
+                    </div>
+                    <button id="friend-menu-button-{{@index}}" class="button big_button" style="visibility:hidden" on-click="toggle_menu:{{"friend"}},{{@index}}">Menu</button>
+                </td>
             </tr>
             {{/friends}}
-            {{^friends}}:-({{/friends}}
+            {{^friends}}Add some friends to get the benefit of direct-to-peer communications.{{/friends}}
         </tbody>
     </table>
     <div class="center">

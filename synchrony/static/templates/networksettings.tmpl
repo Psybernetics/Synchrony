@@ -36,7 +36,7 @@
                 {{/node}}
                 <td>{{trust}}</td>
                 <td>{{last_seen}}</td>
-                <td id="delete-peer-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"peer"}},{{@index}}">Delete</button></td>
+                <td id="delete-peer-{{@index}}" style="visibility:hidden"><button class="button" on-click="delete:{{"peer"}},{{@index}}">Delete</button></td>
             </tr>
             <span id="pubkey-{{@index}}" class="pubkey" style="display:none;">{{pubkey}}</span>
             {{/peers}}

@@ -674,14 +674,11 @@ hr {
 	box-sizing: border-box;
 	clear: both;
 	width: auto;
-/*    max-width: 680px; */
-/*	padding: 0 70px; */
     padding: 3%;
 	z-index: 40;
 	background-color: rgba(255, 255, 255, 0.9);
 	font-family: 'Roboto';
 	font-size: 14px;
-/*	margin-top: 10%; */
 }
 .main_inner {
     color: #D7D8D5;
@@ -850,7 +847,8 @@ a {
 
 .blue {
 /*  color: #1252DA; */
-    color: #275CCE;
+/*    color: #275CCE; */
+    color: #1966AD;
 }
 
 .network_heading_container {
@@ -874,8 +872,7 @@ a {
  * always the zeroth if its type.
  * Make it a foreboding dark red.*/
 #delete-network-0 {
-/*  background-color: #921B1B; */
-    background-color: #C70404;
+    background-color: #F50000;
 }
 
 .pubkey {
@@ -883,3 +880,24 @@ a {
     text-align: center;
     width: 190px;
 }
+
+.menu {
+    float: left;
+    position: absolute;
+    display: block;
+    z-index: 1000;
+    width: 100px;
+    margin: 30px 0px;
+	background-color: #222;
+    color: #E7ECDC;
+    border-radius: 5px;
+}
+.menu li {
+    list-style-type: none;
+    margin-left: -30px;
+}
+.menu li:hover {
+    color: #77B3EB;
+    cursor: pointer;
+}
+
