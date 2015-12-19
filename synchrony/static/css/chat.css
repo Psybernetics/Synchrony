@@ -55,6 +55,9 @@
 	text-decoration: none;
 	color: #96B8E4;
 }
+.chat-messages table {
+    width: 100%;
+}
 .chat-input {
 	width: 100%;
 	color: f6f6f6;

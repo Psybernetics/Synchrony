@@ -442,10 +442,15 @@ class Friend(db.Model):
     __tablename__ = "friends"
     id            = db.Column(db.Integer(), primary_key=True)
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    peer_id       = db.Column(db.Integer(), db.ForeignKey('peers.id'))
     name          = db.Column(db.String())
+    received      = db.Column(db.Boolean(), default=None) # Can we set state to "Added"?
     state         = db.Column(db.Integer(), default=0)
     address       = db.Column(db.String())  # network/node_id/uid
-    ip            = db.Column(db.String())  # find-once contact-anytime
+    network       = db.Column(db.String())
+    node_id       = db.Column(db.String())  # Remote node id
+    uid           = db.Column(db.String())  # Remote user id
+    ip            = db.Column(db.String())  # Find once, contact any time.
     port          = db.Column(db.Integer())
     created       = db.Column(db.DateTime, default=db.func.now())
     states        = {
@@ -455,6 +460,13 @@ class Friend(db.Model):
                         3: "Blocked"
                     }
 
+    def __init__(self, address=""):
+        if address.count("/") != 2:
+            return
+        self.address = address
+        self.network, self.node_id, self.uid = address.split("/")
+        self.name = self.uid
+
     def parse_status(self):
         if not self.state:
             return self.states[0]
@@ -462,7 +474,7 @@ class Friend(db.Model):
 
     def __repr__(self):
         if self.address and self.user:
-            return "<Friend of %s %s>" % (self.user.username, self.address)
+            return "<Friend of %s %s>" % (self.user.username, self.name)
         return "<Friend>"
 
     def jsonify(self):
@@ -470,6 +482,10 @@ class Friend(db.Model):
         response['name']     = self.name
         response['status']   = self.parse_status()
         response['address']  = self.address
+        response['name']     = self.name
+        response['received'] = self.received
+        response['ip']       = self.ip
+        response['port']     = self.port
         if self.created:
             response['created']  = time.mktime(self.created.timetuple())
         if self.user:
@@ -505,7 +521,7 @@ class Network(db.Model):
         response['name']       = self.name
         response['peer_count'] = len(self.peers)
         if with_peers:
-            response['peers'] = [p.jsonify() for p in self.peers]
+            response['peers']  = [p.jsonify() for p in self.peers]
         return response
 
 class Peer(db.Model):
@@ -521,12 +537,13 @@ class Peer(db.Model):
     __tablename__ = "peers"
     id            = db.Column(db.Integer(), primary_key=True)
     network_id    = db.Column(db.Integer(), db.ForeignKey("networks.id")) 
-    long_id       = db.Column(db.Integer())
+    node_id       = db.Column(db.String())
     ip            = db.Column(db.String())
     port          = db.Column(db.Integer())
     pubkey        = db.Column(db.String())
     name          = db.Column(db.String())
     trust         = db.Column(db.Float(),    default=0.00)
+    friends       = db.relationship("Friend", backref="peer")
     created       = db.Column(db.DateTime(), default=db.func.now())
 
     def load_node(self, node):
@@ -534,6 +551,7 @@ class Peer(db.Model):
         self.port     = node.port
         self.trust    = node.trust
         self.pubkey   = node.pubkey
+        self.long_id  = node.long_id  # Stored as a string
 
     def jsonify(self):
         response = {}

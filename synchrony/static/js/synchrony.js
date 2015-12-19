@@ -578,6 +578,15 @@ function userView(username, params){
                     App.Views.userpage.set("showing_" + section, undefined);
                 }
             },
+            toggle_menu: function(event, section, index){
+                if (section == "friend") {
+                    if ($("#friend-menu-" + index).css("display") == "none") {
+                        $("#friend-menu-" + index).css("display", "inline");
+                    } else {
+                        $("#friend-menu-" + index).css("display", "none");
+                    }
+                }
+            },
             forward: function(event, table_type){
                 var url = this[table_type].links.next;
                 populate_table(table_type, url);
@@ -588,13 +597,15 @@ function userView(username, params){
                 populate_table(table_type, url[0] + 'page=' + page);
             },
             select:  function(event, type, index){
-                var row = $('#' + type + '-' + index);
-                var c = row.children();
-                c = c[c.length -1];
-                if ($('#delete-' + type + '-' + index).css('visibility') === "hidden") {
-                    c.style.visibility = "";
-                } else {
-                    c.style.visibility = "hidden";
+                if (type != "friend") {
+                   var row = $('#' + type + '-' + index);
+                   var c = row.children();
+                   c = c[c.length -1];
+                   if ($('#delete-' + type + '-' + index).css('visibility') === "hidden") {
+                       c.style.visibility = "";
+                   } else {
+                       c.style.visibility = "hidden";
+                   }
                 }
                 // Also show the toggle_public button for revisions
                 if (type === "revision") {
@@ -604,6 +615,12 @@ function userView(username, params){
                     } else {
                         $('#public-' + type + '-button-' + index).css('visibility', 'hidden');
                         $('#public-' + type + '-text-'   + index).css('display',    'initial');
+                    }
+                } else if (type == "friend") {
+                    if ($('#' + type + '-menu-button-' + index).css('visibility') === "hidden") {
+                        $('#' + type + '-menu-button-' + index).css('visibility', "");
+                    } else {
+                        $('#' + type + '-menu-button-' + index).css('visibility', "hidden");
                     }
                 }
             },
@@ -730,13 +747,62 @@ function userView(username, params){
                         type: "PUT",
                         data: {address: addr},
                         success: function(response){
-                            console.log(response);
+                            var friends = App.Views.userpage.get("friends");
+                            friends.push(response);
+                            App.Views.userpage.set("friends", friends);
                         },
                         error:   function(response){
                             console.log(response);
                         }
                     });
                 }
+            },
+            accept_friend: function(event, index){
+                var friends = App.Views.userpage.get("friends");
+                var friend  = friends[index];
+                if (friend) {
+                    $.ajax({
+                        url: "/v1/users/" + App.Config.user.username + "/friends",
+                        type: "POST",
+                        data: {"address": friend.address,
+                                "state":   2},
+                        success: function(response) {
+                            console.log(response);
+                            friends[index] = response;
+                            App.Views.userpage.set("friends", friends);
+                            // eugh..
+                            $('#' + type + '-menu-button-' + index).css('visibility', "hidden");
+                            $("#friend-menu-" + index).css("display", "none");
+                        },
+                        error: function(response) {
+                            console.log(response);
+                        }
+                    });
+                }
+            },
+            toggle_blocked_friend: function(event, index){
+                var friends = App.Views.userpage.get("friends");
+                var friend  = friends[index];
+                if (friend) {}
+            },
+            initiate_chat: function(event, index){
+                var friends = App.Views.userpage.get("friends");
+                var friend  = friends[index];
+                if (friend) {
+                    // Ensures the back button takes us to the current view:
+                    // location.hash = "chat";
+                    // Load the template
+                    chatView();
+                    // Wait 1ms before requesting a chat session with a remote user
+                    setTimeout(function(){
+                        App.Views.chat.socket.emit("join", friend.address);
+                    }, 100);
+                }
+            },
+            initiate_collab: function(event, index){
+                var friends = App.Views.userpage.get("friends");
+                var friend  = friends[index];
+                if (friend) {}
             },
             change_password: function(event){
                 event.original.preventDefault();
@@ -986,6 +1052,8 @@ function chatView() {
         }
        
         $('.chat').draggable();
+        var welcome_message = "Use <em>/help</em> to see a list of commands.";
+        $('.chat-messages').append(welcome_message);
 
         App.Views.chat.visible = false;
 

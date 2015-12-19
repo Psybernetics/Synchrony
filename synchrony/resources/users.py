@@ -7,7 +7,8 @@ from flask import request, session
 from flask_restful import reqparse
 from synchrony.controllers.auth import auth
 from synchrony.controllers.utils import make_response
-from synchrony.models import User, Session, Revision, Friend, UserGroup
+from synchrony.models import User, Friend, Peer, Network
+from synchrony.models import Session, UserGroup, Revision
 
 class UserCollection(restful.Resource):
     """
@@ -18,10 +19,10 @@ class UserCollection(restful.Resource):
         Paginated access to users
         """
         parser = reqparse.RequestParser()
-        parser.add_argument("me", type=bool, default=None)
-        parser.add_argument("signups", type=bool, default=None)
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        parser.add_argument("me",       type=bool, default=None)
+        parser.add_argument("signups",  type=bool, default=None)
+        parser.add_argument("page",     type=int, required=False, default=1)
+        parser.add_argument("per_page", type=int, required=False, default=10)
         args = parser.parse_args()
 
         # Let unauthenticated users see if they can register an account
@@ -137,11 +138,11 @@ class UserResource(restful.Resource):
         Account modification
         """
         parser = reqparse.RequestParser()
-        parser.add_argument("email",            type=str)
-        parser.add_argument("password",         type=str)
-        parser.add_argument("verify_password",  type=str)
-        parser.add_argument("public",           type=bool, default=None)
-        parser.add_argument("active",           type=bool, default=None)
+        parser.add_argument("email",           type=str)
+        parser.add_argument("password",        type=str)
+        parser.add_argument("verify_password", type=str)
+        parser.add_argument("public",          type=bool, default=None)
+        parser.add_argument("active",          type=bool, default=None)
         args = parser.parse_args()
 
         calling_user = auth(session, required=True)
@@ -214,9 +215,9 @@ class UserSessionsResource(restful.Resource):
         user = auth(session, required=True)
 
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
-        args = parser.parse_args()  
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
+        args = parser.parse_args()
 
         if user.username != username and not user.can("see_all"):
             return {}, 403
@@ -340,13 +341,13 @@ class UserFriendsCollection(restful.Resource):
         if args.address.count("/") != 2:
             return False
 
-        network, node_id, remote_uid = args.address.split("/")
-        router = app.routes.get(network, None)
+        network_name, node_id, remote_uid = args.address.split("/")
+        router = app.routes.get(network_name, None)
         if router == None:
             return {}, 404
 
         log("%s is adding a remote friend." % user.username)
-        response = router.protocol.rpc_add_friend(user.uid, args.address)
+        response, node = router.protocol.rpc_add_friend(user.uid, args.address)
 
         if not response:
             return {}, 404
@@ -356,10 +357,37 @@ class UserFriendsCollection(restful.Resource):
             Friend.user == user)).first():
             return {}, 304
 
+        # Add a peer instance so the remote sides' public key is
+        # accesible for encrypting data we transmit to this friend.
+        network = Network.query.filter(Network.name == network_name).first()
+        
+        if network != None:
+            network = Network(name = network_name)
+
+        peer = Peer.query.filter(
+                    and_(Peer.network == network,
+                         Peer.ip      == node.ip,
+                         Peer.port    == node.port)
+                ).first()
+
+        if peer == None:
+            peer = Peer()
+            peer.ip      = node.ip
+            peer.port    = node.port
+            peer.network = network
+
+
         friend       = Friend(address=args.address)
         friend.name  = args.name
         friend.state = 1
+        friend.ip    = node.ip
+        friend.port  = node.port
+
         user.friends.append(friend)
+        peer.friends.append(friend)
+        
+        db.session.add(peer)
+        db.session.add(network)
 
         db.session.add(user)
         db.session.add(friend)
@@ -369,11 +397,17 @@ class UserFriendsCollection(restful.Resource):
 
     def post(self, username):
         """
-        Rename a friend.
+        Rename, accept or block a Friend. Refer to models.Friend.states
+        to see what the possible integer values accepted by this method
+        represent.
+
+        Friends with their "received" attribute set to None cannot have
+        their state attribute modified as they represent sent requests.
         """
         user = auth(session, required=True)
 
         parser = reqparse.RequestParser()
+        parser.add_argument("state",   type=int)
         parser.add_argument("name",    type=str)
         parser.add_argument("address", type=str, required=True)
         args = parser.parse_args()
@@ -384,13 +418,14 @@ class UserFriendsCollection(restful.Resource):
         if not friend:
             return {}, 404
         
-        friend.name = args.name
+        if args.name:
+            friend.name  = args.name
+        if args.state:
+            friend.state = args.state
         db.session.add(friend)
         db.session.commit()
 
-        return friend.jsonify(), 202
-
-        return {}, 201
+        return friend.jsonify()
 
     def delete(self, username):
         """
@@ -402,7 +437,6 @@ class UserFriendsCollection(restful.Resource):
         parser.add_argument("address", type=str, required=True)
         args = parser.parse_args()
 
-        return {}
-        return {}, 201
+        return {}, 204
 
 
