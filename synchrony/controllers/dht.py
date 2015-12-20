@@ -541,6 +541,19 @@ class SynchronyProtocol(object):
         handle_ counterparts define how we deal with their receipt.
         Also requires a storage object.
         Check RoutingTable.__init__ out to see how that looks.
+        
+        
+        As well as node ID generation we also use cryptographic
+        keys here to encrypt some RPC calls such as RPC_CHAT and
+        RPC_EDIT. There is a possible MITM attack here whereby a 
+        malicious eavesdropping party intercepts the introduction
+        of two peers to one another and replaces the keys that were
+        originally transmitted with a new pair, deciphering communications
+        in-transit, re-encrypting with the peers' real keys on rebroadcast.
+
+        This is best evaded by sharing your public key ahead of time through
+        a secure medium.
+        
         """
         self.ksize         = ksize
         self.router        = router
@@ -850,8 +863,7 @@ class SynchronyProtocol(object):
                 return {"error": "The intended recipient isn't connected to chat."}
 
             if data['type'] == "init":
-                # Enable the recipient to reply by force-joining them to the
-                # correct channel.
+                # Enable the recipient to reply by forcing them into the channel
                 log("Changing chat channel of %s to %s." % \
                     (user.username, friend.address), "debug")
                 utils.change_channel(self.router.httpd,
