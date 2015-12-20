@@ -341,6 +341,9 @@ def make_response(url, query, jsonify=True):
     return response
 
 def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
+    """
+    Send JSON data to stream users either specifically or by access control.
+    """
     for connection in httpd.sockets.values():
         if connection.connected and connection.socket_type == socket_type:
             for c in connection.active_ns.values():
@@ -348,9 +351,43 @@ def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
                     continue
                 if not hasattr(c, "user"):
                     continue
-                if priv and not c.can(priv):
+                if priv and not c.user.can(priv):
                     continue
-                if user and c != user:
+                if user and c.user.uid != user.uid:
                     continue
                 c.emit(message_type, message)
+
+def check_availability(httpd, socket_type, user):
+    """
+    Return True if the specified user has an active connection to the specified
+    socket type, False otherwise.
+    """
+    for connection in httpd.sockets.values():
+        if connection.connected and connection.socket_type == socket_type:
+            for c in connection.active_ns.values():
+                if not hasattr(c, "socket_type") or c.socket_type != socket_type:
+                    continue
+                if not hasattr(c, "user"):
+                    continue
+                if c.user.uid != user.uid:
+                    continue
+                return True
+    return False
+
+def change_channel(httpd, socket_type, user, channel):
+    """
+    Force a stream user to join an in-stream channel.
+    Useful for enabling people to reply to RPC_CHAT messages.
+    """
+    for connection in httpd.sockets.values():
+        if connection.connected and connection.socket_type == socket_type:
+            for c in connection.active_ns.values():
+                if not hasattr(c, "socket_type") or c.socket_type != socket_type:
+                    continue
+                if not hasattr(c, "user"):
+                    continue
+                if user and c.user.uid != user.uid:
+                    continue
+                print "Joining %s to %s." % (user.username, channel) 
+                c.on_join(channel)
 

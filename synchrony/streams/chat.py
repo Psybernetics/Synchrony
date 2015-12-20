@@ -81,42 +81,50 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
         """
         if self.user and self.user.username:
             if self.user.can("chat"):
+                if channel_name in self.channels: return
                 log("%s joined %s" % (self.user.username, channel_name))
                 channel = Channel(name=channel_name)
                 channel.clients.add(self)
                 self.channels['_default']   = channel
                 self.channels[channel_name] = channel
                 self.join(channel_name)
+
+                # Send an "init" message via RPC_CHAT to the remote host
                 if channel_name.count("/") == 2:
                     network, node_id, uid = channel_name.split("/")
                     router = self.routes.get(network, None)
                     if router == None: return
-                    print 2
                     friend = [f for f in self.user.friends if f.address == channel_name]
                     if not friend: return
-                    print 3
                     friend = friend[0]
                     if not friend.peer: # Return if no known pubkey
                         return
-                    print 4
-                    data   = {"m": "Hello, world."}
-                    router.protocol.rpc_chat((friend.ip, friend.port), data)
-                    return
+                    data         = {}
+                    data['to']   = friend.uid
+                    data['from'] = [self.user.uid, self.user.username]
+                    data['type'] = "init"
+                    data['body'] = ""
+
+                    resp = router.protocol.rpc_chat((friend.ip, friend.port), data)
+                    if resp and "state" in resp and resp['state'] == "delivered":
+                        self.emit("rpc_chat_init", resp)
  
     def on_appear_offline(self, state):
         """
-         Flip the boolean self.socket.appearing_offline
-         so we're omitted from emit_to_room events on other users.
+        Flip the boolean self.socket.appearing_offline
+        so we're omitted from emit_to_room events on other users.
         """
         if state:
             self.socket.appearing_offline = True
-            self.emit("appear_offline",True)
+            self.emit("appear_offline", True)
         else:
             self.socket.appearing_offline = False
-            self.emit("appear_offline",False)
+            self.emit("appear_offline", False)
    
     def emit_to_room(self, room, event, *args):
-        """This is sent to all in the room (in this particular Namespace)"""
+        """
+        This is sent to all in the room in this particular namespace.
+        """
         pkt = dict(type="event",
                     name=event,
                     args=args,
@@ -130,12 +138,40 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
                 socket.send_packet(pkt)
                 
     def on_msg(self, msg):
+        """
+        Handle sending a message to a local user or a friend on a remote instance.
+        """
         if self.user and self.channels.values():
             if self.user.created:
                 body = {"u":self.user.username,"m":escape(msg)}
             else:
                 body = {"u":self.user.username,"m":escape(msg),"a": True}
             channel = self.channels['_default']
+            # Send message via RPC_CHAT to a remote host
+            if channel.name.count("/") == 2:
+                network, node_id, uid = channel.name.split("/")
+                router = self.routes.get(network, None)
+                print 1
+                if router == None: return
+                friend = [f for f in self.user.friends if f.address == channel.name]
+                if not friend: return
+                print 2
+                friend = friend[0]
+                if not friend.peer: # Return if no known pubkey
+                    return
+
+                print 3
+                data         = {}
+                data['to']   = friend.uid
+                data['from'] = [self.user.uid, self.user.username]
+                data['type'] = "message"
+                data['body'] = msg
+
+                resp = router.protocol.rpc_chat((friend.ip, friend.port), data)
+                print 4
+                if resp:
+                    self.emit("privmsg", body)
+                return
             log("Message to %s from %s: %s" % (channel.name, self.user.username, msg))
             self.emit_to_room(channel.name, "privmsg", body)
             self.emit("privmsg", body)

@@ -596,8 +596,11 @@ class SynchronyProtocol(object):
         if addr.count("/") != 2:
             return False, None
         network, node_id, remote_uid = addr.split("/")
-        node = Node(long(node_id))
+        
+        if network != self.router.network:
+            return False, None
 
+        node = Node(long(node_id))
         nearest = self.router.find_neighbours(node)
         if len(nearest) == 0:
             log("There are no neighbours to help us add users on %s as friends." % node_id)
@@ -609,6 +612,18 @@ class SynchronyProtocol(object):
             return False, None
 
         node    = nodes[0]
+
+        # Sometimes spidering doesn't get us all the way there.
+        # Check who we already know:
+        if node.long_id != long(node_id):
+            nodes = [n for n in self.router if n.long_id == long(node_id)]
+            if len(nodes) != 1:
+                return False, None
+            node = nodes[0]
+
+        log(node_id, "debug")
+        log(node.long_id, "debug")
+
         log("Found remote instance %s." % node)
         message = {"rpc_add_friend": {"from": local_uid, "to": remote_uid}}
 
@@ -627,9 +642,11 @@ class SynchronyProtocol(object):
         { 
            'to': 'uid',
            'from': ['uid', 'username'],
-           'body': 'message content'
+           'type': Can be any of "message", "init", "close"
+           'body': {'m':'content'}
         }
         """
+        # Worth retaining this ping call for the routing information we get.
         node     = self.rpc_ping(nodeple)
         
         if node == None:
@@ -638,10 +655,9 @@ class SynchronyProtocol(object):
         data     = base64.b64encode(json.dumps(data))
         key      = RSA.importKey(node.pubkey)
         data     = key.encrypt(data, 32)
-        print data
         data     = base64.b64encode(data[0])
         response = transmit(self.router, node, {'rpc_chat': data})
-        log(response)
+        log(response, "debug")
         return response
 
     def rpc_edit(self, node, data):
@@ -750,8 +766,7 @@ class SynchronyProtocol(object):
         """
         Match to UID and return our Friend instance
         """
-        if not "rpc_add_friend" in data:
-            return False
+        assert "rpc_add_friend" in data
 
         log(data, "debug")
         request   = data['rpc_add_friend']
@@ -771,14 +786,37 @@ class SynchronyProtocol(object):
         
         node = Node(*data['node'])
 
+        network = Network.query.filter(Network.name == self.router.network).first()
+        
+        if network != None:
+            network = Network(name = self.router.network)
+
+        peer = Peer.query.filter(
+                    and_(Peer.network == network,
+                         Peer.ip      == node.ip,
+                         Peer.port    == node.port)
+                ).first()
+
+        if peer == None:
+            peer = Peer()
+            peer.ip      = node.ip
+            peer.port    = node.port
+            peer.pubkey  = node.pubkey
+            peer.network = network
+
         friend          = Friend(address=from_addr)
         friend.state    = 1
         friend.received = True
         friend.ip       = node.ip
         friend.port     = node.port
+        
         user.friends.append(friend)
-        db.session.add(friend)
+        peer.friends.append(friend)
+
         db.session.add(user)
+        db.session.add(peer)
+        db.session.add(friend)
+        db.session.add(network)
         db.session.commit()
 
         return envelope(self.router, {"response": friend.jsonify()})
@@ -788,22 +826,51 @@ class SynchronyProtocol(object):
         Move a message from a remote node up to the UI if the recipient
         UID has an active connection to the chat stream.
         """
-        log(data)
-        self.read_envelope(data)
+        node            = self.read_envelope(data)
+        # With the ciphertext being a binary string we also b64encode it
         message_content = base64.b64decode(data['rpc_chat'])
         message_content = app.key.decrypt((message_content,))
-        message_data    = json.loads(base64.b64decode(message_content))
-        log(message_content)
-        log(message_data)
+        data            = json.loads(base64.b64decode(message_content))
+        log(message_content, "debug")
+        log(data, "debug")
 
-        # friend = Friend.query.filter(Friend.address = data['address']).first()
-        # if friend and friend.user:
-        #    utils.broadcast(self.router.httpd,
-        #                    "chat",
-        #                    "msg",
-        #                    msg_content,
-        #                    user=friend.user)
-        return {"m": "Testing."}
+        user = User.query.filter(User.uid == data['to']).first()
+        if user == None:
+            return {"error": "No such user."}
+
+        friend = Friend.query.filter(and_(Friend.user    == user,
+                                          Friend.network == self.router.network,
+                                          Friend.node_id == str(node.long_id),
+                                          Friend.uid     == data['from'][0])
+                                    ).first()
+        if friend:
+
+            available = utils.check_availability(self.router.httpd, "chat", user)
+            if not available:
+                return {"error": "The intended recipient isn't connected to chat."}
+
+            if data['type'] == "init":
+                # Enable the recipient to reply by force-joining them to the
+                # correct channel.
+                log("Changing chat channel of %s to %s." % \
+                    (user.username, friend.address), "debug")
+                utils.change_channel(self.router.httpd,
+                                     "chat",
+                                     user,
+                                     friend.address)
+                utils.broadcast(self.router.httpd,
+                                "chat",
+                                "rpc_chat_init",
+                                data['from'],
+                                user=user)
+            
+            if data['type'] == "message":
+                utils.broadcast(self.router.httpd,
+                                "chat",
+                                "rpc_chat",
+                                data,
+                                user=user)
+        return {"state": "delivered"}
 
     def handle_edit(self, data):
         self.read_envelope(data)

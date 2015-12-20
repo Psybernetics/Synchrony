@@ -1052,7 +1052,7 @@ function chatView() {
         }
        
         $('.chat').draggable();
-        var welcome_message = "Use <em>/help</em> to see a list of commands.";
+        var welcome_message = "Use <em>/help</em> to see a list of commands.<br />";
         $('.chat-messages').append(welcome_message);
 
         App.Views.chat.visible = false;
@@ -1072,7 +1072,7 @@ function chatView() {
 //            The anonymous flag is for if you've permitted unsigned-up users to chat
 //            via the auth server.
 //            data = {m:message, u:username, a:anonymous_flag}
-            $('.chat-messages').append('<br />&lt;' + linkUser(data.u) + '&gt; ' + data.m);
+            $('.chat-messages').append('&lt;' + linkUser(data.u) + '&gt; ' + data.m + "<br />");
             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
         });
 
@@ -1106,6 +1106,28 @@ function chatView() {
 
         App.Views.chat.socket.on("appear_offline", function(data){
             $('[name="appear_offline"]').attr("checked", data);
+        });
+
+        // RPC_CHAT event listeners for messages from remote Synchrony instances.
+        App.Views.chat.socket.on("rpc_chat_init", function(data){
+            console.log(data);
+            if (data.state == "delivered") {
+                var message = "The remote side has been notified and is available to chat.<br />";
+                $('.chat-messages').append(message);
+                $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+            } else {
+                notify(data[1] + " wants to chat");
+                // App.Views.chat.socket.emit("join", friend.address);
+            }
+        });
+        App.Views.chat.socket.on("rpc_chat", function(data){
+            console.log(data);
+            var message = "&lt;" + data.from[1] + "&gt; " + data.body + "<br />";
+            $('.chat-messages').append(message);
+            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+        });
+        App.Views.chat.socket.on("rpc_chat_close", function(data){
+            console.log(data);
         });
 
         if (App.Config.user){
