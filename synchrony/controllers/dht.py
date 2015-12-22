@@ -208,15 +208,14 @@ class RoutingTable(object):
                              # we only accept peers who can also sign
                              # data using the same public key as ours.
 
-        seed    = "%s:%i:%s" % (addr,port,pubkey)
-
+        seed      = "%s:%i:%s" % (addr,port,pubkey)
         self.node = Node(id or utils.generate_node_id(seed),
-                addr,
-                port,
-                pubkey)
+                         addr,
+                         port,
+                         pubkey)
 
-        #        log(self.node.long_id)
         self.buckets  = [KBucket(0, 2 ** 160, self.ksize)]
+        self.tbucket  =  TBucket(0, 2 ** 160, self.ksize)
         self.protocol = SynchronyProtocol(self, self.node, Storage(), ksize)
 
         # This makes it easy for test suites select which method to use.
@@ -227,7 +226,12 @@ class RoutingTable(object):
         # Introduce previously known nodes 
         nodes = self.load(nodes)
 
+        # Contact these peers and discover their peers
         self.bootstrap(nodes)
+
+        # Place those who responded from the initial set in the set of trusted
+        # peers
+        self.trust_peers(nodes)
 
         if self.httpd:
             self.httpd.loop.run_callback(self.loop)
@@ -253,6 +257,8 @@ class RoutingTable(object):
         except Exception, e:
             log("Error pinging peers: %s" % e.message, "error")
 
+        self.compute_trust()
+
         peers  = len(self)
         # 24 hours:
         timing = 86400
@@ -264,7 +270,7 @@ class RoutingTable(object):
         elif peers <= 500:
             timing = timing / 4
             timing = timing / 3
-            # 6 hours:
+        # 6 hours:
         elif peers <= 1500:
             timing = timing / 2
      
@@ -349,6 +355,15 @@ class RoutingTable(object):
             log("%s: Telling peers we're leaving the network." % self.network)
         gevent.joinall(threads)
 
+    def compute_trust(self):
+        """
+        Weight peers via the ratings assigned to them by trusted peers.
+        """
+#       for node in self.tbucket.nodes.values():
+#           r = get(node, self.network)
+#           log(r, "debug")
+        pass
+
     def split(self, index):
         one, two = self.buckets[index].split()
         self.buckets[index] = one
@@ -400,7 +415,7 @@ class RoutingTable(object):
         """
         Return a reference to a node if we already have it as a contact.
         """
-        if isinstance(node, list) or isinstance(node, tuple):
+        if isinstance(node, (list, tuple)):
             node = Node(*node)
         if not self.is_new_node(node):
             # Try finding the node by its id
@@ -422,6 +437,19 @@ class RoutingTable(object):
             if len(nodes) == k:
                 break
         return map(operator.itemgetter(1), heapq.nsmallest(k, nodes))
+
+    def trust_peers(self, nodes):
+        """
+        Take a list of (addr, port) tuples from the list of bootstrap nodes
+        and add any corresponding Node instance to self.TBucket.
+
+        Given that we don't have node IDs for this list we have to iterate
+        through all known peers.
+        """
+        for nodeple in nodes:
+            for node in self:
+                if node.ip == nodeple[0] and node.port == nodeple[1]:
+                    self.tbucket.add_node(node)
 
     def __getitem__(self, key):
         """
@@ -990,37 +1018,39 @@ class SynchronyProtocol(object):
 
         return True
 
-    def fetch_revision(self, url, content_hash, nodes):
+    def fetch_revision(self, url, content_hash, nodeples):
         """
         Return a revision object for a content hash given a list of peers.
+
         Called from ValueSpider._handle_found_values.
+        nodeples is a list of node triples [long_id, ip, port].
         """
-        urls = []
-        for node in nodes:
-            if not self.router.get_existing_node(node):
-                self.rpc_ping(node)
-            node = self.router.get_existing_node(node)
-            if node == None: continue
-            if node.ip == self.source_node.ip and node.port == self.source_node.port:
-                # We don't request revisions from our own HTTPD due to the
-                # limitation of coroutines with a blocking call waiting for
-                # a blocking call to yeild execution. Instead we just scan
-                # the database directly.
+        urls  = []
+        nodes = []
+        for n in nodeples:
+            if n[1] == self.source_node.ip and n[2] == self.source_node.port:
                 revision = Revision.query.filter(Revision.hash == content_hash)\
                     .first()
                 if revision:
                     return revision
-            elif node.ip == self.source_node.ip:
-                addr = '127.0.0.1'
-            else:
-                addr = node.ip
+            node = self.router.get_existing_node(n)
+            if node:
+                nodes.append(node)
+                continue
+            node = self.rpc_ping(n)
+            if node == None: continue
+            nodes.append(node)
+
+        nodes = sort_nodes_by_trust(nodes)
+
+        for node in nodes:
             urls.append("http://%s:%i/v1/peers/revisions/%s" % \
-                (addr, node.port, content_hash))
+                (node.ip, node.port, content_hash))
 #        urls = ["http://%s:%i/v1/peers/revisions/%s" % \
 #            (n[1],n[2],content_hash) for n in nodes]
         # TODO: Handle unresponsive peers
         headers = {'User-Agent': 'Synchrony %s' % app.version}
-        threads = [gevent.spawn(requests.get, peer_url, headers=headers) for peer_url in urls]
+        threads = [gevent.spawn(requests.get, url, headers=headers) for url in urls]
         gevent.joinall(threads)
         threads = [t.value for t in threads]
         for response in threads:
@@ -1034,7 +1064,7 @@ class SynchronyProtocol(object):
             revision = Revision()
             revision.add(response)
             if revision.hash != content_hash:
-                node.trust -= 0.1
+                node.trust -= 1
                 log("Hash doesn't match content for %s" % content_hash, "warning")
                 log("Decremented trust rating for %s." % node, "warning")
             else:
@@ -1247,6 +1277,33 @@ class KBucket(object):
     def __len__(self):
         return len(self.nodes)
 
+class TBucket(KBucket):
+    """
+    A bucket of pre-trusted peers.
+
+    Peers have a normal placement in KBuckets but peers who also have a
+    reference from a TBucket are considered to be inherently trustworthy, and
+    can be relied upon to be honest in rating the trustworthiness of their
+    peers.
+
+    Pre-trusted peers: nodes residing on internal subnets
+                       nodes supplied by app.default_nodes/options.boostrap
+                       nodes who're the first to be added to a new network
+                       nodes who've previously earned high trust over time
+
+    Given that we have no "i downloaded from A" information,
+    start with your pre-trusted peers and depend on their weighting of
+    their own peers. Fan-out from there.
+    This takes place during the periodic RPC_PING and before republish events.
+    """
+    def calculate_trust(self):
+        return
+        for i in self.nodes:
+            pass
+
+    def __repr__(self):
+        return "<TBucket %s>" % (str(self.nodes.values())[:55] + '...')
+
 class Node(object):
     def __init__(self, id, ip=None, port=None, pubkey=None):
         if isinstance(id, long):
@@ -1367,13 +1424,6 @@ class NodeHeap(object):
 
     def __repr__(self):
         return "<NodeHeap %s" % str(self.heap)
-
-class Siblings(object):
-    """
-    S/Kademlia sibling list.
-    """
-    def __init__(self, s=32):
-        self.s = s
 
 class Storage(object):
     """
@@ -2039,6 +2089,28 @@ def transmit(routes, addr, data):
         log(e.message, "error")
         return
 
+def get(addr, path):
+    """
+    Helper function for doing things like leafing through
+    /v1/peers/<network> on remote peers.
+    """
+    if isinstance(addr, Node):
+        addr = (addr.ip, addr.port)
+
+    if isinstance(addr, tuple):
+        addr  = "http://%s:%i/v1/peers/" % addr
+        addr += path
+
+    try:
+        r = requests.get(addr, timeout=app.config['HTTP_TIMEOUT'])
+        if r.status_code != 200:
+            log("Error contacting %s: %s" % (addr, r.text))
+            return
+        return r.json()
+    except Exception, e:
+        log(e.message, "error")
+        return
+
 def receive(data):
     """
     b64 unencode, decompress binaries
@@ -2061,3 +2133,11 @@ def digest(s):
         s = str(s)
     return sha1(s).digest()
 
+def sort_nodes_by_trust(nodes):
+    if nodes == []: 
+        return []
+    else:
+        pivot = nodes[0]
+        lesser = sort_nodes_by_trust([x for x in nodes[1:] if x.trust < pivot.trust])
+        greater = sort_nodes_by_trust([x for x in nodes[1:] if x.trust >= pivot.trust])
+        return greater + [pivot] + lesser

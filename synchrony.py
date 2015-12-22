@@ -26,6 +26,8 @@ try:
 except ImportError:
     pass
 
+# Beware with writing revisions to disk from DHT as it's 
+# been known to corrupt SQLite databases for some reason
 def write_revision_to_disk(options):
     # query for revision by hash
     rev = Revision.query.filter(Revision.hash == options.write).first()
@@ -88,22 +90,22 @@ def daemon(pidfile):
 if __name__ == "__main__":
     epilog = "Available test suites: %s" % ', '.join([test for test in maps.keys()])
     parser = optparse.OptionParser(epilog=epilog)
-    parser.add_option("-p", "--port", dest="port", action="store", default=8080, help="(defaults to 8080)")
-    parser.add_option("--key", dest="key", action="store", default="id_rsa", help="(defaults to id_rsa)")
-    parser.add_option("-c", "--config", dest="config", action="store", default='synchrony.config')
-    parser.add_option("-a", "--address", dest="address", action="store", default='0.0.0.0')
-    parser.add_option("--stop", dest="stop", action="store_true",default=False)
-    parser.add_option("--restart", dest="restart", action="store_true",default=False)
-    parser.add_option("--test-suite", dest="test_suite", action="store",default=False)
-    parser.add_option("--debug", dest="debug", action="store_true",default=False, help="Enable debugging output.")
+    parser.add_option("-p", "--port",     dest="port", action="store", default=8080, help="(defaults to 8080)")
+    parser.add_option("--key",            dest="key", action="store", default="id_rsa", help="(defaults to id_rsa)")
+    parser.add_option("-c", "--config",   dest="config", action="store", default='synchrony.config')
+    parser.add_option("-a", "--address",  dest="address", action="store", default='0.0.0.0')
+    parser.add_option("--stop",           dest="stop", action="store_true", default=False)
+    parser.add_option("--restart",        dest="restart", action="store_true", default=False)
+    parser.add_option("--test-suite",     dest="test_suite", action="store", default=False)
+    parser.add_option("--debug",          dest="debug", action="store_true", default=False, help="Enable debugging output.")
 #    parser.add_option("--autoreplicate", dest="autoreplicate", action="store", default="2G", help="Automatically replicate peer data.")
-    parser.add_option("-w", "--write", dest="write", action="store",default=None, help="Write a revision object (by content hash) to disk. [TEMPERAMENTAL]")
-    parser.add_option("-o", "--out", dest="out", action="store",default=None, help="Output path for --write")
-    parser.add_option("--pidfile", dest="pidfile", action="store",default='synchrony.pid', help="(defaults to ./synchrony.pid)")
-    parser.add_option("--logfile", dest="logfile", action="store",default='synchrony.log', help="(defaults to ./synchrony.log)")
-    parser.add_option("--run-as", dest="run_as", action="store",default=None, help="(defaults to the invoking user)")
-    parser.add_option("--network", dest="network", action="store", default=None, help="(defaults to \"%s\")" % app.default_network)
-    parser.add_option("--bootstrap", dest="bootstrap", action="store", default="synchrony.link:80", help="(defaults to synchrony.link:80)")
+    parser.add_option("-w", "--write",    dest="write", action="store", default=None, help="Write a revision object (by content hash) to disk. [TEMPERAMENTAL]")
+    parser.add_option("-o", "--out",      dest="out", action="store", default=None, help="Output path for --write")
+    parser.add_option("--pidfile",        dest="pidfile", action="store", default='synchrony.pid', help="(defaults to ./synchrony.pid)")
+    parser.add_option("--logfile",        dest="logfile", action="store", default='synchrony.log', help="(defaults to ./synchrony.log)")
+    parser.add_option("--run-as",         dest="run_as", action="store", default=None, help="(defaults to the invoking user)")
+    parser.add_option("--network",        dest="network", action="store", default=None, help="(defaults to \"%s\")" % app.default_network)
+    parser.add_option("--bootstrap",      dest="bootstrap", action="store", default="synchrony.link:80", help="(defaults to synchrony.link:80)")
     parser.add_option("--dont-bootstrap", dest="dont_bootstrap", action="store_true", default=False, help="(don't try to add peers on startup)")
     (options, args) = parser.parse_args()
     options.port    = int(options.port)
@@ -114,7 +116,7 @@ if __name__ == "__main__":
     if options.stop or options.restart:
         pid = None
         try:
-            f = file(options.pidfile, 'r')
+            f   = file(options.pidfile, 'r')
             pid = int(f.readline())
             f.close()
             os.unlink(options.pidfile)
