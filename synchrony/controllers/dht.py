@@ -215,7 +215,7 @@ class RoutingTable(object):
                          pubkey)
 
         self.buckets  = [KBucket(0, 2 ** 160, self.ksize)]
-        self.tbucket  =  TBucket(0, 2 ** 160, self.ksize)
+        self.tbucket  =  TBucket(self, 0, 2 ** 160, self.ksize)
         self.protocol = SynchronyProtocol(self, self.node, Storage(), ksize)
 
         # This makes it easy for test suites select which method to use.
@@ -257,7 +257,7 @@ class RoutingTable(object):
         except Exception, e:
             log("Error pinging peers: %s" % e.message, "error")
 
-        self.compute_trust()
+        self.tbucket.calculate_trust()
 
         peers  = len(self)
         # 24 hours:
@@ -354,15 +354,6 @@ class RoutingTable(object):
         if threads:
             log("%s: Telling peers we're leaving the network." % self.network)
         gevent.joinall(threads)
-
-    def compute_trust(self):
-        """
-        Weight peers via the ratings assigned to them by trusted peers.
-        """
-#       for node in self.tbucket.nodes.values():
-#           r = get(node, self.network)
-#           log(r, "debug")
-        pass
 
     def split(self, index):
         one, two = self.buckets[index].split()
@@ -1281,25 +1272,77 @@ class TBucket(KBucket):
     """
     A bucket of pre-trusted peers.
 
+    Pre-trusted peers: nodes residing on internal subnets (possibly)
+                       nodes supplied by app.default_nodes/options.boostrap
+                       nodes who're the first to be added to a new network
+                       nodes who've previously earned high trust over time
+
     Peers have a normal placement in KBuckets but peers who also have a
     reference from a TBucket are considered to be inherently trustworthy, and
     can be relied upon to be honest in rating the trustworthiness of their
     peers.
-
-    Pre-trusted peers: nodes residing on internal subnets
-                       nodes supplied by app.default_nodes/options.boostrap
-                       nodes who're the first to be added to a new network
-                       nodes who've previously earned high trust over time
 
     Given that we have no "i downloaded from A" information,
     start with your pre-trusted peers and depend on their weighting of
     their own peers. Fan-out from there.
     This takes place during the periodic RPC_PING and before republish events.
     """
+    def __init__(self, router, lower, upper, ksize):
+        self.router = router
+        KBucket.__init__(self, lower, upper, ksize)
+        
     def calculate_trust(self):
-        return
-        for i in self.nodes:
-            pass
+        """
+        Weight peers by the ratings assigned to them via trusted peers.
+        Loosely based on EigenTrust++ with modifications due to not having
+        information about the amount of satisfactory downloads remote peers
+        have made.
+        """
+        def same_source(node):
+            """
+            Simple closure to help us skip references to ourselves when
+            spidering.
+            """
+            if node[1] == self.router.node.ip and \
+                    node[2] == self.router.node.port:
+                return True
+            return False
+
+        near_nodes = []
+        far_nodes  = []
+        for node in self.nodes.values():
+            i = get(node, self.router.network) # get /v1/peers/<network_name>
+            if not "data" in i: continue
+            for j in i["data"]:
+                if same_source(j['node']): continue
+                near_node = Node(*j['node'])
+                existing  = self.router.get_existing_node(near_node)
+                if existing:
+                    near_node = existing
+                else:
+                    near_node = self.router.protocol.rpc_ping(near_node)
+                if not near_node: continue
+                if j['trust'] > 0: # peer of trusted peer has positive rating
+                    near_node.trust = node.trust / j['trust']
+                near_nodes.append(near_node)
+
+                f = get(near_node, self.router.network)
+                if not "data" in f: continue
+                for k in f['data']:
+                    if same_source(k['node']): continue
+                    far_node = Node(*k['node'])
+                    existing  = self.router.get_existing_node(far_node)
+                    if existing:
+                        far_node = existing
+                    else:
+                        far_node = self.router.protocol.rpc_ping(far_node)
+                    if not far_node: continue
+                    if k['trust'] > 0: # k.trust = (t.trusted / j.trust) / k.trust
+                        far_node.trust = near_node.trust / k['trust']
+                    far_nodes.append(far_node)
+        near_nodes.extend(far_nodes)
+        for node in near_nodes:
+            self.router.add_contact(node)
 
     def __repr__(self):
         return "<TBucket %s>" % (str(self.nodes.values())[:55] + '...')
