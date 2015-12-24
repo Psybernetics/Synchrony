@@ -214,8 +214,11 @@ class RoutingTable(object):
                          port,
                          pubkey)
 
+        # An unbounded group of pre-trusted peers
+        self.tbucket  = TBucket(self)
+        # Our sublists of known peers
         self.buckets  = [KBucket(0, 2 ** 160, self.ksize)]
-        self.tbucket  =  TBucket(self, 0, 2 ** 160, self.ksize)
+        # An instance of a protocol class implementing our RPCs
         self.protocol = SynchronyProtocol(self, self.node, Storage(), ksize)
 
         # This makes it easy for test suites select which method to use.
@@ -440,7 +443,7 @@ class RoutingTable(object):
         for nodeple in nodes:
             for node in self:
                 if node.ip == nodeple[0] and node.port == nodeple[1]:
-                    self.tbucket.add_node(node)
+                    self.tbucket[node.id] = node
 
     def __getitem__(self, key):
         """
@@ -1268,7 +1271,7 @@ class KBucket(object):
     def __len__(self):
         return len(self.nodes)
 
-class TBucket(KBucket):
+class TBucket(dict):
     """
     A bucket of pre-trusted peers.
 
@@ -1287,9 +1290,9 @@ class TBucket(KBucket):
     their own peers. Fan-out from there.
     This takes place during the periodic RPC_PING and before republish events.
     """
-    def __init__(self, router, lower, upper, ksize):
+    def __init__(self, router, *args, **kwargs):
         self.router = router
-        KBucket.__init__(self, lower, upper, ksize)
+        dict.__init__(self, *args, **kwargs)
         
     def calculate_trust(self):
         """
@@ -1310,7 +1313,7 @@ class TBucket(KBucket):
 
         near_nodes = []
         far_nodes  = []
-        for node in self.nodes.values():
+        for node in self.values():
             i = get(node, self.router.network) # get /v1/peers/<network_name>
             if not "data" in i: continue
             for j in i["data"]:
@@ -1345,7 +1348,7 @@ class TBucket(KBucket):
             self.router.add_contact(node)
 
     def __repr__(self):
-        return "<TBucket %s>" % (str(self.nodes.values())[:55] + '...')
+        return "<TBucket %s>" % (str(self.values())[:55] + '...')
 
 class Node(object):
     def __init__(self, id, ip=None, port=None, pubkey=None):
@@ -1747,7 +1750,7 @@ class TableTraverser(object):
         raise StopIteration
 
 # TODO: Prioritise routes based on their global trust rating.
-class Routers(object):
+class Routers(dict):
     """
     Ease access to multiple overlay networks by network name.
 
@@ -1759,70 +1762,47 @@ class Routers(object):
     routes['private']
     routes.get('private', None)
     """
-    def __init__(self, routes={}):
-        self.routes        = routes
+    def __init__(self, routes={}, *args, **kwargs):
         if not routes:
             self._default_name = None
         else:
             self._default_name = routes.values()[0].network
+        dict.__init__(self, *args, **kwargs)
 
     def __getattr__(self, attr):
-        if not attr.startswith("_") and attr in self.routes:
-            return self.routes[attr]
+        if not attr.startswith("_") and attr in self:
+            return self[attr]
         raise AttributeError
 
-    def __getitem__(self, key):
-        if key in self.routes:
-            return self.routes[key]
-        raise KeyError
-
-    def __setitem__(self, key, value):
-        assert isinstance(value, RoutingTable)
+    def append(self, router):
+        assert isinstance(router, RoutingTable)
+        self[router.network] = router
         if not self._default_name:
-            self._default_name = value.network
-        self.routes[key] = value
-
-    def get(self, key, default=None):
-        if key in self.routes:
-            return self.routes[key]
-        return default
-
-    def append(self, value):
-        assert isinstance(value, RoutingTable)
-        self.routes[value.network] = value
-        if not self._default_name:
-            self._default_name     = value.network
- 
-    # FIXME: Subclass dictionaries instead.
-    def values(self):
-        return self.routes.values()
-
-    def keys(self):
-        return self.routes.keys()
+            self._default_name = router.network
 
     @property
     def _default(self):
-        if not self.routes or not self._default_name:
+        if not self or not self._default_name:
             return None
-        return self.routes[self._default_name]
+        return self[self._default_name]
 
     @property
     def routes_available(self):
-        return self.routes != {}
+        return self != {}
 
     def leave(self, key):
         router = self.get(key)
         if router == None:
             return
         router.leave_network()
-        del self.routes[key]
+        del self[key]
 
     def leave_networks(self):
         """
         This is set as sys.exitfunc to tell all networks that we're leaving.
         """
         # TODO: Query for Node objects in the database.
-        for router in self.routes.values():
+        for router in self.values():
 #            for node in router:
 #                p = Peer()
 #                p.load_node(router.network, node)
