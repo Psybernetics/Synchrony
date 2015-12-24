@@ -53,6 +53,10 @@ class RevisionResource(restful.Resource):
         if rev:
             if args.public != None:
                 rev.public = args.public
+                # Broadcast to overlay networks when a revision's made public.
+                if args.public == True:
+                    for router in app.routes:
+                        app.routes[router][rev] = rev
 
             db.session.add(rev)
             db.session.commit()
