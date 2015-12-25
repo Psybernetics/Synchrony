@@ -1255,7 +1255,7 @@ class KBucket(object):
         # delete the node, and see if we can add a replacement
         del self.nodes[node.id]
         if len(self.replacement_nodes) > 0:
-            nodenode = self.replacement_nodes.pop()
+            newnode = self.replacement_nodes.pop()
             self.nodes[newnode.id] = newnode
 
     def depth(self):
@@ -1294,7 +1294,7 @@ class TBucket(dict):
         self.router = router
         dict.__init__(self, *args, **kwargs)
         
-    def calculate_trust(self):
+    def calculate_trust(self, nodes=None):
         """
         Weight peers by the ratings assigned to them via trusted peers.
         Loosely based on EigenTrust++ with modifications due to not having
@@ -1313,9 +1313,12 @@ class TBucket(dict):
 
         near_nodes = []
         far_nodes  = []
-        for node in self.values():
+        if nodes == None:
+            nodes = self.values()
+
+        for node in nodes:
             i = get(node, self.router.network) # get /v1/peers/<network_name>
-            if not "data" in i: continue
+            if not i or not "data" in i: continue
             for j in i["data"]:
                 if same_source(j['node']): continue
                 near_node = Node(*j['node'])
@@ -1330,7 +1333,7 @@ class TBucket(dict):
                 near_nodes.append(near_node)
 
                 f = get(near_node, self.router.network)
-                if not "data" in f: continue
+                if not f or not "data" in f: continue
                 for k in f['data']:
                     if same_source(k['node']): continue
                     far_node = Node(*k['node'])
@@ -1346,6 +1349,7 @@ class TBucket(dict):
         near_nodes.extend(far_nodes)
         for node in near_nodes:
             self.router.add_contact(node)
+#        self.calculate_trust(far_nodes)
 
     def __repr__(self):
         return "<TBucket %s>" % (str(self.values())[:55] + '...')
