@@ -16,16 +16,16 @@ class TestSuite(BaseSuite):
     storage_method = "rpc_append"
 
     def store_and_retrieve(self):
-        rev = Revision.query.first()
-        if not rev:
+        revision = Revision.query.first()
+        if not revision:
             print "Couldn't find a revision to test with."
             print "You may want to browse with Synchrony and try again."
             raise SystemExit
-        self.peers[0][rev] = rev
+        self.peers[0][revision] = revision
 
         # Now that we've stored references to the 0th peer
         # let's see if we can find them from the 1st peer.
-        self.assertEqual(self.peers[1][rev], rev)
+        self.assertEqual(self.peers[1][revision], revision)
 
 def run():
     suite = unittest.TestSuite()

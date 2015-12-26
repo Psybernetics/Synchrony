@@ -1023,6 +1023,8 @@ class SynchronyProtocol(object):
         nodes = []
         for n in nodeples:
             if n[1] == self.source_node.ip and n[2] == self.source_node.port:
+#                continue # Attempt to retrieve from DHT even if we have a copy
+                log("Serving locally held copy of this revision.")
                 revision = Revision.query.filter(Revision.hash == content_hash)\
                     .first()
                 if revision:
@@ -1063,11 +1065,22 @@ class SynchronyProtocol(object):
                 log("Decremented trust rating for %s." % node, "warning")
             else:
                 # Adjust mimetype, set the network and increment bytes_rcvd
+                # TODO: Make the trust increment proportionate to Revision.size
+                log("Incrementing trust rating for %s." % node)
+                node.trust += 1
                 if 'content-type' in response.headers:
-                    revision.mimetype = response.headers['content-type']        
+                    revision.mimetype = response.headers['content-type']
                 if 'Content-Type' in response.headers:
-                    revision.mimetype = response.headers['Content-Type']        
-                revision.network = self.router.network
+                    revision.mimetype = response.headers['Content-Type']
+                # Set the network instance on this revision object
+                # the user instance is defined when Revision.save is called in
+                # controllers.fetch
+                network = Network.query.filter(
+                            Network.name == self.router.network
+                          ).first()
+                if not network:
+                    network = Network(name=self.router.network)
+                revision.network = network
                 app.bytes_received += revision.size
 
                 # Remember this download in case we have feedback on it
