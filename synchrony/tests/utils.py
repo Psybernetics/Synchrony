@@ -37,7 +37,7 @@ def create_peers(peer_amount, storage_method):
     for x in range(peer_amount):
         peers[x] = dht.RoutingTable(
                 "127.0.0.1",
-                random.randint(0,99999),
+                random.randint(0,999999),
                 app.key.publickey().exportKey(),
                 None,
         )
@@ -59,9 +59,10 @@ def create_peers(peer_amount, storage_method):
         return create_peers(peer_amount, storage_method)
         
     log("Introducing peers to one another.")
-    dht.log = lambda x: x
+    dht.log = lambda x, y=None: x
     for peer in peers.values():
         [peer.add_contact(router.node) for router in peers.values()]
+        print peer
     dht.log = log
     print pprint.pformat(peers)
     return peers

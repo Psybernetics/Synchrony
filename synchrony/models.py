@@ -87,8 +87,9 @@ class Revision(db.Model):
     """
     __tablename__ = "revisions"
     id            = db.Column(db.Integer(), primary_key=True)
-    content_id    = db.Column(db.Integer(), db.ForeignKey('content.id'))
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    content_id    = db.Column(db.Integer(), db.ForeignKey('content.id'))
+    network_id    = db.Column(db.Integer(), db.ForeignKey("networks.id")) 
     created       = db.Column(db.DateTime(), default=db.func.now())
     hash          = db.Column(db.String())
     public        = db.Column(db.Boolean(), default=False) # Publicly available
@@ -98,20 +99,20 @@ class Revision(db.Model):
     bcontent      = db.Column(BinaryBuffer(20*1000000000)) # 20gb default limit
     mimetype      = db.Column(db.String())
     size          = db.Column(db.Integer())
-    network       = None
     status        = 200
 
     def jsonify(self):
         res = {}
-        res['hash']     = self.hash
-        res['url']      = self.url
-        res['created']  = time.mktime(self.created.timetuple())
-        res['mimetype'] = self.mimetype
-        res['size']     = self.size
-        res['public']   = self.public
-        res['network']  = self.network
+        res['hash']        = self.hash
+        res['url']         = self.url
+        res['created']     = time.mktime(self.created.timetuple())
+        res['mimetype']    = self.mimetype
+        res['size']        = self.size
+        res['public']      = self.public
         if self.user:
-            res['user'] = self.user.username
+            res['user']    = self.user.username
+        if self.network:
+            res['network'] = self.network.name
         return res
 
     def __repr__(self):
@@ -146,7 +147,7 @@ class Revision(db.Model):
         response.headers['Content-Type'] = self.mimetype
         response.headers['Content-Hash'] = self.hash
         if self.network:
-            response.headers['Overlay-Network'] = self.network
+            response.headers['Overlay-Network'] = self.network.name
         return response
 
     def add(self, response):
@@ -500,10 +501,11 @@ class Network(db.Model):
     networks acheive a decent size.
     """
     __tablename__ = "networks"
-    id      = db.Column(db.Integer(), primary_key=True)
-    name    = db.Column(db.String())
-    peers   = db.relationship("Peer", backref="network")
-    created = db.Column(db.DateTime, default=db.func.now())
+    id        = db.Column(db.Integer(), primary_key=True)
+    name      = db.Column(db.String())
+    peers     = db.relationship("Peer", backref="network")
+    revisions = db.relationship("Revision", backref="network")
+    created   = db.Column(db.DateTime, default=db.func.now())
 
     def delete(self):
         for peer in self.peers:
