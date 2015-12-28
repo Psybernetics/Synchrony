@@ -321,7 +321,20 @@ class UserFriendsCollection(restful.Resource):
 
         query = Friend.query.filter(Friend.user == user)\
             .order_by(desc(Friend.created)).paginate(args.page, args.per_page)
-        return make_response(request.url, query)
+
+        response = make_response(request.url, query)
+
+        # Check the remote side of each request
+        for i, friend_request in enumerate(response['data']):
+            address = friend_request['address']
+            network, node_id, uid = address.split('/')
+            router = app.routes.get(network, None)
+            if router != None:
+                remote_state = router.protocol.rpc_add_friend(user.uid, address)
+                if remote_state[0]:
+                    response['data'][i]['status'] = remote_state[0]['status']
+
+        return response
 
     def put(self, username):
         """

@@ -1,6 +1,9 @@
+# _*_ coding: utf-8 _*_
 """
-Test multiple peers handling calls to RoutingTable.__setitem__
+Test sim for 70% dishonest feedback. Nearly three quarters of network nodes
+will be malign, with colluding groups.
 """
+
 import hashlib
 import unittest
 from synchrony.models import Revision
@@ -9,7 +12,7 @@ from synchrony.tests.utils import BaseSuite
 
 class TestSuite(BaseSuite):
 
-    peer_amount = 25
+    peer_amount = 250
     storage_method = "rpc_append"
 
     def store_and_retrieve(self):

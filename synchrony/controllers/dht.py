@@ -564,17 +564,15 @@ class SynchronyProtocol(object):
         Also requires a storage object.
         Check RoutingTable.__init__ out to see how that looks.
         
-        
         As well as node ID generation we also use cryptographic
-        keys here to encrypt some RPC calls such as RPC_CHAT and
-        RPC_EDIT. There is a possible MITM attack here whereby a 
+        keys here to encrypt some RPCs like RPC_CHAT and RPC_EDIT.
+        There is a possible Man-in-the-Middle attack here whereby a 
         malicious eavesdropping party intercepts the introduction
-        of two peers to one another and replaces the keys that were
-        originally transmitted with a new pair, deciphering communications
-        in-transit, re-encrypting with the peers' real keys on rebroadcast.
+        of two peers to one another and replaces their keys with a new
+        pair of public keys, deciphering communications in-transit and
+        re-encrypting with the peers' real public keys on rebroadcast.
 
-        This is best evaded by sharing your public key ahead of time through
-        a secure medium.
+        This is best evaded by sharing your public key separately ahead of time.
         
         """
         self.ksize         = ksize
@@ -799,7 +797,7 @@ class SynchronyProtocol(object):
 
     def handle_add_friend(self, data):
         """
-        Match to UID and return our Friend instance
+        Match to UID and return a new Friend instance representing our side.
         """
         assert "rpc_add_friend" in data
 
@@ -817,6 +815,7 @@ class SynchronyProtocol(object):
                             and_(Friend.address == from_addr, Friend.user == user)
                         ).first()
         if friend:
+            # This permits the remote side to see if they're added or blocked.
             return envelope(self.router, {"response": friend.jsonify()})
         
         node = Node(*data['node'])
@@ -1023,6 +1022,8 @@ class SynchronyProtocol(object):
         nodes = []
         for n in nodeples:
             if n[1] == self.source_node.ip and n[2] == self.source_node.port:
+#                continue # Attempt to retrieve from DHT even if we have a copy
+                log("Serving locally held copy of this revision.")
                 revision = Revision.query.filter(Revision.hash == content_hash)\
                     .first()
                 if revision:
@@ -1063,11 +1064,22 @@ class SynchronyProtocol(object):
                 log("Decremented trust rating for %s." % node, "warning")
             else:
                 # Adjust mimetype, set the network and increment bytes_rcvd
+                # TODO: Make the trust increment proportionate to Revision.size
+                log("Incrementing trust rating for %s." % node)
+                node.trust += 1
                 if 'content-type' in response.headers:
-                    revision.mimetype = response.headers['content-type']        
+                    revision.mimetype = response.headers['content-type']
                 if 'Content-Type' in response.headers:
-                    revision.mimetype = response.headers['Content-Type']        
-                revision.network = self.router.network
+                    revision.mimetype = response.headers['Content-Type']
+                # Set the network instance on this revision object
+                # the user instance is defined when Revision.save is called in
+                # controllers.fetch
+                network = Network.query.filter(
+                            Network.name == self.router.network
+                          ).first()
+                if not network:
+                    network = Network(name=self.router.network)
+                revision.network = network
                 app.bytes_received += revision.size
 
                 # Remember this download in case we have feedback on it
@@ -1255,7 +1267,7 @@ class KBucket(object):
         # delete the node, and see if we can add a replacement
         del self.nodes[node.id]
         if len(self.replacement_nodes) > 0:
-            nodenode = self.replacement_nodes.pop()
+            newnode = self.replacement_nodes.pop()
             self.nodes[newnode.id] = newnode
 
     def depth(self):
@@ -1294,7 +1306,7 @@ class TBucket(dict):
         self.router = router
         dict.__init__(self, *args, **kwargs)
         
-    def calculate_trust(self):
+    def calculate_trust(self, nodes=None):
         """
         Weight peers by the ratings assigned to them via trusted peers.
         Loosely based on EigenTrust++ with modifications due to not having
@@ -1313,9 +1325,12 @@ class TBucket(dict):
 
         near_nodes = []
         far_nodes  = []
-        for node in self.values():
+        if nodes == None:
+            nodes = self.values()
+
+        for node in nodes:
             i = get(node, self.router.network) # get /v1/peers/<network_name>
-            if not "data" in i: continue
+            if not i or not "data" in i: continue
             for j in i["data"]:
                 if same_source(j['node']): continue
                 near_node = Node(*j['node'])
@@ -1330,7 +1345,7 @@ class TBucket(dict):
                 near_nodes.append(near_node)
 
                 f = get(near_node, self.router.network)
-                if not "data" in f: continue
+                if not f or not "data" in f: continue
                 for k in f['data']:
                     if same_source(k['node']): continue
                     far_node = Node(*k['node'])
@@ -1346,6 +1361,7 @@ class TBucket(dict):
         near_nodes.extend(far_nodes)
         for node in near_nodes:
             self.router.add_contact(node)
+#        self.calculate_trust(far_nodes)
 
     def __repr__(self):
         return "<TBucket %s>" % (str(self.values())[:55] + '...')

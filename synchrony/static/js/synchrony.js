@@ -783,7 +783,37 @@ function userView(username, params){
             toggle_blocked_friend: function(event, index){
                 var friends = App.Views.userpage.get("friends");
                 var friend  = friends[index];
-                if (friend) {}
+                if (friend) {
+                    if (friend.status == "Blocked"){
+                        $.ajax({
+                            url: "/v1/users/" + App.Config.user.username + "/friends",
+                            type: "POST",
+                            data: {"address": friend.address,
+                                   "state":   2},
+                            success: function(response){
+                                friends[index] = response;
+                                App.Views.userpage.set({"friends": friends});
+                            },
+                            error:   function(response){
+                                console.log(response);
+                            }
+                        });
+                    } else {
+                        $.ajax({
+                            url: "/v1/users/" + App.Config.user.username + "/friends",
+                            type: "POST",
+                            data: {"address": friend.address,
+                                   "state":   3},
+                            success: function(response){
+                                friends[index] = response;
+                                App.Views.userpage.set({"friends": friends});
+                            },
+                            error:   function(response){
+                                console.log(response);
+                            }
+                        });
+                    }
+                }
             },
             initiate_chat: function(event, index){
                 var friends = App.Views.userpage.get("friends");
