@@ -564,17 +564,15 @@ class SynchronyProtocol(object):
         Also requires a storage object.
         Check RoutingTable.__init__ out to see how that looks.
         
-        
         As well as node ID generation we also use cryptographic
-        keys here to encrypt some RPC calls such as RPC_CHAT and
-        RPC_EDIT. There is a possible MITM attack here whereby a 
+        keys here to encrypt some RPCs like RPC_CHAT and RPC_EDIT.
+        There is a possible Man-in-the-Middle attack here whereby a 
         malicious eavesdropping party intercepts the introduction
-        of two peers to one another and replaces the keys that were
-        originally transmitted with a new pair, deciphering communications
-        in-transit, re-encrypting with the peers' real keys on rebroadcast.
+        of two peers to one another and replaces their keys with a new
+        pair of public keys, deciphering communications in-transit and
+        re-encrypting with the peers' real public keys on rebroadcast.
 
-        This is best evaded by sharing your public key ahead of time through
-        a secure medium.
+        This is best evaded by sharing your public key separately ahead of time.
         
         """
         self.ksize         = ksize
@@ -799,7 +797,7 @@ class SynchronyProtocol(object):
 
     def handle_add_friend(self, data):
         """
-        Match to UID and return our Friend instance
+        Match to UID and return a new Friend instance representing our side.
         """
         assert "rpc_add_friend" in data
 
@@ -817,6 +815,7 @@ class SynchronyProtocol(object):
                             and_(Friend.address == from_addr, Friend.user == user)
                         ).first()
         if friend:
+            # This permits the remote side to see if they're added or blocked.
             return envelope(self.router, {"response": friend.jsonify()})
         
         node = Node(*data['node'])
