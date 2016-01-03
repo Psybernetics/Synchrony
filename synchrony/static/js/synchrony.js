@@ -285,10 +285,20 @@ function request(event){
 
         $('iframe').contents().find('body').html("Loading...");
 
-        $.ajax({
+        var response = $.ajax({
             type: "GET",
             url: "/request/" + url,
             success: function(data, status){
+                var headers    = response.getAllResponseHeaders();
+                var header_map = {};
+                headers = headers.split('\n');
+                for (var i = 0; i  <= headers.length; i++) {
+                    if (headers[i] && headers[i].indexOf(':') != -1) {
+                        var items = headers[i].split(':');
+                        header_map[items[0]] = items[1].slice(1, items[1].length);
+                    }
+                }
+                App.current_hash = header_map["Content-Hash"];
                 iframe.contents().find('body').html(data);
 
                 // Bind a callback to anchor tags so their href attribute
@@ -1033,17 +1043,27 @@ Ractive.load({
                 iframe.contents().find('body').attr('spellcheck','false');
                 App.Views.synchrony.set('edit_button', "Done");
                 $('.edit_button').html("Done");
+                App.Views.synchrony.set("showing_save_button", true);
            } else {
                 iframe.contents().find('body').attr('contenteditable','false');
                 App.Views.synchrony.set('edit_button', "Edit");
                 $('.edit_button').html("Edit");
+                App.Views.synchrony.set("showing_save_button", false);
             }
+        },
+        save:      function(event){
+           $.ajax({
+               url: "/v1/revisions/" + App.current_hash,
+               type: "PUT",
+               data: {"document": $('.iframe').contents()[0].all[0].innerHTML},
+               success: function(response){
+                   console.log(response);
+               },
+               error:   function(response){}
+           });
         },
         settings:  function(event){
             window.location.hash = "#settings";
-        },
-        sessions:  function(event){
-            window.location.hash = "#sessions";
         },
         show_hide: function(event){ // Show/hide the .main panel over content
             toggleMain();

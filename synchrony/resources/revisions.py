@@ -2,6 +2,7 @@
 # Revision.delete(hash)
 # /v1/revisions/<hash>
 # /v1/revisions/<hash>/content
+import hashlib
 from synchrony import app, db
 import flask_restful as restful
 from flask import request, session
@@ -37,6 +38,29 @@ class RevisionResource(restful.Resource):
         rev  = Revision.query.filter(and_(Revision.hash == hash, Revision.user == user)).first()
         if rev:
             return rev.jsonify()
+        return {}, 404
+
+    def put(self, hash):
+        """
+        Create an edit of a revision.
+        """
+        user   = auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("document",type=str, required=True)
+        args   = parser.parse_args()  
+
+        parent = Revision.query.filter(and_(Revision.hash == hash, Revision.user == user)).first()
+        if parent != None:
+            revision         = Revision()
+            revision.content = args.document
+            revision.parent  = parent
+            revision.size    = len(revision.content)
+            revision.hash    = hashlib.sha1(args.document).hexdigest()
+            revision.get_mimetype()
+            db.session.add(revision)
+            db.session.add(parent)
+            db.session.commit()
+            return revision.jsonify()
         return {}, 404
 
     def post(self, hash):
