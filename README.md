@@ -1,5 +1,5 @@
 ##Synchrony
-#####A peer-to-peer caching proxy that enables collaboration on hyperdocuments.
+#####A collaborative hyperdocument editor.
 Installation:
 <pre>
 sudo python setup.py install
@@ -24,5 +24,4 @@ Visit :8080/v1/peers/test to tell peers you're serving whatever revision is foun
 
 Visit :8090/v1/peers/url_for_revision to pull the resource through the first peer and serve with the second peer.
 
-
-This is all a work-in-progress at the moment but the project should be ready for sustained use within 2016.
+Currently a work-in-progess as RPCs undergo refinement.
