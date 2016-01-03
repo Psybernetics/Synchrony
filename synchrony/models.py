@@ -94,7 +94,6 @@ class Revision(db.Model):
     created       = db.Column(db.DateTime(), default=db.func.now())
     hash          = db.Column(db.String())
     public        = db.Column(db.Boolean(), default=False) # Publicly available
-    original      = db.Column(db.Boolean(), default=True) # Issued by site. Is not a user edit.
     sufferers     = db.relationship("Peer", secondary=sufferer_table, backref="revisions")
     content       = db.Column(db.String())
     bcontent      = db.Column(BinaryBuffer(20*1000000000)) # 20gb default limit
@@ -106,22 +105,25 @@ class Revision(db.Model):
     def jsonify(self):
         res = {}
         res['hash']        = self.hash
-        res['url']         = self.url
         res['created']     = time.mktime(self.created.timetuple())
         res['mimetype']    = self.mimetype
         res['size']        = self.size
         res['public']      = self.public
         if self.user:
             res['user']    = self.user.username
+        if self.parent:
+            res['parent']  = self.parent.hash
+            res['url']     = self.parent.url
+        else:
+            res['url']     = self.url
         if self.network:
             res['network'] = self.network.name
         return res
 
     def __repr__(self):
-        if self.resource:
-            return '<%s %s by %s %s ago (%i bytes)>' % \
-                ("Original" if self.original else "Revision of",
-                self.url,
+        if self.size and self.created:
+            return '<%s by %s %s ago (%i bytes)>' % \
+                ("Original " + self.url if not self.parent else "Edited " + self.parent.url,
                 self.user.username if self.user else "(deleted user)",
                 tconv(int(time.time()) - int(time.mktime(self.created.timetuple()))),
                 self.size)
