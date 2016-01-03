@@ -784,7 +784,7 @@ function userView(username, params){
                 var friends = App.Views.userpage.get("friends");
                 var friend  = friends[index];
                 if (friend) {
-                    if (friend.status == "Blocked"){
+                    if (friend.status == "Blocked"){ // TODO: turn ints into labels
                         $.ajax({
                             url: "/v1/users/" + App.Config.user.username + "/friends",
                             type: "POST",
