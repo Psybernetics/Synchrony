@@ -87,6 +87,7 @@ class Revision(db.Model):
     """
     __tablename__ = "revisions"
     id            = db.Column(db.Integer(), primary_key=True)
+    parent_id     = db.Column(db.Integer(), db.ForeignKey("revisions.id"))
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
     content_id    = db.Column(db.Integer(), db.ForeignKey('content.id'))
     network_id    = db.Column(db.Integer(), db.ForeignKey("networks.id")) 
@@ -99,6 +100,7 @@ class Revision(db.Model):
     bcontent      = db.Column(BinaryBuffer(20*1000000000)) # 20gb default limit
     mimetype      = db.Column(db.String())
     size          = db.Column(db.Integer())
+    parent        = db.relationship("Revision", backref="edits", remote_side=[id])
     status        = 200
 
     def jsonify(self):
