@@ -1306,18 +1306,14 @@ class TBucket(dict):
         self.router = router
         dict.__init__(self, *args, **kwargs)
         
-    def calculate_trust(self, nodes=None):
+    def calculate_trust(self):
         """
         Weight peers by the ratings assigned to them via trusted peers.
         Loosely based on EigenTrust++ with modifications due to not having
         information about the amount of satisfactory downloads remote peers
         have made.
         """
-        def same_source(node):
-            """
-            Simple closure to help us skip references to ourselves when
-            spidering.
-            """
+        def is_same_source(node):
             if node[1] == self.router.node.ip and \
                     node[2] == self.router.node.port:
                 return True
@@ -1325,14 +1321,13 @@ class TBucket(dict):
 
         near_nodes = []
         far_nodes  = []
-        if nodes == None:
-            nodes = self.values()
+        nodes = self.values()
 
         for node in nodes:
             i = get(node, self.router.network) # get /v1/peers/<network_name>
             if not i or not "data" in i: continue
             for j in i["data"]:
-                if same_source(j['node']): continue
+                if is_same_source(j['node']): continue
                 near_node = Node(*j['node'])
                 existing  = self.router.get_existing_node(near_node)
                 if existing:
@@ -1347,7 +1342,7 @@ class TBucket(dict):
                 f = get(near_node, self.router.network)
                 if not f or not "data" in f: continue
                 for k in f['data']:
-                    if same_source(k['node']): continue
+                    if is_same_source(k['node']): continue
                     far_node = Node(*k['node'])
                     existing  = self.router.get_existing_node(far_node)
                     if existing:
@@ -1361,7 +1356,6 @@ class TBucket(dict):
         near_nodes.extend(far_nodes)
         for node in near_nodes:
             self.router.add_contact(node)
-#        self.calculate_trust(far_nodes)
 
     def __repr__(self):
         return "<TBucket %s>" % (str(self.values())[:55] + '...')

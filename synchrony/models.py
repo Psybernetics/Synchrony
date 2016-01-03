@@ -87,39 +87,43 @@ class Revision(db.Model):
     """
     __tablename__ = "revisions"
     id            = db.Column(db.Integer(), primary_key=True)
+    parent_id     = db.Column(db.Integer(), db.ForeignKey("revisions.id"))
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
     content_id    = db.Column(db.Integer(), db.ForeignKey('content.id'))
     network_id    = db.Column(db.Integer(), db.ForeignKey("networks.id")) 
     created       = db.Column(db.DateTime(), default=db.func.now())
     hash          = db.Column(db.String())
     public        = db.Column(db.Boolean(), default=False) # Publicly available
-    original      = db.Column(db.Boolean(), default=True) # Issued by site. Is not a user edit.
     sufferers     = db.relationship("Peer", secondary=sufferer_table, backref="revisions")
     content       = db.Column(db.String())
     bcontent      = db.Column(BinaryBuffer(20*1000000000)) # 20gb default limit
     mimetype      = db.Column(db.String())
     size          = db.Column(db.Integer())
+    parent        = db.relationship("Revision", backref="edits", remote_side=[id])
     status        = 200
 
     def jsonify(self):
         res = {}
         res['hash']        = self.hash
-        res['url']         = self.url
         res['created']     = time.mktime(self.created.timetuple())
         res['mimetype']    = self.mimetype
         res['size']        = self.size
         res['public']      = self.public
         if self.user:
             res['user']    = self.user.username
+        if self.parent:
+            res['parent']  = self.parent.hash
+            res['url']     = self.parent.url
+        else:
+            res['url']     = self.url
         if self.network:
             res['network'] = self.network.name
         return res
 
     def __repr__(self):
-        if self.resource:
-            return '<%s %s by %s %s ago (%i bytes)>' % \
-                ("Original" if self.original else "Revision of",
-                self.url,
+        if self.size and self.created:
+            return '<%s by %s %s ago (%i bytes)>' % \
+                ("Original " + self.url if not self.parent else "Edited " + self.parent.url,
                 self.user.username if self.user else "(deleted user)",
                 tconv(int(time.time()) - int(time.mktime(self.created.timetuple()))),
                 self.size)

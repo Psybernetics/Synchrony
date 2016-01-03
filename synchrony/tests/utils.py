@@ -4,6 +4,7 @@ Implements a base class for all Synchrony test suites to quickly create peer nod
 import pprint
 import random
 import unittest
+from copy import deepcopy
 from synchrony import app
 from synchrony.models import Revision
 from synchrony.controllers import dht
@@ -73,11 +74,13 @@ def mock_transmit(routes, addr, data):
     Put dht.RoutingTable instances through to one another without calling out
     to the network.
     """
+    # Test case setup method should set a peers attr on this function beforehand
     if not hasattr(mock_transmit, "peers"):
         dht.log("Can't find test peers.")
-        dht.log("synchrony.test.utils.mock_transmit is missing a peers object.")
+        dht.log("synchrony.test.utils.mock_transmit is missing a peers dictionary.")
         return
 
+    # Filter for everyone who isn't the intended recipient
     peer_routes = filter(
         lambda r: r if r.node.port == addr[1] else 0,
         [r for r in mock_transmit.peers.values()]
