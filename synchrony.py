@@ -11,6 +11,7 @@ import time
 import json
 import _socket
 import optparse
+from sqlalchemy import and_
 from synchrony import log, app, init
 from synchrony.controllers import dht
 from synchrony.tests.maps import maps
@@ -218,8 +219,8 @@ if __name__ == "__main__":
        log("Internet hosts will not be able to initiate connections to us.", "warning")
 
     try:
-        app.routes              = dht.Routers()
-        sys.exitfunc            = app.routes.leave_networks
+        app.routes   = dht.Routers()
+        sys.exitfunc = app.routes.leave_networks
 
         if portmap_success and  options.address == '0.0.0.0':
             addr = upnp.externalipaddress()
@@ -258,7 +259,9 @@ if __name__ == "__main__":
         for router in app.routes.values():
             if len(router):
                 log("DHT: %s: Telling peers of our public revisions." % router.network)
-                for revision in Revision.query.filter(Revision.public == True).all():
+                for revision in Revision.query.filter(
+                            and_(Revision.public == True, Revision.parent == None)
+                        ).all():
                     router[revision] = revision
 
         log("Binding to %s:%s" % (options.address, options.port))
