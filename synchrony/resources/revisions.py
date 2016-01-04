@@ -52,15 +52,16 @@ class RevisionResource(restful.Resource):
         parent = Revision.query.filter(and_(Revision.hash == hash, Revision.user == user)).first()
         if parent != None:
             revision         = Revision()
-            revision.content = args.document
+            revision.user    = user
             revision.parent  = parent
+            revision.content = args.document
             revision.size    = len(revision.content)
             revision.hash    = hashlib.sha1(args.document).hexdigest()
             revision.get_mimetype()
             db.session.add(revision)
             db.session.add(parent)
             db.session.commit()
-            return revision.jsonify()
+            return revision.jsonify(), 201
         return {}, 404
 
     def post(self, hash):
@@ -74,13 +75,13 @@ class RevisionResource(restful.Resource):
         args = parser.parse_args()  
 
         rev  = Revision.query.filter(and_(Revision.hash == hash, Revision.user == user)).first()
-        if rev:
-            if args.public != None:
-                rev.public = args.public
-                # Broadcast to overlay networks when a revision's made public.
-                if args.public == True:
-                    for router in app.routes:
-                        app.routes[router][rev] = rev
+        # Tell peers we're storing data for this revision if it exists and isn't an edit.
+        if rev and rev.parent == None and args.public != None:
+            rev.public = args.public
+            # Broadcast to overlay networks when a revision's made public.
+            if args.public == True:
+                for router in app.routes:
+                    app.routes[router][rev] = rev
 
             db.session.add(rev)
             db.session.commit()
