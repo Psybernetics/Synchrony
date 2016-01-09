@@ -550,7 +550,7 @@ function userView(username, params){
                 for (var i = 0; i < response.data.length; i++) {
                     var address = response.data[i].name + "/" + response.data[i].node_id;
                     address     = address + "/" + App.Config.user.uid;
-                    addresses.push(address);
+                    addresses[addresses.length] = address;
                 }
                 App.Views.userpage.set("user_addresses", addresses);
             }

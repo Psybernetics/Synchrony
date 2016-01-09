@@ -9,11 +9,10 @@
  the process messages go through before being received by
  their counterpart methods in the protocol class.
 
- The basic gist of how this file works is that between it and peers.py they
- implement an overlay network heavily based Kademlia.
- If you're coming to this without having read the original paper take a couple
- of days to really grok it, hopefully it won't take that long because you have
- this software.
+ The basic gist of this namespace is that it and synchrony/resources/peers.py
+ implement an overlay network heavily based Kademlia. If you're coming to this
+ without having read the original paper take a couple of days to really grok
+ it, hopefully it won't take that long because you have this software.
 
  These modules make it as easy as possible to participate in multiple networks.
  Telling peers you have data and obtaining data from peers looks like this:
@@ -156,6 +155,7 @@ from binascii import hexlify, unhexlify
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
 from synchrony.models import Revision, User, Friend, Network, Peer
+
 class RoutingTable(object):
     """
     Routing is based on representative members of lists ("buckets") and an XOR
@@ -498,7 +498,7 @@ class RoutingTable(object):
 
         Peer nodes may also opt to replicate data for observed advertisements.
         """
-        if isinstance(url, Revision):  
+        if isinstance(url, Revision):
             if url.url:                
                 url = url.url          
             else:                # This permits the following:
@@ -599,7 +599,7 @@ class SynchronyProtocol(object):
             if isinstance(addr, Node):
                 self.router.remove_node(addr)
             return
-        node = Node(*data['node'], pubkey=data['pubkey'])
+        node = Node(*data['node'], pubkey=data['pubkey'], router=self.router)
         self.router.add_contact(node)
         # FIXME: Ping nodes in the 'peers' part of the response.
         #        Don't let malicious nodes fill the routing table with
@@ -608,7 +608,9 @@ class SynchronyProtocol(object):
             for peer in data['peers']:
                 if peer['node'][0] == self.source_node.long_id:
                     continue
-                peer = Node(*peer['node'], pubkey=peer['pubkey'])
+                peer = Node(*peer['node'],
+                            pubkey=peer['pubkey'],
+                            router=self.router)
                 self.router.add_contact(peer)
 #                self.rpc_ping(node)
         return node
@@ -1151,12 +1153,12 @@ class SynchronyProtocol(object):
         #        referring us to dead nodes.
         if 'peers' in data:
             for peer in data['peers']:
-                node = Node(*peer['node'], pubkey=peer['pubkey'])
+                node = Node(*peer['node'], pubkey=peer['pubkey'], router=self.router)
                 if node != self.source_node and self.router.is_new_node(node):
                     self.router.add_contact(node)
 
         # Update last_seen times for contacts or add if new
-        node          = Node(*data['node'], pubkey=data['pubkey'])
+        node          = Node(*data['node'], pubkey=data['pubkey'], router=self.router)
         existing_node = self.router.get_existing_node(node)
         if existing_node:
             existing_node.last_seen = time.time()
@@ -1361,7 +1363,7 @@ class TBucket(dict):
         return "<TBucket %s>" % (str(self.values())[:55] + '...')
 
 class Node(object):
-    def __init__(self, id, ip=None, port=None, pubkey=None):
+    def __init__(self, id, ip=None, port=None, pubkey=None, router=None):
         if isinstance(id, long):
             id = unhexlify('%x' % id)
         self.id        = id
@@ -1369,6 +1371,7 @@ class Node(object):
         self.port      = port
         self.trust     = 0.00
         self.pubkey    = pubkey
+        self.router    = router
         self.last_seen = time.time()
         self.long_id   = long(id.encode('hex'), 16) 
         self.name      = str(self.long_id)
@@ -1378,6 +1381,15 @@ class Node(object):
 
     def distance_to(self, node):
         return self.long_id ^ node.long_id
+
+    @property
+    def transactions(self):
+        if self.router == None:
+            return 0
+        return len(
+                    self.router.protocol
+                    .downloads.get_entries_for((self.ip, self.port))
+                  )
 
     @property
     def printable_id(self):
@@ -1400,10 +1412,11 @@ class Node(object):
 
     def jsonify(self, string_id=False):
         res = {}
-        res['node']      = self.threeple
-        res['trust']     = self.trust
-        res['pubkey']    = self.pubkey
-        res['last_seen'] = self.last_seen
+        res['node']         = self.threeple
+        res['trust']        = self.trust
+        res['pubkey']       = self.pubkey
+        res['last_seen']    = self.last_seen
+        res['transactions'] = self.transactions
         if string_id:
             res['node']    = list(res['node'])
             res['node'][0] = str(res['node'][0])
@@ -1665,7 +1678,7 @@ class ForgetfulStorage(object):
         True
         """
         self.lock.acquire()
-        if self.bound and key in self.data and isinstance(self.data[key][1],list):
+        if self.bound and key in self.data and isinstance(self.data[key][1], list):
             data = self.data[key][1]
             if value in data:
                 self.lock.release()
@@ -1700,6 +1713,17 @@ class ForgetfulStorage(object):
         if key in self.data:
             return self[key]
         return default
+
+    def get_entries_for(self, node):
+        """
+        Get entries for an (addr, port) pair.
+        Used in Node.transactions to count total transactions.
+        """
+        e = []
+        for i in self.data.copy().values():
+            if len(i) > 1 and isinstance(i[1], dict) and i[1].values()[0] == node:
+                e.append(i)
+        return e
 
     def cull(self):
         """
@@ -2068,12 +2092,9 @@ def shared_prefix(args):
 
 def envelope(routes, data={}):
     """
-    Add known peers, the public key and then
-    sign the base64 encoded JSON of the data.
-
-    For the time being we sign the time [...] as attributes
-    never recombine in the same order on the receive side when
-    parsed. This method guarantees that hashes match on both sides.
+    We sign the time as attribute never recombine in the same order on the
+    receive side when parsed. This method guarantees that hashes match on both
+    sides.
     """
     assert isinstance(data, dict)
     data['time']    = time.time()
@@ -2082,19 +2103,9 @@ def envelope(routes, data={}):
     data['pubkey']  = app.key.publickey().exportKey() 
     data['peers']   = [peer.jsonify() for peer in routes.find_neighbours(routes.node)]
 
-#    print "sending "+ sha1(json.dumps(data)).hexdigest()
     hash = SHA256.new(str(data['time'])).digest()
     data['signature'] = app.key.sign(hash, '')[0] 
 
-    # base64 encode the json and sign.
-#    import base64
-#    payload = base64.b64encode(json.dumps(data))
-#    hash = SHA256.new(payload).digest()
-#    output = {
-#        'data':      payload,
-#        'signature': app.key.sign(hash, '')[0],
-#        'pubkey':    app.key.publickey().exportKey()
-#    }
     return data
 
 def transmit(routes, addr, data):

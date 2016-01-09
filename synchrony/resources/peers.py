@@ -13,10 +13,6 @@ from synchrony.controllers.utils import generate_node_id, make_response
 class PeerCollection(restful.Resource):
 
     def get(self):
-        """
-        Currently returns /all/ peers we know of,
-        but it should be a paginated resource.
-        """
         auth(session, required=True)
         parser = restful.reqparse.RequestParser()
         parser.add_argument("page",type=int, help="", required=False, default=1)
