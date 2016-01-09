@@ -78,7 +78,6 @@ class RevisionResource(restful.Resource):
         # Tell peers we're storing data for this revision if it exists and isn't an edit.
         if rev and rev.parent == None and args.public != None:
             rev.public = args.public
-            # Broadcast to overlay networks when a revision's made public.
             if args.public == True:
                 for router in app.routes:
                     app.routes[router][rev] = rev
