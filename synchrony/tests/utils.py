@@ -12,7 +12,9 @@ from synchrony.controllers.utils import exclude
 
 class BaseSuite(unittest.TestCase):
 
-    peer_amount    = 10
+    dfp            = 0.0          # 0% peers are malicious by default
+    iterations     = 100          # calculate_trust iterates 100 times by default
+    peer_amount    = 10           # 10 peers by default.
     storage_method = "rpc_append"
 
     def setUp(self):
@@ -20,6 +22,25 @@ class BaseSuite(unittest.TestCase):
             (self.peer_amount, self.storage_method)
 
         self.peers = create_peers(self.peer_amount, self.storage_method)
+
+        count = int(len(self.peers) * self.dfp)
+#        dht.log("Making %i peers malicious." % count)
+#        for i in range(count):
+#            self.peers[i] ...
+
+        # All remaining peers considered honest are automatically
+        # added to one anothers' bucket of pre-trusted peers.
+        #
+        # Your test suite(s) will want to adjust this manually after the fact.
+        
+        self.honest_peers = {}
+        honest_count = len(self.peers) - count
+        dht.log("Introducing %i pre-trusted peers to one another." % honest_count)
+        for j in range(honest_count):
+            self.honest_peers[self.peers[count+j].node.long_id] = self.peers[count+j]
+
+        for router in self.honest_peers.values():
+            router.tbucket.update(self.honest_peers)
 
         # We add these RoutingTable objects as an attribute of mock_transmit
         # so it may find other nodes and work on their protocol instances.
