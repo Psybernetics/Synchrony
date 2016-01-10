@@ -124,7 +124,7 @@ class Revision(db.Model):
         if self.size and self.created:
             return '<%s by %s %s ago (%i bytes)>' % \
                 ("Original " + self.url if not self.parent else "Edited " + self.parent.url,
-                self.user.username if self.user else "(deleted user)",
+                self.user.username if self.user else "(no user)",
                 tconv(int(time.time()) - int(time.mktime(self.created.timetuple()))),
                 self.size)
         return "<Revision>"
