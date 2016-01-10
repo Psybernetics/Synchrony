@@ -16,11 +16,7 @@ class BaseSuite(unittest.TestCase):
     storage_method = "rpc_append"
 
     def setUp(self):
-        """
-        This method will probably form the basis of other tests.
-        """
-        print
-        print "Creating %i peers configured to use %s." % \
+        print "\nCreating %i peers configured to use %s." % \
             (self.peer_amount, self.storage_method)
 
         self.peers = create_peers(self.peer_amount, self.storage_method)
@@ -35,39 +31,47 @@ class BaseSuite(unittest.TestCase):
 
 def create_peers(peer_amount, storage_method):
     peers = {}
-    for x in range(peer_amount):
-        peers[x] = dht.RoutingTable(
+    for i in range(peer_amount):
+        peers[i] = dht.RoutingTable(
                 "127.0.0.1",
-                random.randint(0,999999),
+                random.randint(0, 999999),
                 app.key.publickey().exportKey(),
                 None,
         )
-        peers[x].buckets = [dht.KBucket(0,2**160,20)]
-        rpcmethod = getattr(peers[x].protocol, storage_method, None)
+        peers[i].buckets = [dht.KBucket(0, 2**160, 20)]
+        rpcmethod = getattr(peers[i].protocol, storage_method, None)
         if not rpcmethod:
             raise Exception("Unknown storage method: %s" % storage_method)
-        peers[x].storage_method = rpcmethod
-    log = dht.log
+        peers[i].storage_method = rpcmethod
+        # Attempted pings in add_contact would cause some previously
+        # added peers to be promptly removed. We manually swap the method
+        # for a mockup and reintroduce the original once we have our set of peers.
+        peers[i].protocol.original_ping = peers[i].protocol.rpc_ping
+        peers[i].protocol.rpc_ping = mock_ping
 
-    # We check for unique port numbers because addr is usually an (ip, port)
+    log = dht.log
+    # We check for unique port numbers because addr is /usually/ an (ip, port)
     # tuple when calling dht.transmit.
-    ports = []
-    for p in peers.values():
-        ports.append(p.node.port)
+    ports = [p.node.port for p in peers.values()]
     unique_ports = len(set(ports)) == len(peers.keys())
     log("Unique port numbers: %s" % str("Yes." if unique_ports else "No. Recreating."))
     if not unique_ports:
         return create_peers(peer_amount, storage_method)
-        
+ 
     log("Introducing peers to one another.")
     dht.log = lambda x, y=None: x
     for peer in peers.values():
         [peer.add_contact(router.node) for router in peers.values()]
-        print peer
     dht.log = log
     print pprint.pformat(peers)
+    
+    # Please god, forgive this fourth loop?
+    for p in peers.values():
+        peer.protocol.rpc_ping = peer.protocol.original_ping
     return peers
 
+def mock_ping(addr):
+    return
 
 def mock_transmit(routes, addr, data):
     """
@@ -80,9 +84,12 @@ def mock_transmit(routes, addr, data):
         dht.log("synchrony.test.utils.mock_transmit is missing a peers dictionary.")
         return
 
+    if isinstance(addr, dht.Node):
+        addr = (addr.ip, addr.port)
+
     # Filter for everyone who isn't the intended recipient
     peer_routes = filter(
-        lambda r: r if r.node.port == addr[1] else 0,
+        lambda r: r if r.node.port == addr[1] else None,
         [r for r in mock_transmit.peers.values()]
     )
 
