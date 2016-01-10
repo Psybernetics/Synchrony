@@ -1720,7 +1720,7 @@ class ForgetfulStorage(object):
         Used in Node.transactions to count total transactions.
         """
         e = []
-        for i in self.data.copy().values():
+        for i in self.data.values():
             if len(i) > 1 and isinstance(i[1], dict) and i[1].values()[0] == node:
                 e.append(i)
         return e
