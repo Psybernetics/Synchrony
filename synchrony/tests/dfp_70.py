@@ -1,11 +1,12 @@
 # _*_ coding: utf-8 _*_
 """
-Test sim for 70% dishonest feedback. Nearly three quarters of network nodes
-will be malign, with colluding groups.
+Test sim for dishonest feedback percentage 70.
+Nearly three quarters of network nodes will be malign with colluding groups.
 """
 
 import hashlib
 import unittest
+from synchrony import db
 from synchrony.models import Revision
 from synchrony.controllers import dht
 from synchrony.tests.utils import BaseSuite
@@ -18,10 +19,22 @@ class TestSuite(BaseSuite):
 
     def store_and_retrieve(self):
         revision = Revision.query.first()
+
+        # Permit this to compute in headless environments.
         if not revision:
             print "Couldn't find a revision to test with."
-            print "You may want to browse with Synchrony and try again."
-            raise SystemExit
+            choice = raw_input("Create revision [y/n]: ")
+            if choice.lower() != "y":
+                raise SystemExit
+            revision = Revision()
+            revision.content = "Hello, world."
+            revision.size = len(revision.content)
+            revision.hash = hashlib.sha1(revision.content).hexdigest()
+            revision.get_mimetype()
+    
+            db.session.add(revision)
+            db.session.commit()
+            print "New revision committed."
         self.peers[0][revision] = revision
 
         # Now that we've stored references to the 0th peer
