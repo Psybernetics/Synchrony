@@ -1360,7 +1360,7 @@ class TBucket(dict):
             self.router.add_contact(node)
 
     def __repr__(self):
-        return "<TBucket %s>" % (str(self.values())[:55] + '...')
+        return "<TBucket of %i peers>" % len(self)
 
 class Node(object):
     def __init__(self, id, ip=None, port=None, pubkey=None, router=None):

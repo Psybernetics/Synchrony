@@ -1,9 +1,8 @@
 # _*_ coding: utf-8 _*_
 """
-Test sim for dishonest feedback percentage 70.
-Nearly three quarters of network nodes will be malign with colluding groups.
+Test suite for a dishonest feedback percentage of 70%.
+Nearly three quarters of network peers will be malign with colluding groups.
 """
-
 import hashlib
 import unittest
 from synchrony import db
@@ -13,9 +12,8 @@ from synchrony.tests.utils import BaseSuite
 
 class TestSuite(BaseSuite):
 
-#    peer_amount = 100
-    peer_amount = 70
-    storage_method = "rpc_append"
+    dfp         = 0.7
+    peer_amount = 100
 
     def store_and_retrieve(self):
         revision = Revision.query.first()
@@ -26,15 +24,16 @@ class TestSuite(BaseSuite):
             choice = raw_input("Create revision [y/n]: ")
             if choice.lower() != "y":
                 raise SystemExit
-            revision = Revision()
+            revision         = Revision()
             revision.content = "Hello, world."
-            revision.size = len(revision.content)
-            revision.hash = hashlib.sha1(revision.content).hexdigest()
+            revision.size    = len(revision.content)
+            revision.hash    = hashlib.sha1(revision.content).hexdigest()
             revision.get_mimetype()
     
             db.session.add(revision)
             db.session.commit()
             print "New revision committed."
+
         self.peers[0][revision] = revision
 
         # Now that we've stored references to the 0th peer
