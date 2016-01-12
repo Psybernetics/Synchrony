@@ -1289,7 +1289,7 @@ class TBucket(dict):
     """
     A bucket of pre-trusted peers.
 
-    Pre-trusted peers: nodes residing on internal subnets (possibly)
+    Pre-trusted peers: nodes residing on internal subnets (No.)
                        nodes supplied by app.default_nodes/options.boostrap
                        nodes who're the first to be added to a new network
                        nodes who've previously earned high trust over time
@@ -1299,10 +1299,20 @@ class TBucket(dict):
     can be relied upon to be honest in rating the trustworthiness of their
     peers.
 
-    Given that we have no "i downloaded from A" information,
-    start with your pre-trusted peers and depend on their weighting of
-    their own peers. Fan-out from there.
-    This takes place during the periodic RPC_PING and before republish events.
+    Psuedocode translation from the sigma notation in EigenTrust++:
+
+        S(i,j) = max(j.trust / j.transactions, 0)
+        Where P is the set of pre-trusted peers:
+        C(i,j) = max(max(S(i,j) / max(sum(i,m), 0)), len(P))
+
+        SIMILARITY of feedbacks from peers u and v is defined as:
+        1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(common_peers(u,v)))
+        where common_peers is all peers where peer.transactions > 1 in both instances.
+        tr = v.trust, u.trust / len(common_peers(u, v) 
+        
+        CREDIBILITY f(i,j) = sim(i,j) / sum(R(i), sim(i,m))
+        where R(i) is the set of peers where i.transactions > 1
+
     """
     def __init__(self, router, *args, **kwargs):
         self.router = router
