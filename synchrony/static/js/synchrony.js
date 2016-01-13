@@ -3,16 +3,12 @@
    A soft-realtime collaborative hyperdocument editor.
    Copyright Luke Brooks 2015
 
-TODO:
+   MIT License.
 
-/request/:url      Raw resource
+TODO:
 /#request/:url     JavaScript to load /request/:url into .content
 
-The iframe in .content will navigate around a site
 the /request/:url endpoint merely needs to remove javascript so as not to interfere with the window object.
-We can then monitor events in the iframe.
-
-
  Global stream [Notify of remote sign-ins]
  localStorage controls
  Administrative chat controls.
@@ -67,20 +63,6 @@ We can then monitor events in the iframe.
 // Tell Ractive.load where our mustache templates live.
 Ractive.load.baseUrl = '/static/templates/';
 
-// Tell Backbone where our API endpoints are for documents.
-App.Revision  = Backbone.Model.extend({urlRoot: '/v1/revisions' });
-App.Revisions = Backbone.Collection.extend({
-    model: App.Document,
-    url: '/v1/revisions',
-    paginate: function(perPage, page) {
-        page = page - 1;
-        var collection = this;
-        collection = _(collection.rest(perPage*page));
-        collection = _(collection.first(perPage));    
-        return collection.map( function(model) { return model.toJSON() }); 
-    },
-});
-
 //  URL hashes -> attributes on this router
 App.Router = Backbone.Router.extend({
     routes: {
@@ -121,6 +103,26 @@ App.Router = Backbone.Router.extend({
         update_synchrony();
     },
 });
+
+// Basis class for page synchronisation
+//
+// var synch = new Synchrony($('.iframe'));
+// synch.save();
+//
+function Synchrony (el) {
+    this.el        = el;
+    
+    // We may traverse through different urls as channels on this stream.
+    this.socket    = io.connect('/documents', {resource: "stream"});
+
+    // Re-make the socket if asked
+    this.reconnect = function () {}
+
+    // Provide our last revision ID and get the latest copy
+    this.poll             = function () {}
+    this.save             = function () {}
+    this.getCollaborators = function () {}
+}
 
 // Our error handler prints to the stream for ten seconds
 function renderError(statement) {
