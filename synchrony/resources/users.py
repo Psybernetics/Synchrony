@@ -294,13 +294,30 @@ class UserRevisionCollection(restful.Resource):
             return {}, 403
 
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=20)
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=20)
         args = parser.parse_args()  
+
+        user = User.query.filter(User.username == username).first()
+        if user == None:
+            return 404
 
         query = Revision.query.filter(Revision.user == user)\
             .order_by(desc(Revision.created)).paginate(args.page, args.per_page)
         return make_response(request.url, query)
+
+class UserRevisionCountResource(restful.Resource):
+    def get(self, username):
+        user = auth(session, required=True)
+
+        if user.username != username and not user.can("see_all"):
+            return {}, 403
+
+        user = User.query.filter(User.username == username).first()
+        if user == None:
+            return 404
+
+        return Revision.query.filter(Revision.user == user).count()
 
 class UserFriendsCollection(restful.Resource):
     def get(self, username):

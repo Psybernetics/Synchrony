@@ -462,7 +462,7 @@ class RoutingTable(object):
         # url here is passed to ValueSpider so it can be a param to
         # SynchronyProtocol.fetch_revision, which can then set
         # SynchronyProtocol.downloads correctly. The reason this is done is 
-        # because tracking a pages' <link>, <script> and <img> downloads via
+        # because tracking resource requests for <link>, <script> and <img> elements via
         # headers when that page is in an iframe isn't supposed to be possible.
         # It's a protection for visiting security-sensitive sites, which is a
         # good design. Instead we memorise all DHT downloads and let admins do
@@ -934,7 +934,8 @@ class SynchronyProtocol(object):
         if not source: return
         if not 'rpc_find_value' in data: return
         # usually comes in as unicode
-        if type(data['rpc_find_value']) not in [unicode, str]: return
+        if not isinstance(data['rpc_find_value'], (unicode, str)):
+            return
         key = data['rpc_find_value']
         log("Finding value for %s" % key)
         value = self.storage.get(key, None)
@@ -1167,7 +1168,7 @@ class SynchronyProtocol(object):
             self.router.add_contact(node)
             return node
 
-    def decrement_trust(self, addr, severity):
+    def decrement_trust(self, addr, severity=1):
         """
         Implements the feedback mechanism for our trust metric.
         
@@ -1180,7 +1181,7 @@ class SynchronyProtocol(object):
         http://www.cc.gatech.edu/~lingliu/papers/2012/XinxinFan-EigenTrust++.pdf
         http://dimacs.rutgers.edu/Workshops/InformationSecurity/slides/gamesandreputation.pdf
 
-        The second PDF is highly recommended.
+        The second PDF is recommended.
         """
         for node in self.router:
             if node.ip == addr[0] and node.port == addr[1]:
@@ -1337,31 +1338,37 @@ class TBucket(dict):
 
         for node in nodes:
             i = get(node, self.router.network) # get /v1/peers/<network_name>
-            if not i or not "data" in i: continue
+            if not i or not "data" in i:
+                continue
             for j in i["data"]:
-                if is_same_source(j['node']): continue
+                if is_same_source(j['node']):
+                    continue
                 near_node = Node(*j['node'])
                 existing  = self.router.get_existing_node(near_node)
                 if existing:
                     near_node = existing
                 else:
                     near_node = self.router.protocol.rpc_ping(near_node)
-                if not near_node: continue
+                if not near_node:
+                    continue
                 if j['trust'] > 0: # peer of trusted peer has positive rating
                     near_node.trust = node.trust / j['trust']
                 near_nodes.append(near_node)
 
                 f = get(near_node, self.router.network)
-                if not f or not "data" in f: continue
+                if not f or not "data" in f:
+                    continue
                 for k in f['data']:
-                    if is_same_source(k['node']): continue
+                    if is_same_source(k['node']):
+                        continue
                     far_node = Node(*k['node'])
                     existing  = self.router.get_existing_node(far_node)
                     if existing:
                         far_node = existing
                     else:
                         far_node = self.router.protocol.rpc_ping(far_node)
-                    if not far_node: continue
+                    if not far_node:
+                        continue
                     if k['trust'] > 0: # k.trust = (t.trusted / j.trust) / k.trust
                         far_node.trust = near_node.trust / k['trust']
                     far_nodes.append(far_node)
