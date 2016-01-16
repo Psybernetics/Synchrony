@@ -1,3 +1,4 @@
+# _*_ coding: utf-8 _*_
 """
 Implements a base class for all Synchrony test suites to quickly create peer nodes.
 """
