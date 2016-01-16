@@ -1420,7 +1420,7 @@ function settingsView() {
         App.Views.settings.set("open_button",     "Show");
 
         // Closes the sections if we left some open previously
-        App.Views.settings.set("showing_accounts",  undefined);
+        App.Views.settings.set("showing_accounts",     undefined);
         App.Views.settings.set("showing_groups",    undefined);
         App.Views.settings.set("showing_networks",  undefined);
         App.Views.settings.set("showing_downloads", undefined);
@@ -1431,6 +1431,10 @@ function settingsView() {
 //            console.log(response.data);
 //            App.Views.peers.set("peers", response.data);
 //        });
+        $.get('/v1/users', function(response){
+            upDate(response.data, "created");
+            App.Views.settings.set("accounts", response.data);
+        });
 
         $.get('/v1/revisions/downloads', function(response){
             App.Views.settings.set("downloads", response.data);
@@ -1439,11 +1443,6 @@ function settingsView() {
         $.get('/v1/networks', function(response){
             App.Views.settings.set("networks", response.data);
         });
-
-//       if (App.Views.settings.get("showing_peers") === undefined) {
-//           App.Views.settings.set("peers_button","Hide");
-//           App.Views.settings.set("showing_peers",true);
-//       }
 
         if (App.Views.settings.get("showing_downloads") === undefined) {
             App.Views.settings.set("downloads_button", "Show");
