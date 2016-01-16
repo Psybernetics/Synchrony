@@ -372,16 +372,17 @@ class User(db.Model):
             password.encode(), bcrypt.gensalt(16)
         ).decode()
 
-    def jsonify(self, groups=False, sessions=False):
+    def jsonify(self, revision_count=True, groups=False, sessions=False):
         response = {}
         if self.username:
-            response['username'] = self.username
-            response['uid']      = self.uid
-            response['email']    = self.email
-            response['active']   = self.active
-            response['created']  = time.mktime(self.created.timetuple())
+            response['username']        = self.username
+            response['uid']             = self.uid
+            response['email']           = self.email
+            response['active']          = self.active
+            response['created']         = time.mktime(self.created.timetuple())
+            response['revision_count']  = len(self.revisions)
             if sessions:
-                response['sessions'] = [s.jsonify() for s in self.sessions]
+                response['sessions']    = [s.jsonify() for s in self.sessions]
             if groups:
                 response['user_groups'] = [g.jsonify() for g in self.user_groups]
         return response
@@ -420,12 +421,12 @@ class Session(db.Model):
     Represents the server side of an HTTP session cookie.
     """
     __tablename__ = "sessions"
-    id = db.Column(db.Integer(), primary_key=True)
-    session_id = db.Column(db.String(), default=uid())
-    ip = db.Column(db.String())
-    user_agent = db.Column(db.String())
-    created = db.Column(db.DateTime(), default=db.func.now())
-    user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    id            = db.Column(db.Integer(), primary_key=True)
+    session_id    = db.Column(db.String(), default=uid())
+    ip            = db.Column(db.String())
+    user_agent    = db.Column(db.String())
+    created       = db.Column(db.DateTime(), default=db.func.now())
+    user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
 
     def from_request(self, request):
         self.session_id = uid()

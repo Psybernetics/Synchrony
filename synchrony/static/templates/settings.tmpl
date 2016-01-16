@@ -6,13 +6,32 @@
         {{#toggle_signups_permitted}}
         <form>
             <h4>Permit new signups</h4>
-            <label><input on-click="toggle_signups:{{true}}" type="radio" checked="{{signups_allow}}">Allow</label>
+            <label><input on-click="toggle_signups:{{true}}"  type="radio" checked="{{signups_allow}}">Allow</label>
             <label><input on-click="toggle_signups:{{false}}" type="radio" checked="{{signups_deny}}">Deny</label>
-        </form>
+        </form><br />
         {{/toggle_signups_permitted}}
-    <ul>
-        <li>List users (toggle active, delete)</li>
-    </ul>
+    <table>
+        <tbody>
+            <tr>
+                <td>Name</td>
+                <td>UID</td>
+                <td>Email</td>
+                <td>Revisions</td>
+                <td>Active</td>
+                <td>Created</td>
+            </tr>
+        {{#accounts}}
+            <tr on-mouseover="select:{{"user"}},{{@index}}" on-mouseout="select:{{"user"}},{{@index}}" id="user-{{@index}}">
+                <td><a href="/#user/{{username}}">{{username}}</a></td>
+                <td>{{uid}}</td>
+                <td>{{email}}</td>
+                <td>{{revision_count}}</td>
+                <td>{{#if active}}Yes{{else}}No{{/if}}</td>
+                <td>{{created}}</td>
+            </tr>
+        {{/accounts}}
+        </tbody>
+    </table>
     {{/showing_accounts}}
     <h2>Groups <button on-click="toggle:{{"groups"}}" class="button big_button pull-right">{{groups_button}}</button></h2>
     {{#showing_groups}}

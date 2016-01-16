@@ -126,6 +126,7 @@ def init():
     api.add_resource(users.UserSessionsResource,            "/users/<string:username>/sessions")
     api.add_resource(users.UserFriendsCollection,           "/users/<string:username>/friends")
     api.add_resource(users.UserRevisionCollection,          "/users/<string:username>/revisions")
+    api.add_resource(users.UserRevisionCountResource,       "/users/<string:username>/revisions/count")
 
     api.add_resource(peers.PeerCollection,                  "/peers")
     api.add_resource(peers.PeerNetworkResource,             "/peers/<string:network>")
