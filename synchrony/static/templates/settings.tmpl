@@ -32,6 +32,19 @@
         {{/accounts}}
         </tbody>
     </table>
+    <div class="center">
+        {{#accounts_back_available}}
+        <a on-click="back:{{"accounts"}}">Back</a>
+            {{#accounts_forward_available}}
+            /
+            {{/accounts_forward_available}}
+        {{/accounts_back_available}}
+        {{#accounts_forward_available}}
+        <a on-click="forward:{{"accounts"}}">Forward</a>
+        {{/accounts_forward_available}}
+    </div>
+    {{#accounts_paging_error}}Server unavailable.Try refreshing the page.{{/revisions_paging_error}}
+
     {{/showing_accounts}}
     <h2>Groups <button on-click="toggle:{{"groups"}}" class="button big_button pull-right">{{groups_button}}</button></h2>
     {{#showing_groups}}

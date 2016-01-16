@@ -326,6 +326,37 @@ function request(event){
     }
 }
 
+// This function is pretty general in terms of populating tables
+function populate_table(view, table_type, url){
+    // Grab the data
+    $.get(url, function(data){
+        // Update the DOM on success
+        view.set(table_type + "_paging_error", undefined);
+        data.data = upDate(data.data, "created");
+        view.set(table_type, data.data);
+        view[table_type] = data;
+
+        // Show navigation links depending on the response data
+        // This is where the jsonapi.org style of {links: {next: "http://"}}
+        // comes in handy.
+        if (data.links.hasOwnProperty("self")) {
+            var url = data.links.self.split('page=')[1];
+            if (url != undefined) {
+                if (url > 1) {
+                    view.set(table_type + "_back_available", true);
+                } else {
+                    view.set(table_type + "_back_available", false);
+                }
+            } 
+        }
+        if (data.links.hasOwnProperty("next")) {
+            view.set(table_type + "_forward_available", true);
+        }
+    }).fail(function(){
+       view.set(table_type + "_paging_error", true);
+    });
+}
+
 // Start the Backbone URL hash monitor
 new App.Router();
 Backbone.history.start();
@@ -513,38 +544,6 @@ function userView(username, params){
             toggleMain();
         }
 
-        // This function is pretty general in terms of populating tables
-        function populate_table(table_type, url){
-            // Grab the data
-            $.get(url, function(data){
-                // Update the DOM on success
-                App.Views.userpage.set(table_type + "_paging_error", undefined);
-                data.data = upDate(data.data, "created");
-                App.Views.userpage.set(table_type, data.data);
-                App.Views.userpage[table_type] = data;
-
-                // Show navigation links depending on the response data
-                // This is where the jsonapi.org style of {links: {next: "http://"}}
-                // comes in handy.
-                if (data.links.hasOwnProperty("self")) {
-                    var url = data.links.self.split('page=')[1];
-                    if (url != undefined) {
-                        if (url > 1) {
-                            App.Views.userpage.set(table_type + "_back_available", true);
-                        } else {
-                            App.Views.userpage.set(table_type + "_back_available", false);
-                        }
-                    } 
-                }
-
-                if (data.links.hasOwnProperty("next")) {
-                    App.Views.userpage.set(table_type + "_forward_available", true);
-                }
-            }).fail(function(){
-               App.Views.userpage.set(table_type + "_paging_error", true);
-            });
-        }
-
         // Populate the user address line
         $.get('/v1/networks', function(response){
             if (response.data.length > 0){
@@ -560,7 +559,7 @@ function userView(username, params){
 
         // Determine whether this is a profile or settings page.
         if (App.Config.user.username != username) {
-//            populate_table("revisions", "/v1//user/" + username + "/revisions");
+//            populate_table(this, "revisions", "/v1//user/" + username + "/revisions");
         } else {
             // Ugliest section in the file, but this stuff has to be somewhere
             App.Views.userpage.set("show_settings",     true);
@@ -573,9 +572,9 @@ function userView(username, params){
             App.Views.userpage.set("showing_friends",   undefined);
             App.Views.userpage.set("showing_password",  undefined);
 
-            populate_table("revisions", "/v1/users/" + username + "/revisions");
-            populate_table("friends",   "/v1/users/" + username + "/friends");
-            populate_table("sessions",  "/v1/users/" + username + "/sessions");
+            populate_table(App.Views.userpage, "revisions", "/v1/users/" + username + "/revisions");
+            populate_table(App.Views.userpage, "friends",   "/v1/users/" + username + "/friends");
+            populate_table(App.Views.userpage, "sessions",  "/v1/users/" + username + "/sessions");
         }
 
         App.Views.userpage.on({
@@ -601,12 +600,12 @@ function userView(username, params){
             },
             forward: function(event, table_type){
                 var url = this[table_type].links.next;
-                populate_table(table_type, url);
+                populate_table(App.Views.userpage, table_type, url);
             },
             back:    function(event, table_type){
                 var url = this[table_type].links.self.split('page=');
                 var page = url[1] - 1;
-                populate_table(table_type, url[0] + 'page=' + page);
+                populate_table(App.Views.userpage, table_type, url[0] + 'page=' + page);
             },
             select:  function(event, type, index){
                 if (type != "friend") {
@@ -1420,29 +1419,15 @@ function settingsView() {
         App.Views.settings.set("open_button",     "Show");
 
         // Closes the sections if we left some open previously
-        App.Views.settings.set("showing_accounts",     undefined);
+        App.Views.settings.set("showing_accounts",  undefined);
         App.Views.settings.set("showing_groups",    undefined);
         App.Views.settings.set("showing_networks",  undefined);
         App.Views.settings.set("showing_downloads", undefined);
         App.Views.settings.set("showing_open",      undefined);
 
-        // Populate the view
-//        $.get('/v1/peers', function(response){
-//            console.log(response.data);
-//            App.Views.peers.set("peers", response.data);
-//        });
-        $.get('/v1/users', function(response){
-            upDate(response.data, "created");
-            App.Views.settings.set("accounts", response.data);
-        });
-
-        $.get('/v1/revisions/downloads', function(response){
-            App.Views.settings.set("downloads", response.data);
-        });
-
-        $.get('/v1/networks', function(response){
-            App.Views.settings.set("networks", response.data);
-        });
+        populate_table(App.Views.settings, "accounts",  "/v1/users");
+        populate_table(App.Views.settings, "downloads", "/v1/revisions/downloads");
+        populate_table(App.Views.settings, "networks",  "/v1/networks");
 
         if (App.Views.settings.get("showing_downloads") === undefined) {
             App.Views.settings.set("downloads_button", "Show");
@@ -1495,6 +1480,15 @@ function settingsView() {
                     console.log(index);
 //                    var row = $('#' + type + '-' + index);
                 }
+            },
+            forward: function(event, table_type){
+                var url = this[table_type].links.next;
+                populate_table(App.Views.settings, table_type, url);
+            },
+            back:    function(event, table_type){
+                var url  = this[table_type].links.self.split('page=');
+                var page = url[1] - 1;
+                populate_table(App.Views.settings, table_type, url[0] + 'page=' + page);
             },
             toggle_signups: function(event, permit){
                 if (permit) {
