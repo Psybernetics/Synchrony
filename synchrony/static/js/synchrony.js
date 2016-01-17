@@ -39,10 +39,10 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
 // App init
 (function(){
     window.App = {
-        Config:        {},
-        Views:         {},
-        stream:        [],
-        history:       [],
+        Config:  {},
+        Views:   {},
+        stream:  [],
+        history: [],
         title: " - Synchrony",
     }
 
@@ -63,7 +63,13 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
 // Tell Ractive.load where our mustache templates live.
 Ractive.load.baseUrl = '/static/templates/';
 
-//  URL hashes -> attributes on this router
+/* We're using Backbone here because it gives us the option of
+ * treating our Revision object as Backbone models.
+ * A far nimbler alternative is to use page.js, as we're only
+ * using Backbone.Router so far.
+ *
+ * URL hashes -> attributes on this router
+ */   
 App.Router = Backbone.Router.extend({
     routes: {
         '':                    'index',
@@ -104,16 +110,119 @@ App.Router = Backbone.Router.extend({
     },
 });
 
-// Basis class for page synchronisation
-//
-// var synch = new Synchrony($('.iframe'));
-// synch.save();
-//
+/* Base class for page synchronisation
+ * 
+ * var synch = new Synchrony($('.iframe'));
+ * synch.save();
+ * Consider a map of {channel: Synchrony} pairs.
+ *
+ * The current strategy revolves around subscribing to a channel named "public"
+ * though this could just as well be a User UID to follow them through their
+ * use of the proxy.
+ *
+ * DOM nodes are matched up to two parent nodes and changes are then reintegrated
+ * where they're found to match. This strategy is not terribly effective /right now/
+ * but is generally better than transmitting the entire document.
+ *
+ * The hardest fragment to match is a single character that's the only inhabitant of
+ * its parent element.
+ *
+ * The protocol appears to want two major message types: "document" and "fragment"
+ * where "document" is the entire tree and "fragment" is a subtree.
+ *
+ * This should be as simple as doing dom.patch(subtree)
+ */
 function Synchrony (el) {
-    this.el        = el;
-    
-    // We may traverse through different urls as channels on this stream.
-    this.socket    = io.connect('/documents', {resource: "stream"});
+
+    this.el      = el;
+    this.socket  = undefined;
+    this.connect = function(endpoint, channel) {
+        if (!endpoint) {
+            endpoint = "/documents";
+        }
+
+        if (!channel) {
+            channel = "public";
+        }
+
+        // We traverse through different urls as channels on this stream.
+        var socket  = io.connect(endpoint, {resource: "stream"});
+        this.socket = socket;
+        socket.emit('subscribe', channel)
+        // this.socket.emit('subscribe', channel)
+        socket.on("fragment", function(data){
+            // Someone is sending us some DOM nodes.
+            console.log(data);
+            parser = new DOMParser();
+            doc = parser.parseFromString(data.document, "text/xml");
+            // Clean out errors found by the parser.
+            var element = doc.getElementsByTagName("parsererror");
+            for (index = element.length - 1; index >= 0; index--) {
+                    element[index].parentNode.removeChild(element[index]);
+            }
+            console.log(doc);
+            console.log(element);
+            var doc_text = $(doc).text();
+            console.log("doc_text: "+ doc_text);
+    //        window.doc = doc;
+            var nodes = "";
+            var text_data = "";
+    //        doc.children[0].className
+            nodes = nodes + doc.children[0].nodeName
+            if (doc.children[0].children) {
+                nodes = nodes + ' ' + doc.children[0].children[0].nodeName
+                if (doc.children[0].children[0].children) {
+                    nodes = nodes + ' ' + doc.children[0].children[0].children[0].nodeName
+                    text_data = doc.children[0].children[0].children[0].innerHTML
+                } else {
+                    text_data = doc.children[0].children[0].innerHTML
+                }
+            } else {
+                text_data = doc.children[0].innerHTML
+            }
+            console.log("nodes: " + nodes);
+            console.log("text_data: " + text_data);
+            var length = text_data.length;
+            // First half
+            var c = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')');
+            var swapped = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')').first().html(data.document);
+            console.log("swap attempt 1:");
+            console.log(swapped.length);
+            console.log(swapped.text());
+            // Second half
+            if (swapped.length != 1) {
+                c.push.apply(c, $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')'));
+                var swapped = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')').first().html(data.document);
+                console.log("swap attempt 2:")
+                console.log(swapped.length);
+                console.log(swapped.text());
+            }
+            console.log("c: " + c.length);
+            console.log(c);
+            for (var i = 0; i < c.length; i++) {
+                console.log($(c[i]).text());
+            }
+        });
+
+    //    Only transmit when textnode characters have been modified
+        this.el.contents().find('body').on('DOMCharacterDataModified', function(event){
+    //        Traverse to up to two parent elements and transmit the outerHTML.
+            if (event.target.parentElement) {
+                if (event.target.parentElement.parentElement) {
+                    edit_data = event.target.parentElement.parentElement.outerHTML;
+                } else {
+                    edit_data = event.target.parentElement.outerHTML;
+                }
+            } else {
+                edit_data = event.target.outerHTML;
+            }
+            
+            socket.emit('edit', edit_data);
+
+            console.log(event);
+            App.e = event;
+        });
+    }
 
     // Re-make the socket if asked
     this.reconnect = function () {}
@@ -905,110 +1014,10 @@ Ractive.load({
         data: {events: App.stream},
         adaptor: ['Backbone'],
     });
-/*
- * The current strategy revolves around subscribing to a channel named "public"
- * though this could just as well be a User UID to follow them through their
- * use of the proxy.
- *
- * DOM nodes are matched up to two parent nodes and changes are then reintegrated
- * where they're found to match. This strategy is not terribly effective /right now/
- * but is generally better than transmitting the entire document.
- *
- * The hardest fragment to match is a single character that's the only inhabitant of
- * its surrounding nodes.
- *
- * The protocol appears to want two major message types: "document" and "fragment"
- * where "document" is the entire tree and "fragment" is a subtree.
- *
- * This should be as simple as doing dom.patch(subtree)
- *
- */
-    App.Views.content.socket = io.connect('/documents', {resource: "stream"})
-    App.Views.content.socket.emit('subscribe', 'public')
-    App.Views.content.socket.on("fragment", function(data){
-        // Someone is sending us some DOM nodes.
-        console.log(data);
-        parser = new DOMParser();
-        doc = parser.parseFromString(data.document, "text/xml");
-        // Clean out errors found by the parser.
-        var element = doc.getElementsByTagName("parsererror");
-        for (index = element.length - 1; index >= 0; index--) {
-                element[index].parentNode.removeChild(element[index]);
-        }
-        console.log(doc);
-        console.log(element);
-        var doc_text = $(doc).text();
-        console.log("doc_text: "+ doc_text);
-//        window.doc = doc;
-        var nodes = "";
-        var text_data = "";
-//        doc.children[0].className
-        nodes = nodes + doc.children[0].nodeName
-        if (doc.children[0].children) {
-            nodes = nodes + ' ' + doc.children[0].children[0].nodeName
-            if (doc.children[0].children[0].children) {
-                nodes = nodes + ' ' + doc.children[0].children[0].children[0].nodeName
-                text_data = doc.children[0].children[0].children[0].innerHTML
-            } else {
-                text_data = doc.children[0].children[0].innerHTML
-            }
-        } else {
-            text_data = doc.children[0].innerHTML
-        }
-        console.log("nodes: " + nodes);
-        console.log("text_data: " + text_data);
-        var length = text_data.length;
-        // First half
-        var c = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')');
-        var swapped = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')').first().html(data.document);
-        console.log("swap attempt 1:");
-        console.log(swapped.length);
-        console.log(swapped.text());
-        // Second half
-        if (swapped.length != 1) {
-            c.push.apply(c, $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')'));
-            var swapped = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')').first().html(data.document);
-            console.log("swap attempt 2:")
-            console.log(swapped.length);
-            console.log(swapped.text());
-        }
-        console.log("c: " + c.length);
-        console.log(c);
-        for (var i = 0; i < c.length; i++) {
-            console.log($(c[i]).text());
-        }
-    });
-
-//    Only transmit when textnode characters have been modified
-    $('.iframe').contents().find('body').on('DOMCharacterDataModified', function(event){
-//        Traverse to up to two parent elements and transmit the outerHTML.
-        if (event.target.parentElement) {
-            if (event.target.parentElement.parentElement) {
-                edit_data = event.target.parentElement.parentElement.outerHTML;
-            } else {
-                edit_data = event.target.parentElement.outerHTML;
-            }
-        } else {
-            edit_data = event.target.outerHTML;
-        }
-        
-        App.Views.content.socket.emit('edit', edit_data);
-
-        console.log(event);
-        App.e = event;
-    });
-
-/*
-    App.Views['results'] = new components.results({
-        el: $('.results'),
-        adaptor: ['Backbone'],
-    });
-    $('.results').hide();
-    $('.results').click(function(){
-        App.Views.search.set('term', '');
-    });
-*/
-    // Search bar and an event handler for searching on input
+    App.Views.content.synchrony = new Synchrony($('.iframe'));
+    App.Views.content.synchrony.connect();
+    
+    
     App.Views['synchrony'] = new components.synchrony({
         el: $('.synchrony'),
         data: {
