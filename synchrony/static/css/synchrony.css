@@ -35,6 +35,7 @@ body {
 }
 
 label { display: inline-block; }
+
 .form-control {
 	outline: none;
 	display: block;
