@@ -1288,12 +1288,12 @@ class KBucket(object):
 
 class TBucket(dict):
     """
-    A bucket of pre-trusted peers.
+    A set of pre-trusted peers.
 
-    Pre-trusted peers: nodes residing on internal subnets (No.)
-                       nodes supplied by app.default_nodes/options.boostrap
-                       nodes who're the first to be added to a new network
-                       nodes who've previously earned high trust over time
+        Nodes residing on internal subnets. (No.)
+        Nodes supplied by app.default_nodes/options.bootstrap.
+        Nodes who're the first to be added to a new network.
+        Nodes who've previously earned high trust over time.
 
     Peers have a normal placement in KBuckets but peers who also have a
     reference from a TBucket are considered to be inherently trustworthy, and
@@ -1319,12 +1319,27 @@ class TBucket(dict):
         self.router = router
         dict.__init__(self, *args, **kwargs)
         
+    def common_peers(i, j):
+        """
+        Returns a set of the common peers by node triple who have
+        transactions > 1 between peers i and j.
+        """
+        i_peers  = get(i, self.router.network)
+        j_peers  = get(j, self.router.network)
+        
+        log(i_peers, "debug")
+        log(j_peers, "debug")
+
+        if not i_peers or not j_peers:
+            return None
+
+        i_peers = [[p['node']] for p in i_peers if p['transactions'] > 0]
+        j_peers = [[p['node']] for p in j_peers if p['transactions'] > 0]
+        return list(set(i_peers).intersection(j_peers))
+
     def calculate_trust(self):
         """
         Weight peers by the ratings assigned to them via trusted peers.
-        Loosely based on EigenTrust++ with modifications due to not having
-        information about the amount of satisfactory downloads remote peers
-        have made.
         """
         def is_same_source(node):
             if node[1] == self.router.node.ip and \
@@ -2150,10 +2165,11 @@ def transmit(routes, addr, data):
         log(e.message, "error")
         return
 
-def get(addr, path):
+def get(addr, path, field="data", all=True):
     """
     Helper function for doing things like leafing through
     /v1/peers/<network> on remote peers.
+    
     """
     if isinstance(addr, Node):
         addr = (addr.ip, addr.port)
@@ -2162,15 +2178,28 @@ def get(addr, path):
         addr  = "http://%s:%i/v1/peers/" % addr
         addr += path
 
-    try:
-        r = requests.get(addr, timeout=app.config['HTTP_TIMEOUT'])
-        if r.status_code != 200:
-            log("Error contacting %s: %s" % (addr, r.text))
+    def next(addr):
+        result = []
+        
+        try:
+            r = requests.get(addr, timeout=app.config['HTTP_TIMEOUT'])
+            if r.status_code != 200:
+                log("Error contacting %s: %s" % (addr, r.text))
+                return result
+        except Exception, e:
+            log(e.message, "error")
             return
-        return r.json()
-    except Exception, e:
-        log(e.message, "error")
-        return
+
+        json_data = r.json()
+        if field in json_data:
+            result.append(json_data[field])
+
+        if all and "self" in json_data and "next" in json_data["self"]:
+           result.append(next(json_data["self"]["next"]))
+        
+        return result
+    
+    return next(addr)
 
 def receive(data):
     """
@@ -2198,7 +2227,7 @@ def sort_nodes_by_trust(nodes):
     if nodes == []: 
         return []
     else:
-        pivot = nodes[0]
-        lesser = sort_nodes_by_trust([x for x in nodes[1:] if x.trust < pivot.trust])
+        pivot   = nodes[0]
+        lesser  = sort_nodes_by_trust([x for x in nodes[1:] if x.trust < pivot.trust])
         greater = sort_nodes_by_trust([x for x in nodes[1:] if x.trust >= pivot.trust])
         return greater + [pivot] + lesser
