@@ -15,9 +15,9 @@ class PeerCollection(restful.Resource):
     def get(self):
         auth(session, required=True)
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
-        parser.add_argument("network",type=str, help="", required=False, default=None)
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
+        parser.add_argument("network",  type=str, default=None)
         args = parser.parse_args()
 
         if not args.network:
