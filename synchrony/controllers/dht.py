@@ -1303,16 +1303,26 @@ class TBucket(dict):
     Psuedocode translation from the sigma notation in EigenTrust++:
 
         S(i,j) = max(j.trust / j.transactions, 0)
-        Where P is the set of pre-trusted peers:
         C(i,j) = max(max(S(i,j) / max(sum(i,m), 0)), len(P))
+        Where P is the set of pre-trusted peers.
 
         SIMILARITY of feedbacks from peers u and v is defined as:
-        1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(common_peers(u,v)))
-        where common_peers is all peers where peer.transactions > 1 in both instances.
-        tr = v.trust, u.trust / len(common_peers(u, v) 
+        sim(u,v) = 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(common_peers(u,v)))
+              tr = v.trust, u.trust / len(common_peers(u, v) 
+        Where common_peers is all peers where peer.transactions > 1 in both instances.
         
-        CREDIBILITY f(i,j) = sim(i,j) / sum(R(i), sim(i,m))
-        where R(i) is the set of peers where i.transactions > 1
+        CREDIBILITY of feedbacks is defined as:
+        f(i,j)  = sim(i,j) / sum([sim(i,m) for i in R(i)]
+        where R(i) is the set of peers who've had transactions with peer i.
+
+        fC(i,j) = f(i,j) * C(i,j)
+
+         l(i,j) = max(fC(i,j), 0) / sum([max(fC(i,m), 0) for i in P])
+  
+         t(i,j) = sum(l(i,k) + C(k,j))
+  
+         w(i,j) = (i - b) * C(j,i) + b * sim(j,i)
+              b = 0.85
 
     """
     def __init__(self, router, *args, **kwargs):
