@@ -1347,13 +1347,34 @@ class TBucket(dict):
     def tr(self, u, w):
         return v.trust + u.trust / self.R(u,v)
 
-    def R(self, u, v):
+    def R0(self, u, v):
         u = get(u, self.router.network)
         v = get(v, self.router.network)
-        # Count transactions > 1
+
+        u_results = []
+        v_results = []
+
+        results = []
+
+        u = [i['node'] for i in u if i['transactions'] > 1]
+        v = [i['node'] for i in v if i['transactions'] > 1]
+
+        for i in u_results:
+            if i in v_results:
+                results.append(i)
+
+        return len(results)
+
+    def R1(self, i):
+        data    = []
+        for p in self.router:
+            data.extend(get(p, self.router.network))
+        
+        results = [p for p in data if tuple(p['node']) == i.threeple and p['transactions']]
+        return results
 
     def f(self, i, j):
-        return sim(i,j) / sum([self.sim(i,j) for i in self.R(i)])
+        return sim(i,j) / sum([self.sim(i,j) for i in self])
 
     def fC(self, i, j):
         #
@@ -2236,7 +2257,7 @@ def get(addr, path, field="data", all=True):
                 return result
         except Exception, e:
             log(e.message, "error")
-            return
+            return []
 
         json_data = r.json()
         if field in json_data:
