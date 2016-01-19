@@ -1350,7 +1350,27 @@ class TBucket(dict):
     def R(self, u, v):
         u = get(u, self.router.network)
         v = get(v, self.router.network)
-        # Count transactions > 1
+
+        u_results = []
+        v_results = []
+
+        results = []
+
+        for i in u:
+            if i['node'] in u_results or not i['transactions']:
+                continue
+            u_results.append(i['node'])
+
+        for i in v:
+            if i['node'] in v_results or not i['transactions']:
+                continue
+            v_results.append(i['node'])
+
+        for i in u_results:
+            if i in v_results:
+                results.append(i)
+
+        return len(results)
 
     def f(self, i, j):
         return sim(i,j) / sum([self.sim(i,j) for i in self.R(i)])
