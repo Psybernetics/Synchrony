@@ -128,6 +128,7 @@ TODO/NOTES:
 """
 import gzip
 import json
+import math
 import time
 import heapq
 import socket
@@ -1308,8 +1309,8 @@ class TBucket(dict):
 
         SIMILARITY of feedbacks from peers u and v is defined as:
         sim(u,v) = 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(common_peers(u,v)))
-              tr = v.trust, u.trust / len(common_peers(u, v) 
-        Where common_peers is all peers where peer.transactions > 1 in both instances.
+              tr = v.trust, u.trust / R(u, v) 
+        Where R(u,v) is the cardinality of the set of transactions between u and v.
         
         CREDIBILITY of feedbacks is defined as:
         f(i,j)  = sim(i,j) / sum([sim(i,m) for i in R(i)]
@@ -1326,9 +1327,48 @@ class TBucket(dict):
 
     """
     def __init__(self, router, *args, **kwargs):
+
+        self.alpha = 0
+        self.beta  = 0.85
+
         self.router = router
         dict.__init__(self, *args, **kwargs)
-        
+       
+    def S(self, i, j):
+        return max(j.trust / j.transactions, 0)
+
+    def C(self, i, j):
+        #
+        return max(max(self.S(i,j) / max(sum(i,m), 0), len(self)))
+
+    def sim(self, u, v):
+        return 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(self.common_peers(u,v)))
+
+    def tr(self, u, w):
+        return v.trust + u.trust / self.R(u,v)
+
+    def R(self, u, v):
+        u = get(u, self.router.network)
+        v = get(v, self.router.network)
+        # Count transactions > 1
+
+    def f(self, i, j):
+        return sim(i,j) / sum([self.sim(i,j) for i in self.R(i)])
+
+    def fC(self, i, j):
+        #
+        return self.f(i,j) * self.C(k, j)
+
+    def l(self, i, j):
+        return max(self.fC(i,j), 0) / sum([max(self.fC(i,m), 0) for i in P])
+
+    def t(self, i, j):
+        #
+        return sum(self.l(i,k) + self.C(k,j))
+
+    def w(self, i, j):
+        return (i.trust - b) * self.C(j,k) + self.beta * self.sim(j,i)
+
     def common_peers(i, j):
         """
         Returns a set of the common peers by node triple who have
@@ -1337,15 +1377,13 @@ class TBucket(dict):
         i_peers  = get(i, self.router.network)
         j_peers  = get(j, self.router.network)
         
-        log(i_peers, "debug")
-        log(j_peers, "debug")
-
         if not i_peers or not j_peers:
             return None
 
         i_peers = [[p['node']] for p in i_peers if p['transactions'] > 0]
         j_peers = [[p['node']] for p in j_peers if p['transactions'] > 0]
         return list(set(i_peers).intersection(j_peers))
+
 
     def calculate_trust(self):
         """
