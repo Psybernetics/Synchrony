@@ -1309,11 +1309,11 @@ class TBucket(dict):
 
         SIMILARITY of feedbacks from peers u and v is defined as:
         sim(u,v) = 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(common_peers(u,v)))
-              tr = v.trust, u.trust / R(u, v) 
+              tr = v.trust, u.trust / R0(u, v) 
         Where R(u,v) is the cardinality of the set of transactions between u and v.
         
         CREDIBILITY of feedbacks is defined as:
-        f(i,j)  = sim(i,j) / sum([sim(i,m) for i in R(i)]
+        f(i,j)  = sim(i,j) / sum([sim(i,m) for i in R1(i)]
         where R(i) is the set of peers who've had transactions with peer i.
 
         fC(i,j) = f(i,j) * C(i,j)
@@ -1327,11 +1327,10 @@ class TBucket(dict):
 
     """
     def __init__(self, router, *args, **kwargs):
-
-        self.alpha = 0
-        self.beta  = 0.85
-
-        self.router = router
+        self.alpha      = 0.0
+        self.beta       = 0.85
+        self.iterations = 100
+        self.router     = router
         dict.__init__(self, *args, **kwargs)
        
     def S(self, i, j):
@@ -1339,13 +1338,19 @@ class TBucket(dict):
 
     def C(self, i, j):
         #
-        return max(max(self.S(i,j) / max(sum(i,m), 0), len(self)))
+        score = 0
+        for _, p in enumerate(self.router):
+            if _ >= self.iterations: break
+            if p in self:
+                score += len(self)
+            score += self.S(i, p)
+        return self.S(i,j) / score
 
     def sim(self, u, v):
         return 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(self.common_peers(u,v)))
 
     def tr(self, u, w):
-        return v.trust + u.trust / self.R(u,v)
+        return v.trust + u.trust / self.R0(u,v)
 
     def R0(self, u, v):
         u = get(u, self.router.network)
@@ -1377,15 +1382,17 @@ class TBucket(dict):
         return sim(i,j) / sum([self.sim(i,j) for i in self])
 
     def fC(self, i, j):
-        #
         return self.f(i,j) * self.C(k, j)
 
     def l(self, i, j):
         return max(self.fC(i,j), 0) / sum([max(self.fC(i,m), 0) for i in P])
 
     def t(self, i, j):
-        #
-        return sum(self.l(i,k) + self.C(k,j))
+        score = 0
+        for _, k in enumerate(self.router):
+            if _ >= self.iterations: break
+            score += self.l(i,k) + self.C(k,j)
+        return score
 
     def w(self, i, j):
         return (i.trust - b) * self.C(j,k) + self.beta * self.sim(j,i)
@@ -1404,7 +1411,6 @@ class TBucket(dict):
         i_peers = [[p['node']] for p in i_peers if p['transactions'] > 0]
         j_peers = [[p['node']] for p in j_peers if p['transactions'] > 0]
         return list(set(i_peers).intersection(j_peers))
-
 
     def calculate_trust(self):
         """
@@ -1460,8 +1466,11 @@ class TBucket(dict):
         for node in near_nodes:
             self.router.add_contact(node)
 
+    def __iter__(self):
+        return iter(self.values())
+
     def __repr__(self):
-        return "<TBucket of %i peers>" % len(self)
+        return "<TBucket of %i pre-trusted peers>" % len(self)
 
 class Node(object):
     def __init__(self, id, ip=None, port=None, pubkey=None, router=None):

@@ -13,9 +13,11 @@ from synchrony.controllers.utils import exclude
 
 class BaseSuite(unittest.TestCase):
 
-    dfp            = 0.0          # 0% peers are malicious by default
+    dfp            = 0.0          # 0% of peers are malicious by default
+    alpha          = 0.0
+    beta           = 0.85         # Normalisation factor
     iterations     = 100          # calculate_trust iterates 100 times by default
-    peer_amount    = 10           # 10 peers by default.
+    peer_amount    = 25
     storage_method = "rpc_append"
 
     def setUp(self):
