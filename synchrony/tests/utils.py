@@ -27,7 +27,7 @@ class BaseSuite(unittest.TestCase):
         self.peers = create_peers(self.peer_amount, self.storage_method)
 
         count = int(len(self.peers) * self.dfp)
-#        dht.log("Making %i peers malicious." % count)
+#        dht.log("%i peers will be malicious for this test." % count)
 #        for i in range(count):
 #            self.peers[i] ...
 
@@ -48,8 +48,11 @@ class BaseSuite(unittest.TestCase):
         # We add these RoutingTable objects as an attribute of mock_transmit
         # so it may find other nodes and work on their protocol instances.
         # We also monkey patch dht.fetch revision to avert network calls.
-        mock_transmit.peers = self.peers
-        dht.transmit        = mock_transmit
+        mock_transmit.peers       = self.peers
+        dht.transmit              = mock_transmit
+        mock_get.peers            = self.peers
+        dht.get                   = mock_get
+        mock_fetch_revision.peers = self.peers
         for key in self.peers:
             self.peers[key].protocol.fetch_revision = mock_fetch_revision
 
@@ -134,7 +137,16 @@ def mock_transmit(routes, addr, data):
                 return
             return rpc_method(data)
 
+def mock_get(addr, path, field="data", all=True):
+
+    if isinstance(addr, dht.Node):
+        f = lambda f: f.node.threeple == addr.threeple
+        addr = filter(f, mock_get.peers.values())
+        if addr:
+            return [p.jsonify() for p in addr[0]]
+   
+    return []
+
 def mock_fetch_revision(url, content_hash, nodes):
-    # This could definitely be fleshed out to more accurately
-    # model the real fetch_revision.
+    #
     return  Revision.query.filter(Revision.hash == content_hash).first()

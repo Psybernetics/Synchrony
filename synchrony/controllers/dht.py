@@ -1037,7 +1037,8 @@ class SynchronyProtocol(object):
                 nodes.append(node)
                 continue
             node = self.rpc_ping(n)
-            if node == None: continue
+            if node == None:
+                continue
             nodes.append(node)
 
         nodes = sort_nodes_by_trust(nodes)
@@ -1334,6 +1335,8 @@ class TBucket(dict):
         dict.__init__(self, *args, **kwargs)
        
     def S(self, i, j):
+        if not j.transactions:
+            return 0
         return max(j.trust / j.transactions, 0)
 
     def C(self, i, j):
@@ -1344,10 +1347,18 @@ class TBucket(dict):
             if p in self:
                 score += len(self)
             score += self.S(i, p)
+        if not score:
+            return 0
         return self.S(i,j) / score
 
     def sim(self, u, v):
-        return 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(self.common_peers(u,v)))
+        score = 0
+        common_peers = self.common_peers(u,v)
+        s = sum([pow((self.tr(u,w) - self.tr(v,w)),2) for w in common_peers])
+        if not common_peers:
+            return 0
+        s = s / len(common_peers)
+        return 1 - math.sqrt(s)
 
     def tr(self, u, w):
         return v.trust + u.trust / self.R0(u,v)
@@ -1379,13 +1390,19 @@ class TBucket(dict):
         return results
 
     def f(self, i, j):
-        return sim(i,j) / sum([self.sim(i,j) for i in self])
+        s = sum([self.sim(i,j) for i in self])
+        if not s:
+            return 0
+        return self.sim(i,j) / s
 
     def fC(self, i, j):
-        return self.f(i,j) * self.C(k, j)
+        return self.f(i,j) * self.C(i, j)
 
     def l(self, i, j):
-        return max(self.fC(i,j), 0) / sum([max(self.fC(i,m), 0) for i in P])
+        s = sum([max(self.fC(i,m), 0) for m in self])
+        if not s:
+            return 0
+        return max(self.fC(i,j), 0) / s
 
     def t(self, i, j):
         score = 0
@@ -1395,9 +1412,9 @@ class TBucket(dict):
         return score
 
     def w(self, i, j):
-        return (i.trust - b) * self.C(j,k) + self.beta * self.sim(j,i)
+        return (i.trust - self.beta) * self.C(j,k) + self.beta * self.sim(j,i)
 
-    def common_peers(i, j):
+    def common_peers(self, i, j):
         """
         Returns a set of the common peers by node triple who have
         transactions > 1 between peers i and j.
@@ -1406,7 +1423,7 @@ class TBucket(dict):
         j_peers  = get(j, self.router.network)
         
         if not i_peers or not j_peers:
-            return None
+            return []
 
         i_peers = [[p['node']] for p in i_peers if p['transactions'] > 0]
         j_peers = [[p['node']] for p in j_peers if p['transactions'] > 0]
@@ -1416,55 +1433,11 @@ class TBucket(dict):
         """
         Weight peers by the ratings assigned to them via trusted peers.
         """
-        def is_same_source(node):
-            if node[1] == self.router.node.ip and \
-                    node[2] == self.router.node.port:
-                return True
-            return False
-
-        near_nodes = []
-        far_nodes  = []
-        nodes = self.values()
-
-        for node in nodes:
-            i = get(node, self.router.network) # get /v1/peers/<network_name>
-            if not i or not "data" in i:
-                continue
-            for j in i["data"]:
-                if is_same_source(j['node']):
-                    continue
-                near_node = Node(*j['node'])
-                existing  = self.router.get_existing_node(near_node)
-                if existing:
-                    near_node = existing
-                else:
-                    near_node = self.router.protocol.rpc_ping(near_node)
-                if not near_node:
-                    continue
-                if j['trust'] > 0: # peer of trusted peer has positive rating
-                    near_node.trust = node.trust / j['trust']
-                near_nodes.append(near_node)
-
-                f = get(near_node, self.router.network)
-                if not f or not "data" in f:
-                    continue
-                for k in f['data']:
-                    if is_same_source(k['node']):
-                        continue
-                    far_node = Node(*k['node'])
-                    existing  = self.router.get_existing_node(far_node)
-                    if existing:
-                        far_node = existing
-                    else:
-                        far_node = self.router.protocol.rpc_ping(far_node)
-                    if not far_node:
-                        continue
-                    if k['trust'] > 0: # k.trust = (t.trusted / j.trust) / k.trust
-                        far_node.trust = near_node.trust / k['trust']
-                    far_nodes.append(far_node)
-        near_nodes.extend(far_nodes)
-        for node in near_nodes:
-            self.router.add_contact(node)
+        for remote_peer in self.router:
+            new_trust = self.t(self.router.node, remote_peer)
+            log("%s: New trust rating for %s of %i." %\
+                (self.router.network, remote_peer, new_trust))
+            remote_peer.trust = new_trust
 
     def __iter__(self):
         return iter(self.values())

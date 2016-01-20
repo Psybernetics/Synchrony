@@ -3,6 +3,7 @@
 Test suite for a dishonest feedback percentage of 70%.
 Nearly three quarters of network peers will be malign with colluding groups.
 """
+import random
 import hashlib
 import unittest
 from synchrony import db
@@ -34,11 +35,20 @@ class TestSuite(BaseSuite):
             db.session.commit()
             print "New revision committed."
 
-        self.peers[0][revision] = revision
+        # Set a positive (though constrained) trust rating on all peers
+        for p in self.peers.values():
+            for x in p:
+                x.trust = random.randint(50, 60)
 
-        # Now that we've stored references to the 0th peer
-        # let's see if we can find them from the 1st peer.
-        self.assertEqual(self.peers[1][revision], revision)
+        # Make some transactions and then calculate_trust
+        self.honest_peers.values()[0][revision] = revision
+        self.honest_peers.values()[0].tbucket.calculate_trust()
+
+        # Adjust trust ratings manually and then calculate_trust
+        p = random.choice([p for p in self.peers[0]])
+        p.trust = random.randint(1,100)
+        self.honest_peers.values()[0].tbucket.calculate_trust()
+
 
 def run():
     suite = unittest.TestSuite()
