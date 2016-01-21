@@ -213,14 +213,15 @@ class RoutingTable(object):
         self.node = Node(id or utils.generate_node_id(seed),
                          addr,
                          port,
-                         pubkey)
+                         pubkey,
+                         self)
 
         # An unbounded group of pre-trusted peers
         self.tbucket  = TBucket(self)
         # Our sublists of known peers
         self.buckets  = [KBucket(0, 2 ** 160, self.ksize)]
         # An instance of a protocol class implementing our RPCs
-        self.protocol = SynchronyProtocol(self, self.node, Storage(), ksize)
+        self.protocol = SynchronyProtocol(self, Storage(), ksize)
 
         # This makes it easy for test suites select which method to use.
         # Note that if you use a different storage method then it's up to you
@@ -510,7 +511,7 @@ class RoutingTable(object):
 
         hashed_url = digest(url)
 
-        log("Adjusting local reference.")
+        log("Adding local reference.")
         self.protocol.storage[hexlify(hashed_url)] = (content_hash, self.node)
 
         def store(nodes):
@@ -558,7 +559,7 @@ class RoutingTable(object):
         return "<RoutingTable for \"%s\" with %i peers>" %  (self.network, len(self))
 
 class SynchronyProtocol(object):
-    def __init__(self, router, source_node, storage, ksize):
+    def __init__(self, router, storage, ksize):
         """
         Methods beginning with rpc_ define our outward calls and their
         handle_ counterparts define how we deal with their receipt.
@@ -579,7 +580,7 @@ class SynchronyProtocol(object):
         self.ksize         = ksize
         self.router        = router
         self.storage       = storage
-        self.source_node   = source_node
+        self.source_node   = router.node
         self.downloads     = ForgetfulStorage()         # content_hash -> (n.ip, n.port)
         self.received_keys = ForgetfulStorage(bound=2)  # node -> [republish_messages,..]
 
@@ -1416,18 +1417,18 @@ class TBucket(dict):
 
     def common_peers(self, i, j):
         """
-        Returns a set of the common peers by node triple who have
-        transactions > 1 between peers i and j.
+        Returns the set of the common peers between sets i and j who have
+        transactions > 1, by node triple.
         """
-        i_peers  = get(i, self.router.network)
-        j_peers  = get(j, self.router.network)
+        i = get(i, self.router.network)
+        j = get(j, self.router.network)
         
-        if not i_peers or not j_peers:
+        if not i or not j:
             return []
 
-        i_peers = [[p['node']] for p in i_peers if p['transactions'] > 0]
-        j_peers = [[p['node']] for p in j_peers if p['transactions'] > 0]
-        return list(set(i_peers).intersection(j_peers))
+        i = [[p['node']] for p in i if p['transactions'] > 0]
+        j = [[p['node']] for p in j if p['transactions'] > 0]
+        return list(set(i).intersection(j))
 
     def calculate_trust(self):
         """
@@ -1435,7 +1436,7 @@ class TBucket(dict):
         """
         for remote_peer in self.router:
             new_trust = self.t(self.router.node, remote_peer)
-            log("%s: New trust rating for %s of %i." %\
+            log("%s: Recalculated trust of %s as %i." %\
                 (self.router.network, remote_peer, new_trust))
             remote_peer.trust = new_trust
 

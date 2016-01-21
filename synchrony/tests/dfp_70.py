@@ -25,6 +25,7 @@ class TestSuite(BaseSuite):
             choice = raw_input("Create revision [y/n]: ")
             if choice.lower() != "y":
                 raise SystemExit
+
             revision         = Revision()
             revision.content = "Hello, world."
             revision.size    = len(revision.content)
@@ -33,22 +34,23 @@ class TestSuite(BaseSuite):
     
             db.session.add(revision)
             db.session.commit()
+            
             print "New revision committed."
 
-        # Set a positive (though constrained) trust rating on all peers
-        for p in self.peers.values():
-            for x in p:
-                x.trust = random.randint(50, 60)
-
         # Make some transactions and then calculate_trust
-        self.honest_peers.values()[0][revision] = revision
-        self.honest_peers.values()[0].tbucket.calculate_trust()
-
+        for i in range(10):
+            self.honest_peers.values()[i][revision] = revision
+        
+        # This can take a long time.
+        for i in range(10):
+            self.honest_peers.values()[i].tbucket.calculate_trust()
+        
         # Adjust trust ratings manually and then calculate_trust
         p = random.choice([p for p in self.peers[0]])
         p.trust = random.randint(1,100)
         self.honest_peers.values()[0].tbucket.calculate_trust()
-
+        
+        self.assertEqual(self.honest_peers.values()[0][revision], revision) 
 
 def run():
     suite = unittest.TestSuite()
