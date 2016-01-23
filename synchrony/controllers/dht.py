@@ -213,14 +213,15 @@ class RoutingTable(object):
         self.node = Node(id or utils.generate_node_id(seed),
                          addr,
                          port,
-                         pubkey)
+                         pubkey,
+                         self)
 
         # An unbounded group of pre-trusted peers
         self.tbucket  = TBucket(self)
         # Our sublists of known peers
         self.buckets  = [KBucket(0, 2 ** 160, self.ksize)]
         # An instance of a protocol class implementing our RPCs
-        self.protocol = SynchronyProtocol(self, self.node, Storage(), ksize)
+        self.protocol = SynchronyProtocol(self, Storage(), ksize)
 
         # This makes it easy for test suites select which method to use.
         # Note that if you use a different storage method then it's up to you
@@ -510,7 +511,7 @@ class RoutingTable(object):
 
         hashed_url = digest(url)
 
-        log("Adjusting local reference.")
+        log("Adding local reference.")
         self.protocol.storage[hexlify(hashed_url)] = (content_hash, self.node)
 
         def store(nodes):
@@ -558,7 +559,7 @@ class RoutingTable(object):
         return "<RoutingTable for \"%s\" with %i peers>" %  (self.network, len(self))
 
 class SynchronyProtocol(object):
-    def __init__(self, router, source_node, storage, ksize):
+    def __init__(self, router, storage, ksize):
         """
         Methods beginning with rpc_ define our outward calls and their
         handle_ counterparts define how we deal with their receipt.
@@ -578,8 +579,9 @@ class SynchronyProtocol(object):
         """
         self.ksize         = ksize
         self.router        = router
+        self.epsilon       = 0.0001 # Don't use a different trust increment publicly.
         self.storage       = storage
-        self.source_node   = source_node
+        self.source_node   = router.node
         self.downloads     = ForgetfulStorage()         # content_hash -> (n.ip, n.port)
         self.received_keys = ForgetfulStorage(bound=2)  # node -> [republish_messages,..]
 
@@ -1037,7 +1039,8 @@ class SynchronyProtocol(object):
                 nodes.append(node)
                 continue
             node = self.rpc_ping(n)
-            if node == None: continue
+            if node == None:
+                continue
             nodes.append(node)
 
         nodes = sort_nodes_by_trust(nodes)
@@ -1063,14 +1066,14 @@ class SynchronyProtocol(object):
             revision = Revision()
             revision.add(response)
             if revision.hash != content_hash:
-                node.trust -= 1
+                node.trust -= self.epsilon
                 log("Hash doesn't match content for %s" % content_hash, "warning")
                 log("Decremented trust rating for %s." % node, "warning")
             else:
                 # Adjust mimetype, set the network and increment bytes_rcvd
                 # TODO: Make the trust increment proportionate to Revision.size
                 log("Incrementing trust rating for %s." % node)
-                node.trust += 1
+                node.trust += self.epsilon
                 if 'content-type' in response.headers:
                     revision.mimetype = response.headers['content-type']
                 if 'Content-Type' in response.headers:
@@ -1297,9 +1300,12 @@ class TBucket(dict):
         Nodes who've previously earned high trust over time.
 
     Peers have a normal placement in KBuckets but peers who also have a
-    reference from a TBucket are considered to be inherently trustworthy, and
-    can be relied upon to be honest in rating the trustworthiness of their
+    reference from a TBucket are considered to be inherently trustworthy.
+    They can be relied upon to be honest in rating the trustworthiness of their
     peers.
+
+    They must be the canonical reference to the Node instance as returned by
+    RoutingTable.get_existing_node.
 
     Psuedocode translation from the sigma notation in EigenTrust++:
 
@@ -1308,12 +1314,12 @@ class TBucket(dict):
         Where P is the set of pre-trusted peers.
 
         SIMILARITY of feedbacks from peers u and v is defined as:
-        sim(u,v) = 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(common_peers(u,v)))
-              tr = v.trust, u.trust / R(u, v) 
+        sim(u,v) = 1 - sqrt(sum(pow((tr(u, w) - tr(v, w)), 2)) / len(transactions(u, v)))
+              tr = v.trust, u.trust / R0(u, v) 
         Where R(u,v) is the cardinality of the set of transactions between u and v.
         
         CREDIBILITY of feedbacks is defined as:
-        f(i,j)  = sim(i,j) / sum([sim(i,m) for i in R(i)]
+        f(i,j)  = sim(i,j) / sum([sim(i,m) for i in R1(i)]
         where R(i) is the set of peers who've had transactions with peer i.
 
         fC(i,j) = f(i,j) * C(i,j)
@@ -1327,120 +1333,137 @@ class TBucket(dict):
 
     """
     def __init__(self, router, *args, **kwargs):
-
-        self.alpha = 0
-        self.beta  = 0.85
-
-        self.router = router
+        self.alpha      = 0.0
+        self.beta       = 0.85
+        self.iterations = 100
+        self.router     = router
+        self.messages   = []
         dict.__init__(self, *args, **kwargs)
        
     def S(self, i, j):
+        if not j.transactions:
+            return 0
         return max(j.trust / j.transactions, 0)
 
     def C(self, i, j):
         #
-        return max(max(self.S(i,j) / max(sum(i,m), 0), len(self)))
+        score = 0
+        for _, m in enumerate(self):
+            if _ >= self.iterations: break
+            if m in self:
+                score += len(self)
+            score += self.S(i, m)
+        if not score:
+            return 0
+        return self.S(i, j) / score
 
     def sim(self, u, v):
-        return 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(self.common_peers(u,v)))
+        score = 0
+        common_peers = self.common_peers(u,v)
+        s = sum([pow((self.tr(u, w) - self.tr(v, w)),2) for w in common_peers])
+        if not common_peers:
+            return 0
+        s = s / len(common_peers)
+        return 1 - math.sqrt(s)
 
     def tr(self, u, w):
-        return v.trust + u.trust / self.R(u,v)
+        R0 = self.R0(u, v)
+        if R0 == 0:
+            return 0
+        else:
+            return v.trust + u.trust / R0
 
-    def R(self, u, v):
-        u = get(u, self.router.network)
-        v = get(v, self.router.network)
-        # Count transactions > 1
+    def R0(self, u, v):
+        """
+        Return the average of the transaction count (or their average) reported
+        by two peers for the two peers
+        """
+        log("R0: %s %s" % (u, v))
+        ur = get(u, "/".join(self.router.network, str(v.long_id)))
+        vr = get(v, "/".join(self.router.network, str(u.long_id)))
+
+        if ur and not vr:
+            return ur['transactions']
+        if vr and not ur:
+            return vr['transactions']
+
+        return (ur['transactions'] + vr['transactions']) / 2
+
+    def R1(self, i):
+        data    = []
+        for p in self.router:
+            data.extend(get(p, self.router.network))
+        
+        results = [p for p in data if tuple(p['node']) == i.threeple and p['transactions']]
+        return results
 
     def f(self, i, j):
-        return sim(i,j) / sum([self.sim(i,j) for i in self.R(i)])
+        s = sum([self.sim(i, j) for i in self])
+        if not s:
+            return 0
+        return self.sim(i, j) / s
 
     def fC(self, i, j):
-        #
-        return self.f(i,j) * self.C(k, j)
+        return self.f(i, j) * self.C(i, j)
 
     def l(self, i, j):
-        return max(self.fC(i,j), 0) / sum([max(self.fC(i,m), 0) for i in P])
+        s = sum([max(self.fC(i, m), 0) for m in self])
+        if not s:
+            return 0
+        return max(self.fC(i, j), 0) / s
 
     def t(self, i, j):
-        #
-        return sum(self.l(i,k) + self.C(k,j))
+        score = 0
+        for _, k in enumerate(self.router):
+            if _ >= self.iterations: break
+            score += self.l(i, k) + self.C(k, j)
+        return score
 
     def w(self, i, j):
-        return (i.trust - b) * self.C(j,k) + self.beta * self.sim(j,i)
+        return (i.trust - self.beta) * self.C(j, k) + self.beta * self.sim(j, i)
 
-    def common_peers(i, j):
+    def common_peers(self, i, j):
         """
-        Returns a set of the common peers by node triple who have
-        transactions > 1 between peers i and j.
+        Returns the set of the common peers between sets i and j who have
+        transactions > 1, by node triple.
         """
-        i_peers  = get(i, self.router.network)
-        j_peers  = get(j, self.router.network)
+        i = get(i, self.router.network)
+        j = get(j, self.router.network)
         
-        if not i_peers or not j_peers:
-            return None
+        if not i or not j:
+            return []
 
-        i_peers = [[p['node']] for p in i_peers if p['transactions'] > 0]
-        j_peers = [[p['node']] for p in j_peers if p['transactions'] > 0]
-        return list(set(i_peers).intersection(j_peers))
-
+        i = [tuple(p['node']) for p in i if p['transactions'] > 0]
+        j = [tuple(p['node']) for p in j if p['transactions'] > 0]
+        return list(set(i).intersection(j))
 
     def calculate_trust(self):
         """
         Weight peers by the ratings assigned to them via trusted peers.
+
+        We then make a two-dimensional list of the resulting peers as
+        activation matrix AC
+
         """
-        def is_same_source(node):
-            if node[1] == self.router.node.ip and \
-                    node[2] == self.router.node.port:
-                return True
-            return False
+        log("Recalculating trust values.")
+        for remote_peer in self.router:
+            new_trust = self.t(self.router.node, remote_peer)
+            self.messages.append("%s: Recalculated trust of %s as %i." %\
+                (self.router.network, remote_peer, new_trust))
+            remote_peer.trust = new_trust
+            self.read_messages()    
+        self.read_messages()
 
-        near_nodes = []
-        far_nodes  = []
-        nodes = self.values()
+    def read_messages(self):
+        for message in self.messages:
+            log(message)
+        self.messages = []
 
-        for node in nodes:
-            i = get(node, self.router.network) # get /v1/peers/<network_name>
-            if not i or not "data" in i:
-                continue
-            for j in i["data"]:
-                if is_same_source(j['node']):
-                    continue
-                near_node = Node(*j['node'])
-                existing  = self.router.get_existing_node(near_node)
-                if existing:
-                    near_node = existing
-                else:
-                    near_node = self.router.protocol.rpc_ping(near_node)
-                if not near_node:
-                    continue
-                if j['trust'] > 0: # peer of trusted peer has positive rating
-                    near_node.trust = node.trust / j['trust']
-                near_nodes.append(near_node)
-
-                f = get(near_node, self.router.network)
-                if not f or not "data" in f:
-                    continue
-                for k in f['data']:
-                    if is_same_source(k['node']):
-                        continue
-                    far_node = Node(*k['node'])
-                    existing  = self.router.get_existing_node(far_node)
-                    if existing:
-                        far_node = existing
-                    else:
-                        far_node = self.router.protocol.rpc_ping(far_node)
-                    if not far_node:
-                        continue
-                    if k['trust'] > 0: # k.trust = (t.trusted / j.trust) / k.trust
-                        far_node.trust = near_node.trust / k['trust']
-                    far_nodes.append(far_node)
-        near_nodes.extend(far_nodes)
-        for node in near_nodes:
-            self.router.add_contact(node)
+    def __iter__(self):
+        return iter(self.values())
 
     def __repr__(self):
-        return "<TBucket of %i peers>" % len(self)
+        return "<TBucket of %i pre-trusted peers>" % len(self)
 
 class Node(object):
     def __init__(self, id, ip=None, port=None, pubkey=None, router=None):
@@ -2236,7 +2259,7 @@ def get(addr, path, field="data", all=True):
                 return result
         except Exception, e:
             log(e.message, "error")
-            return
+            return []
 
         json_data = r.json()
         if field in json_data:
