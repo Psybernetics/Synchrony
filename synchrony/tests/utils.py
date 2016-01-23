@@ -40,25 +40,25 @@ class BaseSuite(unittest.TestCase):
         # added to one anothers' bucket of pre-trusted peers.
         #
         # Your test suite(s) will want to adjust this manually after the fact.
-        
         self.honest_peers = {}
         honest_count = len(self.peers) - count
-        dht.log("Introducing %i pre-trusted peers to one another." % honest_count)
+        
+        dht.log("Creating %i pre-trusted peers." % honest_count)
         for j in range(honest_count):
             self.honest_peers[self.peers[count+j].node.long_id] = self.peers[count+j]
 
         for router in self.honest_peers.values():
-            print router
             for r in self.honest_peers.values():
                 if router.node.threeple == r.node.threeple: continue
                 node = router.get_existing_node(r.node.threeple)
                 if not node: continue
                 node.trust += 1
                 router.tbucket[node.long_id] = node
+                # dht.log("Introduced %s to %s as a pre-trusted peer." % (node, router))
 
         # We add these RoutingTable objects as an attributes of mocked methods
         # so they can find other nodes and work on their protocol instances.
-        
+        #
         # Even though we're emulating dht.SynchronyProtocol to avoid network
         # and database calls, we still stick our mock functions on those instances
         # for the time being.
@@ -186,6 +186,7 @@ class TestProtocol(dht.SynchronyProtocol):
         self.peers         = peers
         self.ksize         = ksize
         self.router        = router
+        self.epsilon       = 0.0001
         self.storage       = storage
         self.source_node   = router.node
         self.downloads     = dht.ForgetfulStorage()         # content_hash -> (n.ip, n.port)

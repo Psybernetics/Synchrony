@@ -579,6 +579,7 @@ class SynchronyProtocol(object):
         """
         self.ksize         = ksize
         self.router        = router
+        self.epsilon       = 0.0001 # Don't use a different trust increment publicly.
         self.storage       = storage
         self.source_node   = router.node
         self.downloads     = ForgetfulStorage()         # content_hash -> (n.ip, n.port)
@@ -1065,14 +1066,14 @@ class SynchronyProtocol(object):
             revision = Revision()
             revision.add(response)
             if revision.hash != content_hash:
-                node.trust -= 1
+                node.trust -= self.epsilon
                 log("Hash doesn't match content for %s" % content_hash, "warning")
                 log("Decremented trust rating for %s." % node, "warning")
             else:
                 # Adjust mimetype, set the network and increment bytes_rcvd
                 # TODO: Make the trust increment proportionate to Revision.size
                 log("Incrementing trust rating for %s." % node)
-                node.trust += 1
+                node.trust += self.epsilon
                 if 'content-type' in response.headers:
                     revision.mimetype = response.headers['content-type']
                 if 'Content-Type' in response.headers:
@@ -1299,9 +1300,12 @@ class TBucket(dict):
         Nodes who've previously earned high trust over time.
 
     Peers have a normal placement in KBuckets but peers who also have a
-    reference from a TBucket are considered to be inherently trustworthy, and
-    can be relied upon to be honest in rating the trustworthiness of their
+    reference from a TBucket are considered to be inherently trustworthy.
+    They can be relied upon to be honest in rating the trustworthiness of their
     peers.
+
+    They must be the canonical reference to the Node instance as returned by
+    RoutingTable.get_existing_node.
 
     Psuedocode translation from the sigma notation in EigenTrust++:
 
@@ -1310,7 +1314,7 @@ class TBucket(dict):
         Where P is the set of pre-trusted peers.
 
         SIMILARITY of feedbacks from peers u and v is defined as:
-        sim(u,v) = 1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(common_peers(u,v)))
+        sim(u,v) = 1 - sqrt(sum(pow((tr(u, w) - tr(v, w)), 2)) / len(transactions(u, v)))
               tr = v.trust, u.trust / R0(u, v) 
         Where R(u,v) is the cardinality of the set of transactions between u and v.
         
@@ -1333,6 +1337,7 @@ class TBucket(dict):
         self.beta       = 0.85
         self.iterations = 100
         self.router     = router
+        self.messages   = []
         dict.__init__(self, *args, **kwargs)
        
     def S(self, i, j):
@@ -1343,44 +1348,46 @@ class TBucket(dict):
     def C(self, i, j):
         #
         score = 0
-        for _, p in enumerate(self.router):
+        for _, m in enumerate(self):
             if _ >= self.iterations: break
-            if p in self:
+            if m in self:
                 score += len(self)
-            score += self.S(i, p)
+            score += self.S(i, m)
         if not score:
             return 0
-        return self.S(i,j) / score
+        return self.S(i, j) / score
 
     def sim(self, u, v):
         score = 0
         common_peers = self.common_peers(u,v)
-        s = sum([pow((self.tr(u,w) - self.tr(v,w)),2) for w in common_peers])
+        s = sum([pow((self.tr(u, w) - self.tr(v, w)),2) for w in common_peers])
         if not common_peers:
             return 0
         s = s / len(common_peers)
         return 1 - math.sqrt(s)
 
     def tr(self, u, w):
-        return v.trust + u.trust / self.R0(u,v)
+        R0 = self.R0(u, v)
+        if R0 == 0:
+            return 0
+        else:
+            return v.trust + u.trust / R0
 
     def R0(self, u, v):
-        u = get(u, self.router.network)
-        v = get(v, self.router.network)
+        """
+        Return the average of the transaction count (or their average) reported
+        by two peers for the two peers
+        """
+        log("R0: %s %s" % (u, v))
+        ur = get(u, "/".join(self.router.network, str(v.long_id)))
+        vr = get(v, "/".join(self.router.network, str(u.long_id)))
 
-        u_results = []
-        v_results = []
+        if ur and not vr:
+            return ur['transactions']
+        if vr and not ur:
+            return vr['transactions']
 
-        results = []
-
-        u = [i['node'] for i in u if i['transactions'] > 1]
-        v = [i['node'] for i in v if i['transactions'] > 1]
-
-        for i in u_results:
-            if i in v_results:
-                results.append(i)
-
-        return len(results)
+        return (ur['transactions'] + vr['transactions']) / 2
 
     def R1(self, i):
         data    = []
@@ -1391,29 +1398,29 @@ class TBucket(dict):
         return results
 
     def f(self, i, j):
-        s = sum([self.sim(i,j) for i in self])
+        s = sum([self.sim(i, j) for i in self])
         if not s:
             return 0
-        return self.sim(i,j) / s
+        return self.sim(i, j) / s
 
     def fC(self, i, j):
-        return self.f(i,j) * self.C(i, j)
+        return self.f(i, j) * self.C(i, j)
 
     def l(self, i, j):
-        s = sum([max(self.fC(i,m), 0) for m in self])
+        s = sum([max(self.fC(i, m), 0) for m in self])
         if not s:
             return 0
-        return max(self.fC(i,j), 0) / s
+        return max(self.fC(i, j), 0) / s
 
     def t(self, i, j):
         score = 0
         for _, k in enumerate(self.router):
             if _ >= self.iterations: break
-            score += self.l(i,k) + self.C(k,j)
+            score += self.l(i, k) + self.C(k, j)
         return score
 
     def w(self, i, j):
-        return (i.trust - self.beta) * self.C(j,k) + self.beta * self.sim(j,i)
+        return (i.trust - self.beta) * self.C(j, k) + self.beta * self.sim(j, i)
 
     def common_peers(self, i, j):
         """
@@ -1426,19 +1433,31 @@ class TBucket(dict):
         if not i or not j:
             return []
 
-        i = [[p['node']] for p in i if p['transactions'] > 0]
-        j = [[p['node']] for p in j if p['transactions'] > 0]
+        i = [tuple(p['node']) for p in i if p['transactions'] > 0]
+        j = [tuple(p['node']) for p in j if p['transactions'] > 0]
         return list(set(i).intersection(j))
 
     def calculate_trust(self):
         """
         Weight peers by the ratings assigned to them via trusted peers.
+
+        We then make a two-dimensional list of the resulting peers as
+        activation matrix AC
+
         """
+        log("Recalculating trust values.")
         for remote_peer in self.router:
             new_trust = self.t(self.router.node, remote_peer)
-            log("%s: Recalculated trust of %s as %i." %\
+            self.messages.append("%s: Recalculated trust of %s as %i." %\
                 (self.router.network, remote_peer, new_trust))
             remote_peer.trust = new_trust
+            self.read_messages()    
+        self.read_messages()
+
+    def read_messages(self):
+        for message in self.messages:
+            log(message)
+        self.messages = []
 
     def __iter__(self):
         return iter(self.values())
