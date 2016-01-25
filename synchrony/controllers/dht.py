@@ -993,7 +993,7 @@ class SynchronyProtocol(object):
             key       = RSA.importKey(message['node'][1])
             if not key.verify(hash, signature):
                 log("Invalid signatures for keys provided by %s." % node, "warning")
-                node.trust -= node.epsilon
+                node.trust -= self.epsilon
                 continue
 
             try:
@@ -1028,7 +1028,7 @@ class SynchronyProtocol(object):
         nodes = []
         for n in nodeples:
             if n[1] == self.source_node.ip and n[2] == self.source_node.port:
-                continue # Attempt to retrieve from DHT even if we have a copy
+#                continue # Attempt to retrieve from DHT even if we have a copy
                 log("Serving locally held copy of this revision.")
                 revision = Revision.query.filter(Revision.hash == content_hash)\
                     .first()
@@ -1505,8 +1505,8 @@ class Node(object):
         return iter([self.id, self.ip, self.port])
 
     def __repr__(self):
-        return "<Node %s:%s %.2fT>" % \
-            (self.ip, str(self.port), self.trust)
+        return "<Node %s:%s %.4fT/%i>" % \
+            (self.ip, str(self.port), self.trust, self.transactions)
 
     def __eq__(self, other):
         if other is None: return False

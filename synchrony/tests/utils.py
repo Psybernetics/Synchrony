@@ -52,7 +52,7 @@ class BaseSuite(unittest.TestCase):
                 if router.node.threeple == r.node.threeple: continue
                 node = router.get_existing_node(r.node.threeple)
                 if not node: continue
-                node.trust += node.epsilon
+                node.trust += router.protocol.epsilon
                 router.tbucket[node.long_id] = node
                 # dht.log("Introduced %s to %s as a pre-trusted peer." % (node, router))
 
@@ -602,7 +602,7 @@ class TestProtocol(dht.SynchronyProtocol):
             key       = RSA.importKey(message['node'][1])
             if not key.verify(hash, signature):
                 dht.log("Invalid signatures for keys provided by %s." % node, "warning")
-                node.trust -= node.epsilon
+                node.trust -= self.epsilon
                 continue
 
             try:
@@ -668,7 +668,7 @@ class TestProtocol(dht.SynchronyProtocol):
         for router in routers:
             node = self.router.get_existing_node(router.node.threeple)
             
-            node.trust += node.epsilon
+            node.trust += self.epsilon
 
             references = router.protocol.storage\
                 .get(binascii.hexlify(hashed_url), None)
@@ -772,7 +772,7 @@ class TestProtocol(dht.SynchronyProtocol):
             if node.ip == addr[0] and node.port == addr[1]:
                 amount = severity / 100.0
                 dht.log("Decrementing trust rating for %s by %f." % (node, amount), "warning")
-                node.trust -= 2 * node.epsilon
+                node.trust -= 2 * self.epsilon
 #               peer = Peer.query.filter(
 #                       and_(Peer.network == self.network,
 #                            Peer.ip      == addr[0],
