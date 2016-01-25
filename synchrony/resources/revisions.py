@@ -124,8 +124,8 @@ class RevisionDownloadsCollection(restful.Resource):
         user = auth(session, required=True)
 
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
         args = parser.parse_args()  
 
         if not user.can("see_all") and not user.can("review_downloads"):
@@ -169,9 +169,8 @@ class RevisionDownloadsResource(restful.Resource):
         """
         user   = auth(session, required=True)
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("url",      type=str, required=True)
-        parser.add_argument("hash",     type=str, required=True)
-        parser.add_argument("severity", type=int, required=True)
+        parser.add_argument("url",  type=str, required=True)
+        parser.add_argument("hash", type=str, required=True)
         args   = parser.parse_args()
 
         if not user.can("review_downloads"):
@@ -197,11 +196,7 @@ class RevisionDownloadsResource(restful.Resource):
         db.session.delete(revision)
         db.session.commit()
 
-        # Too severe, Enhance Your Calm
-        if args.severity > 100:
-            return {}, 420
-
-        success = routes.protocol.decrement_trust(addr, args.severity)
+        success = routes.protocol.decrement_trust(addr)
         # Peer is 410 Gone
         if not success:
             return "Peer had already left.", 410

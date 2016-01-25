@@ -955,7 +955,7 @@ class SynchronyProtocol(object):
         { 'url_hash': {'content_hash': [(ts,nodeple)]}}
         """
         node = self.read_envelope(data)
-        if node.trust < 0:
+        if max(node.trust, 0) == 0:
             log("%s with negative trust rating tried to append." % node, "warning")
             return False
         url_hash, content_hash = data['rpc_append'].items()[0]
@@ -976,7 +976,7 @@ class SynchronyProtocol(object):
         """
         node = self.read_envelope(data)
         
-        if node.trust < 0:
+        if max(node.trust, 0) == 0:
             log("%s with negative trust rating tried to republish." % node, "warning")
             return False
 
@@ -984,7 +984,7 @@ class SynchronyProtocol(object):
         republished_keys = data['rpc_republish']
         for message in republished_keys:
             
-            if node.trust < 0:
+            if max(node.trust, 0) == 0:
                 return False
 
             signature = (long(message['keys'].keys()[0]),)
@@ -993,7 +993,7 @@ class SynchronyProtocol(object):
             key       = RSA.importKey(message['node'][1])
             if not key.verify(hash, signature):
                 log("Invalid signatures for keys provided by %s." % node, "warning")
-                node.trust -= 0.01
+                node.trust -= self.epsilon
                 continue
 
             try:
@@ -1172,7 +1172,7 @@ class SynchronyProtocol(object):
             self.router.add_contact(node)
             return node
 
-    def decrement_trust(self, addr, severity=1):
+    def decrement_trust(self, addr):
         """
         Implements the feedback mechanism for our trust metric.
         
@@ -1189,9 +1189,8 @@ class SynchronyProtocol(object):
         """
         for node in self.router:
             if node.ip == addr[0] and node.port == addr[1]:
-                amount = severity / 100.0
-                log("Decrementing trust rating for %s by %f." % (node, amount), "warning")
-                node.trust -= amount
+                log("Decrementing trust rating for %s by %f." % (node, self.epsilon), "warning")
+                node.trust -= 2 * self.epsilon
 #               peer = Peer.query.filter(
 #                       and_(Peer.network == self.network,
 #                            Peer.ip      == addr[0],
@@ -1472,7 +1471,7 @@ class Node(object):
         self.id        = id
         self.ip        = ip
         self.port      = port
-        self.trust     = 0.00
+        self.trust     = 0.50
         self.pubkey    = pubkey
         self.router    = router
         self.last_seen = time.time()
@@ -1506,8 +1505,8 @@ class Node(object):
         return iter([self.id, self.ip, self.port])
 
     def __repr__(self):
-        return "<Node %s:%s %.2fT>" % \
-            (self.ip, str(self.port), self.trust)
+        return "<Node %s:%s %.4fT/%i>" % \
+            (self.ip, str(self.port), self.trust, self.transactions)
 
     def __eq__(self, other):
         if other is None: return False
@@ -2120,7 +2119,7 @@ class ValueSpider(Spider):
             nodeple = self.protocol.get_address(Node(*node_data[1]))
             for known_node in self.protocol.router:
                if self.protocol.get_address(known_node) == nodeple \
-                    and known_node.trust < 0:
+                    and max(known_node.trust,  0) == 0:
                     revisions.remove(node_data)
 
         # Reduce the responses to one entry per node and their most recent timestamp.
