@@ -667,7 +667,7 @@ class TestProtocol(dht.SynchronyProtocol):
 
         for router in routers:
             node = self.router.get_existing_node(router.node.threeple)
-            
+
             node.trust += self.epsilon
 
             references = router.protocol.storage\

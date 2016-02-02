@@ -1190,7 +1190,10 @@ class SynchronyProtocol(object):
         for node in self.router:
             if node.ip == addr[0] and node.port == addr[1]:
                 log("Decrementing trust rating for %s by %f." % (node, self.epsilon), "warning")
-                node.trust -= 2 * self.epsilon
+                if "NO_PRISONERS" in app.config and app.config["NO_PRISONERS"]:
+                    node.trust = 0
+                else:
+                    node.trust -= 2 * self.epsilon
 #               peer = Peer.query.filter(
 #                       and_(Peer.network == self.network,
 #                            Peer.ip      == addr[0],
@@ -1338,19 +1341,29 @@ class TBucket(dict):
         self.router     = router
         self.messages   = []
         dict.__init__(self, *args, **kwargs)
-       
+    
+    def append(self, nodes):
+        if not isinstance(nodes, list):
+            nodes = [nodes]
+
+        c = len(self) + len(nodes)
+        for node in nodes:
+            if not isinstance(node, Node):
+                continue
+            node.trust += 1.0 / c
+            self[node.long_id] = node
+
     def S(self, i, j):
         if not j.transactions:
             return 0
         return max(j.trust / j.transactions, 0)
 
     def C(self, i, j):
-        #
         score = 0
         for _, m in enumerate(self):
             if _ >= self.iterations: break
             if m in self:
-                score += len(self)
+                score += 1.0 / len(self)
             score += self.S(i, m)
         if not score:
             return 0
