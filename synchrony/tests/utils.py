@@ -163,11 +163,17 @@ def mock_transmit(routes, addr, data):
             return rpc_method(data)
 
 def mock_get(addr, path, field="data", all=True):
-
     if isinstance(addr, dht.Node):
-        f = lambda f: f.node.threeple == addr.threeple
+        f    = lambda f: f.node.threeple == addr.threeple
         addr = filter(f, mock_get.peers.values())
         if addr:
+            if '/' in path:
+                node_id = long(path.split('/')[1])
+                for peer in addr[0]:
+                    if peer.long_id == node_id:
+                        return peer.jsonify()
+                return {}
+
             return [p.jsonify() for p in addr[0]]
    
     return []
@@ -667,7 +673,7 @@ class TestProtocol(dht.SynchronyProtocol):
 
         for router in routers:
             node = self.router.get_existing_node(router.node.threeple)
-            
+
             node.trust += self.epsilon
 
             references = router.protocol.storage\
