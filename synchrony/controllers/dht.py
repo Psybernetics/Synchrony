@@ -1406,7 +1406,7 @@ class TBucket(dict):
 
     def med(self, ls):
         if not numpy:
-            med = median(ls)
+            med = utils.median(ls)
         else:
             med =  numpy.median(numpy.array(ls))
         if self.verbose:
