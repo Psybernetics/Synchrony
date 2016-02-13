@@ -1477,7 +1477,7 @@ class TBucket(dict):
                             log((peer, extent_peer, response))
                         if extent_peer.long_id in self.extent:
                             extent_peer.trust = 0
-                            [setattr(_, "trust", 0) for _ in self.router.peers if _ == extent_peer]
+                            [setattr(_, "trust", 0) for _ in self.router if _ == extent_peer]
                             log("Removing %s from EP for inflating trust ratings." % extent_peer)
                             del self.extent[extent_peer.long_id]
 
@@ -1498,7 +1498,7 @@ class TBucket(dict):
                     or (response['trust'] < 0.5 - (response['transactions'] * self.router.protocol.epsilon)) \
                     and response['trust'] and extent_peer.long_id in self.extent:
                         extent_peer.trust = 0
-                        [setattr(_, "trust", 0) for _ in self.router.peers if _ == extent_peer]
+                        [setattr(_, "trust", 0) for _ in self.router if _ == extent_peer]
                         log("Removing %s from EP for impossible trust ratings." % extent_peer)
                         del self.extent[extent_peer.long_id]
  
@@ -1525,7 +1525,7 @@ class TBucket(dict):
                         log((peer, trusted_peer, response))
                     if trusted_peer.long_id in self:
                         trusted_peer.trust = 0
-                        [setattr(_, "trust", 0) for _ in self.router.peers if _ == trusted_peer]
+                        [setattr(_, "trust", 0) for _ in self.router if _ == trusted_peer]
                         log("Removing %s from P for inflating trust ratings." % \
                             trusted_peer)
                         del self[trusted_peer.long_id]
@@ -1549,7 +1549,7 @@ class TBucket(dict):
                 or (response['trust'] < 0.5 - (response['transactions'] * self.router.protocol.epsilon)) \
                 and response['trust'] and trusted_peer.long_id in self:
                     trusted_peer.trust = 0
-                    [setattr(_, "trust", 0) for _ in self.router.peers if _ == trusted_peer]
+                    [setattr(_, "trust", 0) for _ in self.router if _ == trusted_peer]
                     log("Removing %s from P for impossible trust ratings." % trusted_peer)
                     del self[trusted_peer.long_id]
             
