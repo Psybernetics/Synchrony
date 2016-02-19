@@ -54,12 +54,12 @@ class UserCollection(restful.Resource):
         parser.add_argument("password", type=str, help="Password.", required=True)
         args = parser.parse_args()
 
-        if User.query.filter(User.username == args.username).first():
-            return {'message':"Username already in use."}, 304
-       
         if "PERMIT_NEW_ACCOUNTS" in app.config and \
             not app.config["PERMIT_NEW_ACCOUNTS"]:
             return {"message":"This server isn't allowing new accounts at this time."}, 304
+
+        if User.query.filter(User.username == args.username).first():
+            return {'message':"Username already in use."}, 304
         
         user = User(args.username, args.password)
 
