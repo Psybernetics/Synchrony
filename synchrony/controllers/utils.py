@@ -340,6 +340,15 @@ def make_response(url, query, jsonify=True):
         response['links']['next'] = update_url(url, {"page": str(query.next_num)})
     return response
 
+def median(ls):
+    ls = sorted(ls)
+    if len(ls) < 1:
+            return None
+    if len(ls) %2 == 1:
+            return ls[((len(ls)+1)/2)-1]
+    else:
+            return float(sum(ls[(len(ls)/2)-1:(len(ls)/2)+1]))/2.0
+
 def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
     """
     Send JSON data to stream users either specifically or by access control.
