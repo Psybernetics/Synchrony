@@ -338,8 +338,8 @@ class User(db.Model):
     A local user account.
     """
     __tablename__ = "users"
-    id            = db.Column(db.Integer(), primary_key=True) # User.uid permits encrypted chat messages to be directed to, eg:
-    uid           = db.Column(db.String(), default=uid())     # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
+    id            = db.Column(db.Integer(), primary_key=True)          # User.uid permits encrypted chat messages to be directed to, eg:
+    uid           = db.Column(db.String(), default=uid(short_id=True)) # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
     username      = db.Column(db.String())
     password      = db.Column(db.String())
     email         = db.Column(db.String())

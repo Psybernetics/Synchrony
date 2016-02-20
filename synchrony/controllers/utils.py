@@ -14,6 +14,7 @@ import functools
 import miniupnpc
 from math import ceil
 from copy import deepcopy
+from hashlib import sha512
 from synchrony import app, db
 from functools import partial
 from Crypto.Hash import SHA256
@@ -68,11 +69,11 @@ def gzipped(f):
 
     return view_func
 
-def uid():
-    millis = int(round(time.time() * 1000))
-    dt = datetime.now()
-    millis = str(millis)+str(dt.microsecond)
-    return str(base64.b64encode(millis)).strip('==')[-13:] # Adjust slicing to suit
+def uid(short_id=False):
+    uid = hashlib.sha512(str(datetime.now().microsecond)).hexdigest()
+    if short_id:
+        return uid[-13:]
+    return uid
 
 class Log(object): 
     def __init__(self,program, log_file=None, log_stdout=False): 
