@@ -49,11 +49,20 @@
     <h2>Groups <button on-click="toggle:{{"groups"}}" class="button big_button pull-right">{{groups_button}}</button></h2>
     {{#showing_groups}}
     <ul>
-        <li>Show groups (toggle delete)</li>
         <li>Create groups</li>
         <li>Move privs between groups</li>
         <li>Move users between groups</li>
     </ul>
+    <table>
+        <tbody>
+            {{#groups}}
+            <tr>
+                <td><a href="/#group/{{name}}">{{name}}</a></td>
+                <td>{{created}}</td>
+            </tr>
+            {{/groups}}
+        </tbody>
+    </table>
     {{/showing_groups}}
     <h2>Networks <button on-click="toggle:{{"networks"}}" class="button big_button pull-right">{{networks_button}}</button></h2>
     {{#showing_networks}}

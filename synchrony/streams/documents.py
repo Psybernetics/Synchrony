@@ -12,15 +12,12 @@ from socketio.namespace import BaseNamespace
 from socketio.mixins import RoomsMixin, BroadcastMixin
 
 class DocumentStream(BaseNamespace, RoomsMixin, BroadcastMixin):
-    """
-     DCC here stands from document content cache.
-    """
-    dcc = None
-    user = None
-    censored = None
+    user        = None
+    censored    = None
     socket_type = "document"
 
     def initialize(self):
+        self.cache = []
         # The general idea for when a user connects here is to make them aware
         # of existing document streams.
         log("init document stream")
@@ -85,8 +82,8 @@ class DocumentStream(BaseNamespace, RoomsMixin, BroadcastMixin):
                 self.user = user
 
 def censor(data):
-    r = "<expletive>"
-    words = ['fuck','shit']
-    for w in words:
-        data = data.replace(w,r)
+    replacement = "<expletive>"
+    words = []
+    for _ in words:
+        data = data.replace(_, replacement)
     return data
