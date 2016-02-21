@@ -1,0 +1,23 @@
+<div class="view">
+    <h1>Group Settings</h1>
+    <hr />
+    <h2>{{group.name}}</h2>
+    {{#group.users}}
+        {{this}}<br />
+    {{/group.users}}
+    <table>
+        <tbody>
+        {{#group.privileges}}
+        <tr on-mouseover="select:{{"group"}},{{@index}}" on-mouseout="select:{{"group"}},{{@index}}" id="group-{{@index}}">
+                <td>{{this.key}}</td>
+                <td class="group-{{@index}}">
+                    <span id="group-text-{{@index}}">{{#if this.value}}Allowed{{else}}Denied{{/if}}</span>
+                    <button on-click="toggle_allowed:{{@index}}" style="visibility:hidden" class="button big_button" id="group-button-{{@index}}">
+                        {{#if this.value}}Deny{{else}}Allow{{/if}}
+                    </button>
+                </td>
+         </tr>
+        {{/group.privileges}}
+        </tbody>
+    </table>    
+</div>

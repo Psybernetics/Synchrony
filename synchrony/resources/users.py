@@ -12,7 +12,7 @@ from synchrony.models import Session, UserGroup, Revision
 
 class UserCollection(restful.Resource):
     """
-    Implements /v1/user
+    Implements /v1/users
     """
     def get(self):
         """
