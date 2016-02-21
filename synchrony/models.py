@@ -321,7 +321,6 @@ class UserGroup(db.Model):
     def jsonify(self, with_users=False, with_privs=False):
         response = {'name': self.name}
         if self.created:
-#            response['created'] = self.created.strftime("%A, %d. %B %Y %I:%M%p")
             response['created'] = time.mktime(self.created.timetuple())
         if with_users:
             users = []

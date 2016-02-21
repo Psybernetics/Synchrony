@@ -76,6 +76,7 @@ App.Router = Backbone.Router.extend({
 //        'request':             'requestindex',
 //        'request/:resource':   'requestresource',
         'user/:username':      'userview',
+        'group/:name':         'groupview',
         'settings':            'settingsview',
         'settings/:network':   'networksettingsview',
         'chat':                'chatview',
@@ -90,6 +91,7 @@ App.Router = Backbone.Router.extend({
 //    requestindex:       requestIndex,
 //    requestresource:       requestView,
     userview:              userView,
+    groupview:             groupView,
     settingsview:          settingsView,
     networksettingsview:   networkSettingsView,
     chatview:              chatView,
@@ -441,25 +443,29 @@ function populate_table(view, table_type, url){
     $.get(url, function(data){
         // Update the DOM on success
         view.set(table_type + "_paging_error", undefined);
-        data.data = upDate(data.data, "created");
+        if (data.hasOwnProperty("data")) {
+            data.data = upDate(data.data, "created");
+        }
         view.set(table_type, data.data);
         view[table_type] = data;
 
         // Show navigation links depending on the response data
         // This is where the jsonapi.org style of {links: {next: "http://"}}
         // comes in handy.
-        if (data.links.hasOwnProperty("self")) {
+        if (data.hasOwnProperty("links")) {
+            if (data.links.hasOwnProperty("self")) {
             var url = data.links.self.split('page=')[1];
-            if (url != undefined) {
-                if (url > 1) {
-                    view.set(table_type + "_back_available", true);
-                } else {
-                    view.set(table_type + "_back_available", false);
-                }
-            } 
-        }
-        if (data.links.hasOwnProperty("next")) {
-            view.set(table_type + "_forward_available", true);
+                if (url != undefined) {
+                    if (url > 1) {
+                        view.set(table_type + "_back_available", true);
+                    } else {
+                        view.set(table_type + "_back_available", false);
+                    }
+                } 
+            }
+            if (data.links.hasOwnProperty("next")) {
+                view.set(table_type + "_forward_available", true);
+            }
         }
     }).fail(function(){
        view.set(table_type + "_paging_error", true);
@@ -999,6 +1005,99 @@ function userView(username, params){
     });
 }
 
+function groupView(name, params){
+    document.title = name + " group" + App.title;
+    Ractive.load({
+        grouppage: 'grouppage.tmpl',
+    }).then(function(components){
+
+        if (!App.Config.user) {
+            location.hash = "login";
+        }
+
+        App.Views['grouppage'] = new components.grouppage({
+            el: $('.main'),
+            data: {},
+            adaptor: ['Backbone'],
+        });
+
+        if (!$('.main').is(':visible')) {
+            toggleMain();
+        }
+        
+        function filterResponse(response){
+        // Sticks the key attrs on a response 
+            for (var i = 0; i < response.privileges.length; i++) {
+                var key = Object.keys(response.privileges[i])[0];
+                response.privileges[i].key   = key;
+                response.privileges[i].value = response.privileges[i][key];
+            }
+            return response;
+        }
+        
+        $.get("/v1/groups/" + name, function(response){
+            response = filterResponse(response);
+            App.Views.grouppage.set("group", response);
+        });
+        App.Views.grouppage.on({
+            select:  function(event, type, index){
+                if (type != "group") {
+                   var row = $('#' + type + '-' + index);
+                   var c = row.children();
+                   c = c[c.length - 1];
+                   if ($('#delete-' + type + '-' + index).css('visibility') === "hidden") {
+                       c.style.visibility = "";
+                   } else {
+                       c.style.visibility = "hidden";
+                   }
+                }
+                // Also show the toggle_public button for revisions
+                if (type === "group") {
+                    if ($('#' + type + '-button-' + index).css('visibility') === "hidden") {
+                        $('#' + type + '-button-' + index).css('visibility', '');
+                        $('#' + type + '-text-'   + index).css('display',    'none');
+                    } else {
+                        $('#' + type + '-button-' + index).css('visibility', 'hidden');
+                        $('#' + type + '-text-'   + index).css('display',    'initial');
+                    }
+                } else if (type == "friend") {
+                    if ($('#' + type + '-menu-button-' + index).css('visibility') === "hidden") {
+                        $('#' + type + '-menu-button-' + index).css('visibility', "");
+                    } else {
+                        $('#' + type + '-menu-button-' + index).css('visibility', "hidden");
+                    }
+                }
+            },
+            toggle_allowed: function(event, index){
+                event.original.preventDefault();
+                var group = this.get("group");
+                var priv = group.privileges[index];
+                if (priv.value) {
+                    $.ajax({
+                        url: "/v1/groups/" + group.name,
+                        type: "POST",
+                        data: {deny: priv.key},
+                        success: function(response){
+                            response = filterResponse(response);
+                            App.Views.grouppage.set("group", response);
+                        }
+                    });
+                } else {
+                    $.ajax({
+                        url: "/v1/groups/" + group.name,
+                        type: "POST",
+                        data: {allow: priv.key},
+                        success: function(response){
+                            response = filterResponse(response);
+                            App.Views.grouppage.set("group", response);
+                        }
+                    });
+                }
+            },
+        });
+    });
+}
+
 Ractive.load({
     content:   'content.tmpl',
     synchrony: 'synchrony.tmpl',
@@ -1435,6 +1534,7 @@ function settingsView() {
         App.Views.settings.set("showing_open",      undefined);
 
         populate_table(App.Views.settings, "accounts",  "/v1/users");
+        populate_table(App.Views.settings, "groups"  ,  "/v1/groups");
         populate_table(App.Views.settings, "downloads", "/v1/revisions/downloads");
         populate_table(App.Views.settings, "networks",  "/v1/networks");
 
