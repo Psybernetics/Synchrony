@@ -723,16 +723,21 @@ a {
 	left: 10px;
 	top: 10px;
 }
+
 .circular {
-	border-radius: 100%;
+    border-radius: 100%;
 }
+
 .fish {
 	position: relative;
 	max-width:100px;
 	margin-top: 10px;
 	margin-left: 10px;
 }
-.small { max-width: 50px; }
+.small {
+    max-width: 50px; 
+    padding-top: 5px;
+}
 #addressbar {
 	position: absolute;
 }
