@@ -2,6 +2,12 @@
     <div on-mouseover="select:{{"heading"}}" on-mouseout="select:{{"heading"}}">
     <h1>Group Settings</h1>
     <hr />
+    {{^group}}
+    No such group.
+    {{/group}}
+    {{#server_unavailable}}
+    Server unavailable.
+    {{/server_unavailable}}
     <h2>{{group.name}}
     {{#can_modify_usergroup}}
     <button id="delete-button" style="display:none;" class="button pull-right" on-click="delete:{{"group"}}">Delete</button>

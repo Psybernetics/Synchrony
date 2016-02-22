@@ -1047,9 +1047,21 @@ function groupView(name, params){
             }
         });
 
-        $.get("/v1/groups/" + name, function(response){
-            response = filterResponse(response);
-            App.Views.grouppage.set("group", response);
+        $.ajax({
+            url: "/v1/groups/" + name,
+            success: function(response){
+                response = filterResponse(response);
+                App.Views.grouppage.set("group", response);
+                App.Views.grouppage.set("no_such_group", false);
+                App.Views.grouppage.set("server_unavailable", false);
+            },
+            error: function(response){
+                if (response.status == 404) {
+                    App.Views.grouppage.set("no_such_group", true)
+                } else {
+                    App.Views.grouppage.set("server_unavailable", true);
+                }
+            }
         });
 
         App.Views.grouppage.on({
