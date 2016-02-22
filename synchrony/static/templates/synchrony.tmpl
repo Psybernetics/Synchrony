@@ -21,8 +21,10 @@
 	<button class="button big_button" on-click="logout">Log out</button><br />
 </span>
 <span>
-    <img src="/v1/users/{{Config.user.username}}/avatar" class="small circular avatar" />
-	<a id="profile_link" href="/#user/{{Config.user.username}}">{{Config.user.username}}</a><br />
+	<a id="profile_link" href="/#user/{{Config.user.username}}">
+        <img src="/v1/users/{{Config.user.username}}/avatar" class="small circular" />
+        {{Config.user.username}}
+    </a><br />
     {{peers}} DHT peers.<br />
     {{domains}} domains.<br />
 	<br />

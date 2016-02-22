@@ -500,6 +500,7 @@ class UserAvatarResource(restful.Resource):
         revision.mimetype = f.mimetype
         revision.bcontent = f.stream
         user.avatar       = revision
+        user.revisions.append(revision)
 
         db.session.add(user)
         db.session.add(revision)
