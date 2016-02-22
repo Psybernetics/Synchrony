@@ -352,6 +352,7 @@ class User(db.Model):
     username      = db.Column(db.String())
     password      = db.Column(db.String())
     email         = db.Column(db.String())
+    avatar        = db.relationship("Revision", uselist=False)
 #    admin         = db.Column(db.Boolean(), default=False)
     public        = db.Column(db.Boolean(), default=False)
     active        = db.Column(db.Boolean(), default=True)

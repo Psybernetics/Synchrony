@@ -1,13 +1,14 @@
 <div class="view">
-    <div on-mouseover="select:{{"heading"}}" on-mouseout="select:{{"heading"}}">
     <h1>Group Settings</h1>
     <hr />
-    {{^group}}
-    No such group.
-    {{/group}}
+    {{#no_such_group}}
+    Unknown group.<br />
+    Return to the <a href="/#settings">settings</a> view?<br />
+    {{/no_such_group}}
     {{#server_unavailable}}
-    Server unavailable.
+    Server unavailable.<br />
     {{/server_unavailable}}
+    <div on-mouseover="select:{{"heading"}}" on-mouseout="select:{{"heading"}}">
     <h2>{{group.name}}
     {{#can_modify_usergroup}}
     <button id="delete-button" style="display:none;" class="button pull-right" on-click="delete:{{"group"}}">Delete</button>

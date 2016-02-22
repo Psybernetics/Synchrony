@@ -29,8 +29,8 @@ body {
 [class*=" col-"] {
     position: relative;
     float: left;
-    padding-right: 1.333%;
-    padding-left: 1.333%;
+    padding-right: 0.333%;
+    padding-left: 0.333%;
     min-height: 1px;
 }
 
@@ -60,6 +60,9 @@ label { display: inline-block; }
   clear: both;
 }
 
+.avatar {
+    max-width: 80px;
+}
 
 .logo {
 /*
@@ -723,12 +726,13 @@ a {
 .circular {
 	border-radius: 100%;
 }
-.synchrony img {
+.fish {
 	position: relative;
 	max-width:100px;
 	margin-top: 10px;
 	margin-left: 10px;
 }
+.small { max-width: 50px; }
 #addressbar {
 	position: absolute;
 }

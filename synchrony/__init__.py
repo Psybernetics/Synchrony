@@ -129,6 +129,8 @@ def init():
     api.add_resource(users.UserFriendsCollection,           "/users/<string:username>/friends")
     api.add_resource(users.UserRevisionCollection,          "/users/<string:username>/revisions")
     api.add_resource(users.UserRevisionCountResource,       "/users/<string:username>/revisions/count")
+    api.add_resource(users.UserAvatarResource,              "/users/<string:username>/avatar")
+
 
     api.add_resource(groups.UserGroupCollection,            "/groups")
     api.add_resource(groups.UserGroupResource,              "/groups/<string:name>")

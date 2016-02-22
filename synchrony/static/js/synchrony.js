@@ -680,16 +680,21 @@ function userView(username, params){
             App.Views.userpage.set("show_settings",     true);
             App.Views.userpage.set("sessions_button",   "Show");
             App.Views.userpage.set("revisions_button",  "Show");
+            App.Views.userpage.set("avatar_button",     "Show");
             App.Views.userpage.set("friends_button",    "Show");
             App.Views.userpage.set("password_button",   "Show");
             App.Views.userpage.set("showing_sessions",  undefined);
             App.Views.userpage.set("showing_revisions", undefined);
+            App.Views.userpage.set("showing_avatar",    undefined);
             App.Views.userpage.set("showing_friends",   undefined);
             App.Views.userpage.set("showing_password",  undefined);
 
             populate_table(App.Views.userpage, "revisions", "/v1/users/" + username + "/revisions");
             populate_table(App.Views.userpage, "friends",   "/v1/users/" + username + "/friends");
             populate_table(App.Views.userpage, "sessions",  "/v1/users/" + username + "/sessions");
+
+            // For the correct upload endpoint for avatar images:
+            App.Views.userpage.set("username", App.Config.user.username);
         }
 
         App.Views.userpage.on({
@@ -810,6 +815,9 @@ function userView(username, params){
                         }
                     });
                 }
+            },
+            update_avatar: function(event){
+                console.log(event);
             },
             rename: function(event, type, index){
                 if (event.original.keyCode == 13){

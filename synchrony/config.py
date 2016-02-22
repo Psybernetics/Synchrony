@@ -1,7 +1,7 @@
 import os
 
-if 'UROKO_DATABASE' in os.environ:
-	SQLALCHEMY_DATABASE_URI = os.environ['UROKO_DATABASE']
+if 'SYNCHRONY_DATABASE' in os.environ:
+	SQLALCHEMY_DATABASE_URI = os.environ['SYNCHRONY_DATABASE']
 else:
 	SQLALCHEMY_DATABASE_URI = "sqlite:///cache.db"
 
