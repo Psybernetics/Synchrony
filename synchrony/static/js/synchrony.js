@@ -680,16 +680,21 @@ function userView(username, params){
             App.Views.userpage.set("show_settings",     true);
             App.Views.userpage.set("sessions_button",   "Show");
             App.Views.userpage.set("revisions_button",  "Show");
+            App.Views.userpage.set("avatar_button",     "Show");
             App.Views.userpage.set("friends_button",    "Show");
             App.Views.userpage.set("password_button",   "Show");
             App.Views.userpage.set("showing_sessions",  undefined);
             App.Views.userpage.set("showing_revisions", undefined);
+            App.Views.userpage.set("showing_avatar",    undefined);
             App.Views.userpage.set("showing_friends",   undefined);
             App.Views.userpage.set("showing_password",  undefined);
 
             populate_table(App.Views.userpage, "revisions", "/v1/users/" + username + "/revisions");
             populate_table(App.Views.userpage, "friends",   "/v1/users/" + username + "/friends");
             populate_table(App.Views.userpage, "sessions",  "/v1/users/" + username + "/sessions");
+
+            // For the correct upload endpoint for avatar images:
+            App.Views.userpage.set("username", App.Config.user.username);
         }
 
         App.Views.userpage.on({
@@ -810,6 +815,9 @@ function userView(username, params){
                         }
                     });
                 }
+            },
+            update_avatar: function(event){
+                console.log(event);
             },
             rename: function(event, type, index){
                 if (event.original.keyCode == 13){
@@ -1034,25 +1042,47 @@ function groupView(name, params){
             }
             return response;
         }
-        
-        $.get("/v1/groups/" + name, function(response){
-            response = filterResponse(response);
-            App.Views.grouppage.set("group", response);
+
+        $.when(
+            $.get('/v1/users/' + App.Config.user.username + '?can=modify_usergroup',
+            function(response){
+                App.Views.grouppage.set("can_modify_usergroup", response);
+            })
+         ).done(function(){
+            if (App.Views.grouppage.get("can_modify_usergroup") != true) {
+                window.location.hash = "#";
+                return;
+            }
         });
+
+        $.ajax({
+            url: "/v1/groups/" + name,
+            success: function(response){
+                response = filterResponse(response);
+                App.Views.grouppage.set("group", response);
+                App.Views.grouppage.set("no_such_group", false);
+                App.Views.grouppage.set("server_unavailable", false);
+            },
+            error: function(response){
+                if (response.status == 404) {
+                    App.Views.grouppage.set("no_such_group", true)
+                } else {
+                    App.Views.grouppage.set("server_unavailable", true);
+                }
+            }
+        });
+
         App.Views.grouppage.on({
             select:  function(event, type, index){
-                if (type != "group") {
-                   var row = $('#' + type + '-' + index);
-                   var c = row.children();
-                   c = c[c.length - 1];
-                   if ($('#delete-' + type + '-' + index).css('visibility') === "hidden") {
-                       c.style.visibility = "";
+                if (type === "heading") {
+                    if ($('#delete-button').is(':visible')) {
+                        $('#delete-button').hide();
                    } else {
-                       c.style.visibility = "hidden";
+                        $('#delete-button').show();
                    }
                 }
                 // Also show the toggle_public button for revisions
-                if (type === "group") {
+                if (type === "priv") {
                     if ($('#' + type + '-button-' + index).css('visibility') === "hidden") {
                         $('#' + type + '-button-' + index).css('visibility', '');
                         $('#' + type + '-text-'   + index).css('display',    'none');
@@ -1060,13 +1090,21 @@ function groupView(name, params){
                         $('#' + type + '-button-' + index).css('visibility', 'hidden');
                         $('#' + type + '-text-'   + index).css('display',    'initial');
                     }
-                } else if (type == "friend") {
-                    if ($('#' + type + '-menu-button-' + index).css('visibility') === "hidden") {
-                        $('#' + type + '-menu-button-' + index).css('visibility', "");
-                    } else {
-                        $('#' + type + '-menu-button-' + index).css('visibility', "hidden");
-                    }
                 }
+            },
+            delete: function(event){
+                event.original.preventDefault();
+                var group = this.get("group");
+                if (group.name === undefined) { return; }
+                $.ajax({
+                    url: "/v1/groups",
+                    type: "DELETE",
+                    data: {"name": group.name},
+                    success: function(response){
+                        location.hash = '#settings';
+                    },
+                    error:   function(response){}
+                });
             },
             toggle_allowed: function(event, index){
                 event.original.preventDefault();
@@ -1629,6 +1667,25 @@ function settingsView() {
                     });
                  }
             },
+            add_group: function(event){
+                if (event.original.keyCode == 13){
+                    event.original.preventDefault();
+                    var name = this.get("group_name");
+                    $.ajax({
+                        url: "/v1/groups",
+                        type: "PUT",
+                        data: {"name": name},
+                        success: function(response){
+                            var groups = App.Views.settings.get("groups");
+                            groups.push(response)
+                            var groups = upDate(groups);
+                            App.Views.settings.set("groups", groups);
+                            App.Views.settings.set("group_name", "");
+                        },
+                        error: function(response){}
+                    });
+                }
+            },
             add_network: function(event){
                 if (event.original.keyCode == 13){
                     event.original.preventDefault();
@@ -1728,6 +1785,13 @@ function networkSettingsView(network){
 
         App.Views.networksettings.on({
             select:  function(event, type, index){
+                if (type === "network" && index == 0) {
+                    if ($('#delete-button').is(':visible')) {
+                        $('#delete-button').hide();
+                    } else {
+                        $('#delete-button').show();
+                    }
+                }
                 var row = $('#' + type + '-' + index);
                 var c = row.children();
                 c = c[c.length -1];
@@ -1747,14 +1811,12 @@ function networkSettingsView(network){
             },
             delete: function(event, type, id) {
                 if (type === "network") {
-
                     var network = this.get("network");
-                    
                     $.ajax({
                         url:  "/v1/networks/" + network.name,
                         type: "DELETE",
                         success: function(response){
-                           window.location.hash = "settings";
+                            window.location.hash = "settings";
                         },
                         error:   function(response){
                             console.log(response);

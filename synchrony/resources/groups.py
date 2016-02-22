@@ -22,6 +22,7 @@ class UserGroupCollection(restful.Resource):
             return {}, 403
 
         query = UserGroup.query.order_by(desc(UserGroup.created)).paginate(args.page, args.per_page)
+        
         return make_response(request.url, query)
 
     def put(self):
@@ -54,7 +55,8 @@ class UserGroupCollection(restful.Resource):
     
         user = auth(session, required=True)
         group = UserGroup.query.filter(UserGroup.name == args.name).first()
-        db.session.add(group)
+
+        db.session.delete(group)
         db.session.commit()
         return {}, 204
 
