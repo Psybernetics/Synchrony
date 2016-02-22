@@ -872,7 +872,7 @@ a {
 /* The button for deleting a network is
  * always the zeroth if its type.
  * Make it a foreboding dark red.*/
-#delete-network-0 {
+#delete-button {
     background-color: #F50000;
 }
 

@@ -257,12 +257,22 @@ class Acl(db.Model):
     Refer to User.can to see what's going on here.
     """
     __tablename__ = 'acl'
+    priv_id  = db.Column(db.Integer(),  db.ForeignKey('privs.id'), primary_key=True)
+    group_id = db.Column(db.Integer(),  db.ForeignKey('user_groups.id'), primary_key=True)
+    created  = db.Column(db.DateTime(), default=db.func.now())
+    allowed  = db.Column(db.Boolean())    
+    priv     = db.relationship('Priv', backref="groups")
 
-    priv_id = db.Column(db.Integer(), db.ForeignKey('privs.id'), primary_key=True)
-    group_id = db.Column(db.Integer(), db.ForeignKey('user_groups.id'), primary_key=True)
-    created = db.Column(db.DateTime(), default=db.func.now())
-    allowed = db.Column(db.Boolean())    
-    priv    = db.relationship('Priv', backref="groups")
+    def jsonify(self):
+        res = {}
+        res['allowed'] = self.allowed
+        if self.group:
+            res['group'] = self.group.name
+        if self.priv:
+            res['privilege'] = self.priv.name
+        if self.created:
+            res['created'] = time.mktime(self.created.timetuple())
+        return res
 
     def __repr__(self):
         if not self.priv or not self.group:
@@ -283,9 +293,9 @@ class Priv(db.Model):
     def jsonify(self):
         response =  {'name': self.name}
         if self.groups:
-            response['groups'] = self.groups
+            response['groups'] = [_.jsonify() for _ in self.groups]
         if self.created:
-            response['created'] = self.created.strftime("%A, %d. %B %Y %I:%M%p")
+            response['created'] = time.mktime(self.created.timetuple())
         return response
 
 user_groups_joint = db.Table('user_groups_join_table',
