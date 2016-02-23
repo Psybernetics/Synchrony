@@ -1,9 +1,15 @@
 /* 
    Synchrony 0.0.1
-   A soft-realtime collaborative hyperdocument editor.
-   Copyright Luke Brooks 2015
+   Copyright Luke Joshua Brooks 2015.
+   A collaborative hyperdocument editor.
+   There's about seven major religions. That's the beginning of the point.
+   May Allah guide us to the straight path.
 
    MIT License.
+
+    This file contains the frontend for a peer-to-peer caching proxy that can
+    make hyperdocuments collaboratively editable in near real time.
+    It may also implement a friends list, chat and WebRTC session initiation.
 
 TODO:
 /#request/:url     JavaScript to load /request/:url into .content
