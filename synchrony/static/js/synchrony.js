@@ -124,13 +124,15 @@ App.Router = Backbone.Router.extend({
  * synch.save();
  * Consider a map of {channel: Synchrony} pairs.
  *
- * The current strategy revolves around subscribing to a channel named "public"
+ * The current strategy revolves around subscribing to a channel named after the url 
  * though this could just as well be a User UID to follow them through their
  * use of the proxy.
  *
  * DOM nodes are matched up to two parent nodes and changes are then reintegrated
- * where they're found to match. This strategy is not terribly effective /right now/
- * but is generally better than transmitting the entire document.
+ * where they're found to match. The server stores an array of diffs and an array
+ * of reference documents.
+ * 
+ * This should monitor for changes on the DOM itself via all relevant events.
  *
  * The hardest fragment to match is a single character that's the only inhabitant of
  * its parent element.
@@ -139,7 +141,7 @@ App.Router = Backbone.Router.extend({
  * where "document" is the entire tree and "fragment" is a subtree.
  *
  * This should be as simple as doing dom.patch(subtree)
- */
+*/
 function Synchrony (el) {
 
     this.el      = el;
