@@ -144,16 +144,13 @@ App.Router = Backbone.Router.extend({
 */
 function Synchrony (el) {
 
-    this.el      = el;
-    this.socket  = undefined;
-    this.connect = function(endpoint, channel) {
-        if (!endpoint) {
-            endpoint = "/documents";
-        }
-
-        if (!channel) {
-            channel = "public";
-        }
+    this.el       = el;
+    this.socket   = undefined;
+    this.channel  = undefined;
+    this.endpoint = undefined;
+    this.connect  = function(endpoint, channel) {
+        if (!endpoint) { var endpoint = "/documents"; }
+        if (!channel) { var channel = "main"; }
 
         // We traverse through different urls as channels on this stream.
         var socket  = io.connect(endpoint, {resource: "stream"});
@@ -224,6 +221,7 @@ function Synchrony (el) {
                     edit_data = event.target.parentElement.outerHTML;
                 }
             } else {
+                console.log("1")
                 edit_data = event.target.outerHTML;
             }
             
