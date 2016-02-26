@@ -2,9 +2,9 @@
 import time
 import flask_restful as restful
 from sqlalchemy import and_, desc
-from synchrony import app, db, log
-from flask import request, session
 from flask_restful import reqparse
+from flask import request, session
+from synchrony import app, db, log
 from synchrony.controllers.auth import auth
 from synchrony.controllers.utils import make_response
 from synchrony.models import User, Friend, Peer, Network
@@ -12,7 +12,7 @@ from synchrony.models import Session, UserGroup, Revision
 
 class UserCollection(restful.Resource):
     """
-    Implements /v1/user
+    Implements /v1/users
     """
     def get(self):
         """
@@ -184,6 +184,11 @@ class UserResource(restful.Resource):
                 for s in user.sessions:
                     db.session.delete(s)
 
+        log(request.files)
+
+        if "avatar" in request.files:
+            user.avatar = request.files['avatar']
+
         db.session.add(user)
         db.session.commit()
         return user.jsonify()
@@ -214,7 +219,7 @@ class UserSessionsResource(restful.Resource):
     def get(self, username):
         user = auth(session, required=True)
 
-        parser = restful.reqparse.RequestParser()
+        parser = reqparse.RequestParser()
         parser.add_argument("page",     type=int, default=1)
         parser.add_argument("per_page", type=int, default=10)
         args = parser.parse_args()
@@ -233,7 +238,7 @@ class UserSessionsResource(restful.Resource):
 
     def put(self, username):
         "Add a session for a user and return the session cookie"
-        parser = reqparse.RequestParser()
+        parser = restful.reqparse.RequestParser()
         parser.add_argument("password", type=str, help="password.", required=True)
         args = parser.parse_args()
 
@@ -293,7 +298,7 @@ class UserRevisionCollection(restful.Resource):
         if user.username != username and not user.can("see_all"):
             return {}, 403
 
-        parser = restful.reqparse.RequestParser()
+        parser = reqparse.RequestParser()
         parser.add_argument("page",     type=int, default=1)
         parser.add_argument("per_page", type=int, default=20)
         args = parser.parse_args()  
@@ -323,7 +328,7 @@ class UserFriendsCollection(restful.Resource):
     def get(self, username):
         user = auth(session, required=True)
 
-        parser = restful.reqparse.RequestParser()
+        parser = reqparse.RequestParser()
         parser.add_argument("page",     type=int, default=1)
         parser.add_argument("per_page", type=int, default=10)
         args = parser.parse_args()  
@@ -469,4 +474,36 @@ class UserFriendsCollection(restful.Resource):
 
         return {}, 204
 
+class UserAvatarResource(restful.Resource):
+    def get(self, username):
+        user = User.query.filter(User.username == username).first()
+        if not user:
+            return {}, 404
 
+        if not user.avatar:
+            return {}, 404
+
+        return user.avatar.as_response
+
+    def post(self, username):
+        user = auth(session, required=True)
+        parser = reqparse.RequestParser()
+        parser.add_argument("avatar", type=str)
+        args = parser.parse_args()
+        
+        if not 'avatar' in request.files:
+            return {}
+        
+        f = request.files['avatar']
+
+        revision          = Revision()
+        revision.mimetype = f.mimetype
+        revision.bcontent = f.stream
+        user.avatar       = revision
+        user.revisions.append(revision)
+
+        db.session.add(user)
+        db.session.add(revision)
+        db.session.commit()
+        
+        return true

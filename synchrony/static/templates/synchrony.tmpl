@@ -1,4 +1,4 @@
-<img src="/static/img/synchrony.png" onmouseover="javascript:toggle_synchrony();"/>
+<img class="fish" src="/static/img/synchrony.png" onmouseover="javascript:toggle_synchrony();"/>
 <div class="control_panel" style="display: none;"> 
 
 <span class="synchrony_buttons">
@@ -9,7 +9,7 @@
     <button class="button big_button" on-click="settings">Settings</button><br />
     {{/showing_settings_button}}
     {{#showing_hide_button}}
-	<button class="button big_button show-hide" on-click="show_hide">Hide</button><br />
+	<button class="button big_button show-hide" on-click="show_hide">Show</button><br />
     {{/showing_hide_button}}
     {{#showing_edit_button}}
 	<button class="button big_button edit_button" on-click="edit">{{edit_button}}</button><br />
@@ -21,7 +21,10 @@
 	<button class="button big_button" on-click="logout">Log out</button><br />
 </span>
 <span>
-	<a id="profile_link" href="/#user/{{Config.user.username}}">{{Config.user.username}}</a><br />
+	<a id="profile_link" href="/#user/{{Config.user.username}}">
+        <img src="/v1/users/{{Config.user.username}}/avatar" class="small circular" />
+        {{Config.user.username}}
+    </a><br />
     {{peers}} DHT peers.<br />
     {{domains}} domains.<br />
 	<br />

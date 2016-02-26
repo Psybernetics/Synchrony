@@ -19,8 +19,9 @@
 	top: 1%;
 	width: 50%;
 */
-	background-color: rgba(34, 34, 34, 0.92);
-	color: #94928B;
+/*	background-color: rgba(34, 34, 34, 0.92); */
+	background-color: rgba(230, 230, 230, 0.92);
+	color: #4B4E52;
 	overflow: auto;
 	z-index: 50;
 	border: none;
@@ -49,11 +50,11 @@
 	position: initial;
 /*	margin-bottom: 50%; */
 	margin-left: 2px;
-	color: #E7E7E7;
+	color: #4B4E52;
 }
 .chat-messages a {
 	text-decoration: none;
-	color: #96B8E4;
+	color: #7099E2;
 }
 .chat-messages table {
     width: 100%;

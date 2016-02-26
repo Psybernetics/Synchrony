@@ -1,0 +1,36 @@
+<div class="view">
+    <h1>Group Settings</h1>
+    <hr />
+    {{#no_such_group}}
+    Unknown group.<br />
+    Return to the <a href="/#settings">settings</a> view?<br />
+    {{/no_such_group}}
+    {{#server_unavailable}}
+    Server unavailable.<br />
+    {{/server_unavailable}}
+    <div on-mouseover="select:{{"heading"}}" on-mouseout="select:{{"heading"}}">
+    <h2>{{group.name}}
+    {{#can_modify_usergroup}}
+    <button id="delete-button" style="display:none;" class="button pull-right" on-click="delete:{{"group"}}">Delete</button>
+    </h2>
+    </div>
+    {{#group.users}}
+        {{this}}<br />
+    {{/group.users}}
+    <table>
+        <tbody>
+        {{#group.privileges}}
+        <tr on-mouseover="select:{{"priv"}},{{@index}}" on-mouseout="select:{{"priv"}},{{@index}}" id="group-{{@index}}">
+                <td>{{this.key}}</td>
+                <td class="priv-{{@index}}">
+                    <span id="priv-text-{{@index}}">{{#if this.value}}Allowed{{else}}Denied{{/if}}</span>
+                    <button on-click="toggle_allowed:{{@index}}" style="visibility:hidden" class="button big_button" id="priv-button-{{@index}}">
+                        {{#if this.value}}Deny{{else}}Allow{{/if}}
+                    </button>
+                </td>
+         </tr>
+        {{/group.privileges}}
+        </tbody>
+    </table>
+    {{/can_modify_usergroup}}
+</div>

@@ -100,6 +100,8 @@ def init():
 
     # Attach HTTP endpoints
     from synchrony.resources import users
+    from synchrony.resources import groups
+    from synchrony.resources import privs
     from synchrony.resources import peers
     from synchrony.resources import domains
     from synchrony.resources import networks
@@ -126,6 +128,13 @@ def init():
     api.add_resource(users.UserFriendsCollection,           "/users/<string:username>/friends")
     api.add_resource(users.UserRevisionCollection,          "/users/<string:username>/revisions")
     api.add_resource(users.UserRevisionCountResource,       "/users/<string:username>/revisions/count")
+    api.add_resource(users.UserAvatarResource,              "/users/<string:username>/avatar")
+
+
+    api.add_resource(groups.UserGroupCollection,            "/groups")
+    api.add_resource(groups.UserGroupResource,              "/groups/<string:name>")
+
+    api.add_resource(privs.PrivCollection,                  "/privs")
 
     api.add_resource(peers.PeerCollection,                  "/peers")
     api.add_resource(peers.PeerNetworkResource,             "/peers/<string:network>")

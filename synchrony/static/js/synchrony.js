@@ -1,9 +1,15 @@
 /* 
    Synchrony 0.0.1
-   A soft-realtime collaborative hyperdocument editor.
-   Copyright Luke Brooks 2015
+   Copyright Luke Joshua Brooks 2015.
+   A collaborative hyperdocument editor.
+   There's about seven major religions. The beginning of the point.
+   May Allah guide us to the straight path.
 
    MIT License.
+
+    This file contains the frontend for a peer-to-peer caching proxy that can
+    make hyperdocuments collaboratively editable in near real time.
+    It may also implement a friends list, chat and WebRTC session initiation.
 
 TODO:
 /#request/:url     JavaScript to load /request/:url into .content
@@ -18,15 +24,13 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
  whichever threshold is met first
  formatted JSON event messages,
  {d:title, +chr@46,r:hash,s:[usernames]}
- OT, hash content, compare, major sync if necessary.
- An awareness of revision histories in streaming
- An awareness of page deletions in streaming
+ OT or differential sync
+ Undo/Redo
  Reduce the amount of objects used
  Account View (sessions, bio, undelete)
  Account Pages View (search, histories)
  Renaming based on checking availability
- A favicon.ico
- Compress the javascript includes to a single file.
+ Used a minified js file.
 
  Use /#settings to toggle:
   * Preferred peers.
@@ -76,6 +80,7 @@ App.Router = Backbone.Router.extend({
 //        'request':             'requestindex',
 //        'request/:resource':   'requestresource',
         'user/:username':      'userview',
+        'group/:name':         'groupview',
         'settings':            'settingsview',
         'settings/:network':   'networksettingsview',
         'chat':                'chatview',
@@ -90,6 +95,7 @@ App.Router = Backbone.Router.extend({
 //    requestindex:       requestIndex,
 //    requestresource:       requestView,
     userview:              userView,
+    groupview:             groupView,
     settingsview:          settingsView,
     networksettingsview:   networkSettingsView,
     chatview:              chatView,
@@ -116,13 +122,14 @@ App.Router = Backbone.Router.extend({
  * synch.save();
  * Consider a map of {channel: Synchrony} pairs.
  *
- * The current strategy revolves around subscribing to a channel named "public"
- * though this could just as well be a User UID to follow them through their
- * use of the proxy.
+ * The current strategy revolves around subscribing to a channel named after
+ * the active url, a user id to follow or a shared channel name.
  *
  * DOM nodes are matched up to two parent nodes and changes are then reintegrated
- * where they're found to match. This strategy is not terribly effective /right now/
- * but is generally better than transmitting the entire document.
+ * where they're found to match. The server stores an array of diffs and an array
+ * of reference documents.
+ * 
+ * This should monitor for changes on the DOM itself via all relevant events.
  *
  * The hardest fragment to match is a single character that's the only inhabitant of
  * its parent element.
@@ -131,26 +138,23 @@ App.Router = Backbone.Router.extend({
  * where "document" is the entire tree and "fragment" is a subtree.
  *
  * This should be as simple as doing dom.patch(subtree)
- */
+*/
 function Synchrony (el) {
 
-    this.el      = el;
-    this.socket  = undefined;
-    this.connect = function(endpoint, channel) {
-        if (!endpoint) {
-            endpoint = "/documents";
-        }
+    this.el       = el;
+    this.socket   = undefined;
+    this.channel  = undefined;
+    this.endpoint = undefined;
+    this.connect  = function(endpoint, channel) {
+        
+        if (!endpoint) { this.endpoint = "/documents"; }
+        if (!channel)  { this.channel  = "main"; }
 
-        if (!channel) {
-            channel = "public";
-        }
-
-        // We traverse through different urls as channels on this stream.
-        var socket  = io.connect(endpoint, {resource: "stream"});
-        this.socket = socket;
-        socket.emit('subscribe', channel)
-        // this.socket.emit('subscribe', channel)
-        socket.on("fragment", function(data){
+        this.socket  = io.connect(this.endpoint, {resource: "stream"});
+        
+        this.socket.emit('join', this.channel);
+        
+        this.socket.on("fragment", function(data){
             // Someone is sending us some DOM nodes.
             console.log(data);
             parser = new DOMParser();
@@ -214,6 +218,7 @@ function Synchrony (el) {
                     edit_data = event.target.parentElement.outerHTML;
                 }
             } else {
+                console.log("1")
                 edit_data = event.target.outerHTML;
             }
             
@@ -441,25 +446,29 @@ function populate_table(view, table_type, url){
     $.get(url, function(data){
         // Update the DOM on success
         view.set(table_type + "_paging_error", undefined);
-        data.data = upDate(data.data, "created");
+        if (data.hasOwnProperty("data")) {
+            data.data = upDate(data.data, "created");
+        }
         view.set(table_type, data.data);
         view[table_type] = data;
 
         // Show navigation links depending on the response data
         // This is where the jsonapi.org style of {links: {next: "http://"}}
         // comes in handy.
-        if (data.links.hasOwnProperty("self")) {
+        if (data.hasOwnProperty("links")) {
+            if (data.links.hasOwnProperty("self")) {
             var url = data.links.self.split('page=')[1];
-            if (url != undefined) {
-                if (url > 1) {
-                    view.set(table_type + "_back_available", true);
-                } else {
-                    view.set(table_type + "_back_available", false);
-                }
-            } 
-        }
-        if (data.links.hasOwnProperty("next")) {
-            view.set(table_type + "_forward_available", true);
+                if (url != undefined) {
+                    if (url > 1) {
+                        view.set(table_type + "_back_available", true);
+                    } else {
+                        view.set(table_type + "_back_available", false);
+                    }
+                } 
+            }
+            if (data.links.hasOwnProperty("next")) {
+                view.set(table_type + "_forward_available", true);
+            }
         }
     }).fail(function(){
        view.set(table_type + "_paging_error", true);
@@ -674,16 +683,21 @@ function userView(username, params){
             App.Views.userpage.set("show_settings",     true);
             App.Views.userpage.set("sessions_button",   "Show");
             App.Views.userpage.set("revisions_button",  "Show");
+            App.Views.userpage.set("avatar_button",     "Show");
             App.Views.userpage.set("friends_button",    "Show");
             App.Views.userpage.set("password_button",   "Show");
             App.Views.userpage.set("showing_sessions",  undefined);
             App.Views.userpage.set("showing_revisions", undefined);
+            App.Views.userpage.set("showing_avatar",    undefined);
             App.Views.userpage.set("showing_friends",   undefined);
             App.Views.userpage.set("showing_password",  undefined);
 
             populate_table(App.Views.userpage, "revisions", "/v1/users/" + username + "/revisions");
             populate_table(App.Views.userpage, "friends",   "/v1/users/" + username + "/friends");
             populate_table(App.Views.userpage, "sessions",  "/v1/users/" + username + "/sessions");
+
+            // For the correct upload endpoint for avatar images:
+            App.Views.userpage.set("username", App.Config.user.username);
         }
 
         App.Views.userpage.on({
@@ -804,6 +818,9 @@ function userView(username, params){
                         }
                     });
                 }
+            },
+            update_avatar: function(event){
+                console.log(event);
             },
             rename: function(event, type, index){
                 if (event.original.keyCode == 13){
@@ -995,6 +1012,129 @@ function userView(username, params){
                     });
                }
             }
+        });
+    });
+}
+
+function groupView(name, params){
+    document.title = name + " group" + App.title;
+    Ractive.load({
+        grouppage: 'grouppage.tmpl',
+    }).then(function(components){
+
+        if (!App.Config.user) {
+            location.hash = "login";
+        }
+
+        App.Views['grouppage'] = new components.grouppage({
+            el: $('.main'),
+            data: {},
+            adaptor: ['Backbone'],
+        });
+
+        if (!$('.main').is(':visible')) {
+            toggleMain();
+        }
+        
+        function filterResponse(response){
+        // Sticks the key attrs on a response 
+            for (var i = 0; i < response.privileges.length; i++) {
+                var key = Object.keys(response.privileges[i])[0];
+                response.privileges[i].key   = key;
+                response.privileges[i].value = response.privileges[i][key];
+            }
+            return response;
+        }
+
+        $.when(
+            $.get('/v1/users/' + App.Config.user.username + '?can=modify_usergroup',
+            function(response){
+                App.Views.grouppage.set("can_modify_usergroup", response);
+            })
+         ).done(function(){
+            if (App.Views.grouppage.get("can_modify_usergroup") != true) {
+                window.location.hash = "#";
+                return;
+            }
+        });
+
+        $.ajax({
+            url: "/v1/groups/" + name,
+            success: function(response){
+                response = filterResponse(response);
+                App.Views.grouppage.set("group", response);
+                App.Views.grouppage.set("no_such_group", false);
+                App.Views.grouppage.set("server_unavailable", false);
+            },
+            error: function(response){
+                if (response.status == 404) {
+                    App.Views.grouppage.set("no_such_group", true)
+                } else {
+                    App.Views.grouppage.set("server_unavailable", true);
+                }
+            }
+        });
+
+        App.Views.grouppage.on({
+            select:  function(event, type, index){
+                if (type === "heading") {
+                    if ($('#delete-button').is(':visible')) {
+                        $('#delete-button').hide();
+                   } else {
+                        $('#delete-button').show();
+                   }
+                }
+                // Also show the toggle_public button for revisions
+                if (type === "priv") {
+                    if ($('#' + type + '-button-' + index).css('visibility') === "hidden") {
+                        $('#' + type + '-button-' + index).css('visibility', '');
+                        $('#' + type + '-text-'   + index).css('display',    'none');
+                    } else {
+                        $('#' + type + '-button-' + index).css('visibility', 'hidden');
+                        $('#' + type + '-text-'   + index).css('display',    'initial');
+                    }
+                }
+            },
+            delete: function(event){
+                event.original.preventDefault();
+                var group = this.get("group");
+                if (group.name === undefined) { return; }
+                $.ajax({
+                    url: "/v1/groups",
+                    type: "DELETE",
+                    data: {"name": group.name},
+                    success: function(response){
+                        location.hash = '#settings';
+                    },
+                    error:   function(response){}
+                });
+            },
+            toggle_allowed: function(event, index){
+                event.original.preventDefault();
+                var group = this.get("group");
+                var priv = group.privileges[index];
+                if (priv.value) {
+                    $.ajax({
+                        url: "/v1/groups/" + group.name,
+                        type: "POST",
+                        data: {deny: priv.key},
+                        success: function(response){
+                            response = filterResponse(response);
+                            App.Views.grouppage.set("group", response);
+                        }
+                    });
+                } else {
+                    $.ajax({
+                        url: "/v1/groups/" + group.name,
+                        type: "POST",
+                        data: {allow: priv.key},
+                        success: function(response){
+                            response = filterResponse(response);
+                            App.Views.grouppage.set("group", response);
+                        }
+                    });
+                }
+            },
         });
     });
 }
@@ -1215,7 +1355,11 @@ function chatView() {
                         $('#chat-input').val('');
                         App.Views.chat.set("message", '');
                     } else {
-                        App.Views.chat.socket.emit('msg', message);
+                        response = App.Views.chat.socket.emit('msg', message);
+                        if (!response.socket.connected) {
+                            $('.chat-messages').append("Intensify connection . . .");
+                            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+                        }
                         console.log(this.get("message"));
                         $('#chat-input').val('');
                         App.Views.chat.set("message", '');
@@ -1435,6 +1579,7 @@ function settingsView() {
         App.Views.settings.set("showing_open",      undefined);
 
         populate_table(App.Views.settings, "accounts",  "/v1/users");
+        populate_table(App.Views.settings, "groups"  ,  "/v1/groups");
         populate_table(App.Views.settings, "downloads", "/v1/revisions/downloads");
         populate_table(App.Views.settings, "networks",  "/v1/networks");
 
@@ -1528,6 +1673,25 @@ function settingsView() {
                          }
                     });
                  }
+            },
+            add_group: function(event){
+                if (event.original.keyCode == 13){
+                    event.original.preventDefault();
+                    var name = this.get("group_name");
+                    $.ajax({
+                        url: "/v1/groups",
+                        type: "PUT",
+                        data: {"name": name},
+                        success: function(response){
+                            var groups = App.Views.settings.get("groups");
+                            groups.push(response)
+                            var groups = upDate(groups);
+                            App.Views.settings.set("groups", groups);
+                            App.Views.settings.set("group_name", "");
+                        },
+                        error: function(response){}
+                    });
+                }
             },
             add_network: function(event){
                 if (event.original.keyCode == 13){
@@ -1628,6 +1792,13 @@ function networkSettingsView(network){
 
         App.Views.networksettings.on({
             select:  function(event, type, index){
+                if (type === "network" && index == 0) {
+                    if ($('#delete-button').is(':visible')) {
+                        $('#delete-button').hide();
+                    } else {
+                        $('#delete-button').show();
+                    }
+                }
                 var row = $('#' + type + '-' + index);
                 var c = row.children();
                 c = c[c.length -1];
@@ -1647,14 +1818,12 @@ function networkSettingsView(network){
             },
             delete: function(event, type, id) {
                 if (type === "network") {
-
                     var network = this.get("network");
-                    
                     $.ajax({
                         url:  "/v1/networks/" + network.name,
                         type: "DELETE",
                         success: function(response){
-                           window.location.hash = "settings";
+                            window.location.hash = "settings";
                         },
                         error:   function(response){
                             console.log(response);

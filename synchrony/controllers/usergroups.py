@@ -7,6 +7,7 @@ def init_user_groups():
             see_all
             delete_at_will
             reset_user_pw
+            modify_user
             modify_usergroup
             deactivate
             manage_networks
@@ -27,8 +28,9 @@ def init_user_groups():
     """
     # Bans happen by setting User.active to False and clearing their existing sessions.
     groups = ["Administrators", "Users"]
-    admin_privs  = [ "see_all", "delete_at_will", "reset_user_pw", "modify_usergroup",
-                     "deactivate", "manage_networks", "review_downloads", "toggle_signups"] 
+    admin_privs  = [ "see_all", "delete_at_will", "reset_user_pw", "modify_user",
+                     "modify_usergroup", "deactivate", "manage_networks",
+                     "review_downloads", "toggle_signups"] 
     privs        = [ "create_revision_group", "delete_revision_group", "chat",
                      "initiate_rtc", "create_revision", "retrieve_from_dht", 
                      "browse_peer_nodes", "retrieve_resource", "stream_document"]
