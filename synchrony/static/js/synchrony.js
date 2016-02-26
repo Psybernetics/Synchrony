@@ -153,7 +153,7 @@ function Synchrony (el) {
 
         var socket  = io.connect(this.endpoint, {resource: "stream"});
         this.socket = socket;
-        socket.emit('subscribe', this.channel)
+        socket.emit('join', this.channel)
         // this.socket.emit('subscribe', channel)
         socket.on("fragment", function(data){
             // Someone is sending us some DOM nodes.

@@ -30,8 +30,10 @@ class DocumentStream(BaseNamespace):
     """
     user        = None
     socket_type = "document"
-    channel     = () # available types: url, uid, name
-                     # Eg. ("uid": "f50068d167fc6")
+    channel     = () # Available types: url, addr, name.
+                     # Eg. ("addr", "alpha/1252322141974278745698082250347869678457931551015/f50068d167fc6")
+                     # This type implies we should synchronise with the local
+                     # or remote user when they navigate.
 
     def initialize(self):
         """
@@ -42,7 +44,6 @@ class DocumentStream(BaseNamespace):
         log("DocumentStream init")
         self.fragments = []
         self.documents = []
-        self.document = None
         if 'channels' not in self.session:
             self.session['channels'] = set()
 
@@ -65,14 +66,14 @@ class DocumentStream(BaseNamespace):
     def join(self, channel, type="name"):
         self.session['channels'].add(self.get_channel_name(channel))
         self.channel = (type, channel)
-
+        
     def leave(self, channel):
         self.session['channels'].remove(self.get_channel_name(channel))
 
     def get_channel_name(self, channel):
         return self.ns_name + '_' + channel
 
-    def on_subscribe(self, channel):
+    def on_join(self, channel):
         user = auth(self.request)
         if user:
             self.user = user
@@ -81,7 +82,6 @@ class DocumentStream(BaseNamespace):
         else:
             log('An anonymous user has subscribed to the document stream for "%s"' % \
             channel)
-        self.document = channel
         self.join(channel)
 
     def on_names(self, channel):
@@ -105,18 +105,18 @@ class DocumentStream(BaseNamespace):
         self.check_auth()
         if not self.user:
             log("no user ")
-        if self.document and self.user:
+        if self.channel and self.user:
             log('DocumentStream: %s "%s":%i' % \
-            (self.user.username, self.document, len(update)))
+            (self.user.username, self.channel, len(update)))
             body = {"user":self.user.username,"document":update}
-            self.broadcast(self.document, "fragment", body)
+            self.broadcast(self.channel[1], "fragment", body)
             # Tell the transmitter their edit is going through
 #            self.emit("document", body)
 
     def recv_disconnect(self):
-        if self.user and self.document:
-            log('%s has disconnected from document stream "%s"' % \
-            (self.user.username, self.document))
+        if self.user and self.channel:
+            log('%s has disconnected from channel %s' % \
+            (self.user.username, str(self.channel)))
         elif self.user:
             log('%s has disconnected from an unspecified document stream.' % \
             self.user.username)
