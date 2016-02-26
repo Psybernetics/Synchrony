@@ -4,6 +4,9 @@
     <hr />
     <h2>Revisions<button on-click="toggle:{{"revisions"}}" class="button big_button pull-right">{{revisions_button}}</button></h2>
     {{#showing_revisions}}
+    <form>
+        <input class="search" on-keydown="search_revisions" value="{{search_query}}" size="25" placeholder="Search..." spellcheck="false">
+    </form>
     <table>
        <tbody>
             <tr>

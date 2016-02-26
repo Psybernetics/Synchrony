@@ -116,14 +116,14 @@ App.Router = Backbone.Router.extend({
     },
 });
 
-/* Base class for page synchronisation
+/* This is the class for page synchronisation.
  * 
  * var synch = new Synchrony($('.iframe'));
  * synch.save();
  * Consider a map of {channel: Synchrony} pairs.
  *
  * The current strategy revolves around subscribing to a channel named after
- * the active url, a user id to follow or a shared channel name.
+ * the active url, a user addr or shared channel name.
  *
  * DOM nodes are matched up to two parent nodes and changes are then reintegrated
  * where they're found to match. The server stores an array of diffs and an array
@@ -137,24 +137,25 @@ App.Router = Backbone.Router.extend({
  * The protocol appears to want two major message types: "document" and "fragment"
  * where "document" is the entire tree and "fragment" is a subtree.
  *
- * This should be as simple as doing dom.patch(subtree)
+ * dom.patch(subtree)
 */
 function Synchrony (el) {
 
-    this.el       = el;
-    this.socket   = undefined;
-    this.channel  = undefined;
-    this.endpoint = undefined;
+    this.el         = el;
+    this.socket     = null;
+    this.channel    = null;
+    this.endpoint   = null;
+    this.last_event = null;
+
     this.connect  = function(endpoint, channel) {
         
         if (!endpoint) { this.endpoint = "/documents"; }
         if (!channel)  { this.channel  = "main"; }
 
-        this.socket  = io.connect(this.endpoint, {resource: "stream"});
+        var socket = io.connect(this.endpoint, {resource: "stream"});
+        socket.emit('join', this.channel);
         
-        this.socket.emit('join', this.channel);
-        
-        this.socket.on("fragment", function(data){
+        socket.on("fragment", function(data){
             // Someone is sending us some DOM nodes.
             console.log(data);
             parser = new DOMParser();
@@ -168,7 +169,6 @@ function Synchrony (el) {
             console.log(element);
             var doc_text = $(doc).text();
             console.log("doc_text: "+ doc_text);
-    //        window.doc = doc;
             var nodes = "";
             var text_data = "";
     //        doc.children[0].className
@@ -208,9 +208,11 @@ function Synchrony (el) {
             }
         });
 
-    //    Only transmit when textnode characters have been modified
         this.el.contents().find('body').on('DOMCharacterDataModified', function(event){
-    //        Traverse to up to two parent elements and transmit the outerHTML.
+
+            if (!socket) { this.reconnect(); }
+
+            // Traverse up to two parent nodes and transmit the outerHTML.
             if (event.target.parentElement) {
                 if (event.target.parentElement.parentElement) {
                     edit_data = event.target.parentElement.parentElement.outerHTML;
@@ -225,12 +227,16 @@ function Synchrony (el) {
             socket.emit('edit', edit_data);
 
             console.log(event);
-            App.e = event;
+            this.last_event = event;
         });
     }
 
     // Re-make the socket if asked
-    this.reconnect = function () {}
+    this.reconnect = function () {
+        if (this.endpoint && this.channel) {
+            this.connect(this.endpoint, this.channel);
+        }
+    }
 
     // Provide our last revision ID and get the latest copy
     this.poll             = function () {}
@@ -851,6 +857,30 @@ function userView(username, params){
                             }
                         });
                     }
+                }
+            },
+            search_revisions: function(event){
+                if (event.original.keyCode == 13) {
+                    event.original.preventDefault();
+                }
+                var search_query = this.get("search_query");
+                console.log(search_query);
+                if (search_query && search_query.length > 1){
+                    $.ajax({
+                        type: "GET",
+                        url: "/v1/revisions/search/" + search_query,
+                        success: function(response){
+                            console.log(response);
+                            if (response.data){
+                                App.Views.userpage.set({"revisions": response.data});
+                            }
+                        }
+                    });
+                } else {
+                    populate_table(
+                        App.Views.userpage,
+                        "revisions", "/v1/users/" + App.Config.user.username + "/revisions"
+                    );
                 }
             },
             toggle_rename: function(event, type, index){
