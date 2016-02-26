@@ -2,6 +2,8 @@
 # An awareness of events (save/connect/disconnect) in streaming
 #
 # Think of allocations here in terms of dom fragments.
+import time
+import copy
 from synchrony import app, log
 from synchrony.controllers.auth import auth
 from flask import session, request, Response
@@ -41,7 +43,7 @@ class DocumentStream(BaseNamespace):
         they're garbage collected when people disconnect and remaining users
         are left with the official history.
         """
-        log("DocumentStream init")
+        log("Document stream init")
         self.fragments = []
         self.documents = []
         if 'channels' not in self.session:
@@ -108,10 +110,15 @@ class DocumentStream(BaseNamespace):
         if self.channel and self.user:
             log('DocumentStream: %s "%s":%i' % \
             (self.user.username, self.channel, len(update)))
+            
             body = {"user":self.user.username,"document":update}
             self.broadcast(self.channel[1], "fragment", body)
-            # Tell the transmitter their edit is going through
-#            self.emit("document", body)
+            
+            record = {"time":     time.time(), 
+                      "channel":  copy.deepcopy(self.channel),
+                      "fragment": fragment}
+
+            self.emit(self.channel[1], body)
 
     def recv_disconnect(self):
         if self.user and self.channel:

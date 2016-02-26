@@ -33,7 +33,7 @@ def get(url, user_agent, user=None):
     if host:
         log(host)
 
-#    Making deep assumptions about the future of ipv4 here..
+    # Deep assumptions about the future of ipv4 here.
     if any([host.startswith(subnet) for subnet in local_subnets]):
         revision.status   = 403
         revision.mimetype = "text"
@@ -69,8 +69,7 @@ def get(url, user_agent, user=None):
     # Last but not least, check the database
     domain_from_db = Domain.query.filter_by(name=domain).first()
     rev = Revision.query.filter(
-        and_(Revision.original == True,
-            Revision.resource.has(domain=domain_from_db),
+        and_(Revision.resource.has(domain=domain_from_db),
             Revision.resource.has(path=path))
     ).order_by(desc(Revision.created)).first()
     log(domain_from_db)

@@ -3,7 +3,9 @@ from synchrony import log
 from BeautifulSoup import BeautifulSoup
 
 def parse(html, url):
-    ""
+    
+    # TODO(ljb): Recognise licensensing attributes to prevent piracy.
+    
     domain = urlparse.urlparse(url).netloc
 
     #append_text = '<script src="/static/synchrony.js"></script>\n<link rel="stylesheet" type="text/css" href="/static/synchrony.css" />'

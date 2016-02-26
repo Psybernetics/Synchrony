@@ -2,7 +2,7 @@
    Synchrony 0.0.1
    Copyright Luke Joshua Brooks 2015.
    A collaborative hyperdocument editor.
-   There's about seven major religions. That's the beginning of the point.
+   There's about seven major religions. The beginning of the point.
    May Allah guide us to the straight path.
 
    MIT License.
@@ -24,15 +24,13 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
  whichever threshold is met first
  formatted JSON event messages,
  {d:title, +chr@46,r:hash,s:[usernames]}
- OT, hash content, compare, major sync if necessary.
- An awareness of revision histories in streaming
- An awareness of page deletions in streaming
+ OT or differential sync
+ Undo/Redo
  Reduce the amount of objects used
  Account View (sessions, bio, undelete)
  Account Pages View (search, histories)
  Renaming based on checking availability
- A favicon.ico
- Compress the javascript includes to a single file.
+ Used a minified js file.
 
  Use /#settings to toggle:
   * Preferred peers.
@@ -148,14 +146,15 @@ function Synchrony (el) {
     this.channel  = undefined;
     this.endpoint = undefined;
     this.connect  = function(endpoint, channel) {
+        
         if (!endpoint) { this.endpoint = "/documents"; }
         if (!channel)  { this.channel  = "main"; }
 
-        var socket  = io.connect(this.endpoint, {resource: "stream"});
-        this.socket = socket;
-        socket.emit('join', this.channel)
-        // this.socket.emit('subscribe', channel)
-        socket.on("fragment", function(data){
+        this.socket  = io.connect(this.endpoint, {resource: "stream"});
+        
+        this.socket.emit('join', this.channel);
+        
+        this.socket.on("fragment", function(data){
             // Someone is sending us some DOM nodes.
             console.log(data);
             parser = new DOMParser();
@@ -1356,7 +1355,11 @@ function chatView() {
                         $('#chat-input').val('');
                         App.Views.chat.set("message", '');
                     } else {
-                        App.Views.chat.socket.emit('msg', message);
+                        response = App.Views.chat.socket.emit('msg', message);
+                        if (!response.socket.connected) {
+                            $('.chat-messages').append("Intensify connection . . .");
+                            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+                        }
                         console.log(this.get("message"));
                         $('#chat-input').val('');
                         App.Views.chat.set("message", '');
