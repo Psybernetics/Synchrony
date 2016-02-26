@@ -141,21 +141,21 @@ App.Router = Backbone.Router.extend({
 */
 function Synchrony (el) {
 
-    this.el       = el;
-    
-    this.socket   = null;
-    this.channel  = null;
-    this.endpoint = null;
+    this.el         = el;
+    this.socket     = null;
+    this.channel    = null;
+    this.endpoint   = null;
+    this.last_event = null;
 
     this.connect  = function(endpoint, channel) {
         
         if (!endpoint) { this.endpoint = "/documents"; }
         if (!channel)  { this.channel  = "main"; }
 
-        this.socket = io.connect(this.endpoint, {resource: "stream"});
-        this.socket.emit('join', this.channel);
+        var socket = io.connect(this.endpoint, {resource: "stream"});
+        socket.emit('join', this.channel);
         
-        this.socket.on("fragment", function(data){
+        socket.on("fragment", function(data){
             // Someone is sending us some DOM nodes.
             console.log(data);
             parser = new DOMParser();
@@ -169,7 +169,6 @@ function Synchrony (el) {
             console.log(element);
             var doc_text = $(doc).text();
             console.log("doc_text: "+ doc_text);
-    //        window.doc = doc;
             var nodes = "";
             var text_data = "";
     //        doc.children[0].className
@@ -211,9 +210,9 @@ function Synchrony (el) {
 
         this.el.contents().find('body').on('DOMCharacterDataModified', function(event){
 
-            if (!this.socket) { this.reconnect(); }
+            if (!socket) { this.reconnect(); }
 
-    //        Traverse to up to two parent elements and transmit the outerHTML.
+            // Traverse up to two parent nodes and transmit the outerHTML.
             if (event.target.parentElement) {
                 if (event.target.parentElement.parentElement) {
                     edit_data = event.target.parentElement.parentElement.outerHTML;
@@ -225,10 +224,10 @@ function Synchrony (el) {
                 edit_data = event.target.outerHTML;
             }
             
-            this.socket.emit('edit', edit_data);
+            socket.emit('edit', edit_data);
 
             console.log(event);
-            App.e = event;
+            this.last_event = event;
         });
     }
 

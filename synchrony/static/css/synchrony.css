@@ -234,8 +234,13 @@ label { display: inline-block; }
 }
 
 .search { 
+    background-color: #F8F8F8;
 	border: none;
-	padding: 13px;
+	padding: 5px;
+    min-width: 250px;
+    width: 50%;
+    outline: none;
+    color: #3F3F3F;
 }
 
 #md-doc blockquote {

@@ -116,7 +116,7 @@ class DocumentStream(BaseNamespace):
             
             record = {"time":     time.time(), 
                       "channel":  copy.deepcopy(self.channel),
-                      "fragment": fragment}
+                      "fragment": update}
 
             self.emit(self.channel[1], body)
 
