@@ -124,9 +124,8 @@ App.Router = Backbone.Router.extend({
  * synch.save();
  * Consider a map of {channel: Synchrony} pairs.
  *
- * The current strategy revolves around subscribing to a channel named after the url 
- * though this could just as well be a User UID to follow them through their
- * use of the proxy.
+ * The current strategy revolves around subscribing to a channel named after
+ * the active url, a user id to follow or a shared channel name.
  *
  * DOM nodes are matched up to two parent nodes and changes are then reintegrated
  * where they're found to match. The server stores an array of diffs and an array
@@ -149,13 +148,12 @@ function Synchrony (el) {
     this.channel  = undefined;
     this.endpoint = undefined;
     this.connect  = function(endpoint, channel) {
-        if (!endpoint) { var endpoint = "/documents"; }
-        if (!channel) { var channel = "main"; }
+        if (!endpoint) { this.endpoint = "/documents"; }
+        if (!channel)  { this.channel  = "main"; }
 
-        // We traverse through different urls as channels on this stream.
-        var socket  = io.connect(endpoint, {resource: "stream"});
+        var socket  = io.connect(this.endpoint, {resource: "stream"});
         this.socket = socket;
-        socket.emit('subscribe', channel)
+        socket.emit('join', this.channel)
         // this.socket.emit('subscribe', channel)
         socket.on("fragment", function(data){
             // Someone is sending us some DOM nodes.
