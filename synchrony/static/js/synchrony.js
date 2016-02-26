@@ -1590,7 +1590,6 @@ function settingsView() {
         }
 
         // POST /v1/revisions/downloads/<network>
-        // {reason: integer_severity_level}
         App.Views.settings.on({
             // button for show/hide section
             toggle:  function(event, section){
@@ -1722,7 +1721,6 @@ function settingsView() {
                     data: {
                         "url":  selection.url,
                         "hash": hash,
-                        "severity": 1
                     },
                     success: function(response){
                         $.get('/v1/peers', function(response){

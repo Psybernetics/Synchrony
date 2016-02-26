@@ -128,6 +128,7 @@ TODO/NOTES:
 """
 import gzip
 import json
+import math
 import time
 import heapq
 import socket
@@ -155,6 +156,11 @@ from binascii import hexlify, unhexlify
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
 from synchrony.models import Revision, User, Friend, Network, Peer
+
+try:
+    import numpy
+except ImportError:
+    numpy = None
 
 class RoutingTable(object):
     """
@@ -212,14 +218,15 @@ class RoutingTable(object):
         self.node = Node(id or utils.generate_node_id(seed),
                          addr,
                          port,
-                         pubkey)
+                         pubkey,
+                         self)
 
         # An unbounded group of pre-trusted peers
         self.tbucket  = TBucket(self)
         # Our sublists of known peers
         self.buckets  = [KBucket(0, 2 ** 160, self.ksize)]
         # An instance of a protocol class implementing our RPCs
-        self.protocol = SynchronyProtocol(self, self.node, Storage(), ksize)
+        self.protocol = SynchronyProtocol(self, Storage(), ksize)
 
         # This makes it easy for test suites select which method to use.
         # Note that if you use a different storage method then it's up to you
@@ -509,7 +516,7 @@ class RoutingTable(object):
 
         hashed_url = digest(url)
 
-        log("Adjusting local reference.")
+        log("Adding local reference.")
         self.protocol.storage[hexlify(hashed_url)] = (content_hash, self.node)
 
         def store(nodes):
@@ -557,7 +564,7 @@ class RoutingTable(object):
         return "<RoutingTable for \"%s\" with %i peers>" %  (self.network, len(self))
 
 class SynchronyProtocol(object):
-    def __init__(self, router, source_node, storage, ksize):
+    def __init__(self, router, storage, ksize):
         """
         Methods beginning with rpc_ define our outward calls and their
         handle_ counterparts define how we deal with their receipt.
@@ -577,8 +584,9 @@ class SynchronyProtocol(object):
         """
         self.ksize         = ksize
         self.router        = router
+        self.epsilon       = 0.0001 # Don't use a different trust increment publicly.
         self.storage       = storage
-        self.source_node   = source_node
+        self.source_node   = router.node
         self.downloads     = ForgetfulStorage()         # content_hash -> (n.ip, n.port)
         self.received_keys = ForgetfulStorage(bound=2)  # node -> [republish_messages,..]
 
@@ -952,7 +960,7 @@ class SynchronyProtocol(object):
         { 'url_hash': {'content_hash': [(ts,nodeple)]}}
         """
         node = self.read_envelope(data)
-        if node.trust < 0:
+        if max(node.trust, 0) == 0:
             log("%s with negative trust rating tried to append." % node, "warning")
             return False
         url_hash, content_hash = data['rpc_append'].items()[0]
@@ -973,7 +981,7 @@ class SynchronyProtocol(object):
         """
         node = self.read_envelope(data)
         
-        if node.trust < 0:
+        if max(node.trust, 0) == 0:
             log("%s with negative trust rating tried to republish." % node, "warning")
             return False
 
@@ -981,7 +989,7 @@ class SynchronyProtocol(object):
         republished_keys = data['rpc_republish']
         for message in republished_keys:
             
-            if node.trust < 0:
+            if max(node.trust, 0) == 0:
                 return False
 
             signature = (long(message['keys'].keys()[0]),)
@@ -990,7 +998,7 @@ class SynchronyProtocol(object):
             key       = RSA.importKey(message['node'][1])
             if not key.verify(hash, signature):
                 log("Invalid signatures for keys provided by %s." % node, "warning")
-                node.trust -= 0.01
+                node.trust -= self.epsilon
                 continue
 
             try:
@@ -1036,7 +1044,8 @@ class SynchronyProtocol(object):
                 nodes.append(node)
                 continue
             node = self.rpc_ping(n)
-            if node == None: continue
+            if node == None:
+                continue
             nodes.append(node)
 
         nodes = sort_nodes_by_trust(nodes)
@@ -1062,14 +1071,14 @@ class SynchronyProtocol(object):
             revision = Revision()
             revision.add(response)
             if revision.hash != content_hash:
-                node.trust -= 1
+                node.trust -= self.epsilon
                 log("Hash doesn't match content for %s" % content_hash, "warning")
                 log("Decremented trust rating for %s." % node, "warning")
             else:
                 # Adjust mimetype, set the network and increment bytes_rcvd
                 # TODO: Make the trust increment proportionate to Revision.size
                 log("Incrementing trust rating for %s." % node)
-                node.trust += 1
+                node.trust += self.epsilon
                 if 'content-type' in response.headers:
                     revision.mimetype = response.headers['content-type']
                 if 'Content-Type' in response.headers:
@@ -1148,10 +1157,7 @@ class SynchronyProtocol(object):
             return
 
         # Learn of peers
-        #  TODO: Spawn green threads to ping these nodes.
-        #  NOTE: Don't permit a spammer to abuse the routing topology.
-        #        This can include decrementing the senders trust rating for
-        #        referring us to dead nodes.
+        #  TODO: Spawn coroutines to ping these nodes.
         if 'peers' in data:
             for peer in data['peers']:
                 node = Node(*peer['node'], pubkey=peer['pubkey'], router=self.router)
@@ -1168,7 +1174,7 @@ class SynchronyProtocol(object):
             self.router.add_contact(node)
             return node
 
-    def decrement_trust(self, addr, severity=1):
+    def decrement_trust(self, addr):
         """
         Implements the feedback mechanism for our trust metric.
         
@@ -1185,9 +1191,12 @@ class SynchronyProtocol(object):
         """
         for node in self.router:
             if node.ip == addr[0] and node.port == addr[1]:
-                amount = severity / 100.0
-                log("Decrementing trust rating for %s by %f." % (node, amount), "warning")
-                node.trust -= amount
+                if "NO_PRISONERS" in app.config and app.config["NO_PRISONERS"]:
+                    log("Setting trust rating for %s to 0." % node, "warning")
+                    node.trust = 0
+                else:
+                    log("Decrementing trust rating for %s by %f." % (node, self.epsilon), "warning")
+                    node.trust -= 2 * self.epsilon
 #               peer = Peer.query.filter(
 #                       and_(Peer.network == self.network,
 #                            Peer.ip      == addr[0],
@@ -1288,96 +1297,450 @@ class KBucket(object):
 
 class TBucket(dict):
     """
-    A bucket of pre-trusted peers.
+    A two-tiered bucket of pre-trusted peers.
 
-    Pre-trusted peers: nodes residing on internal subnets (No.)
-                       nodes supplied by app.default_nodes/options.boostrap
-                       nodes who're the first to be added to a new network
-                       nodes who've previously earned high trust over time
+    The extended set cannot contain members of the real set and the real set
+    mustn't contain members of the extended set. The members of the set of
+    pre-trusted peers, referred to as P, are queried about every peer we know
+    of except for themselves providing the cardinality of P is greater than a
+    pre set percentage of the size of the network, with a frequency that's also
+    tied to the size of the network as we see it. The larger the network the
+    less often you should perform calculate_trust().
+    
+    The responses about peers are first checked for trust rating inflation,
+    deflation and whether they're just impossible in relation to their reported
+    transaction count.
 
-    Peers have a normal placement in KBuckets but peers who also have a
-    reference from a TBucket are considered to be inherently trustworthy, and
-    can be relied upon to be honest in rating the trustworthiness of their
-    peers.
+    For each peer we then calculate the median altruism rating of all obtained
+    responses, which is the number of transactions divided by the trust rating
+    once normalised to its defaults (IE. trust - 0.5 / transactions * epsilon).
 
-    Psuedocode translation from the sigma notation in EigenTrust++:
+    For peers who have a median altruism rating below 1.00 minus our cutoff
+    point, say 5%, we say that a consensus has been acheived via set P that
+    the peer in question is malicious. This enables use to identify nodes
+    we should distrust without having to transact with them at all.
 
-        S(i,j) = max(j.trust / j.transactions, 0)
-        Where P is the set of pre-trusted peers:
-        C(i,j) = max(max(S(i,j) / max(sum(i,m), 0)), len(P))
+    Members of the extended set, referred to as EP, are being monitored for
+    retaining an altruism score of 1.00 (100% ratio of trust to transactions)
+    and can be graduated into set P once they have rendered reliable service
+    to at least either half of our set of pre-trusted peers or if none are
+    available, directly to ourselves.
 
-        SIMILARITY of feedbacks from peers u and v is defined as:
-        1 - sqrt(sum(pow((tr(u,w) - tr(v,w)),2)) / len(common_peers(u,v)))
-        where common_peers is all peers where peer.transactions > 1 in both instances.
-        tr = v.trust, u.trust / len(common_peers(u, v) 
-        
-        CREDIBILITY f(i,j) = sim(i,j) / sum(R(i), sim(i,m))
-        where R(i) is the set of peers where i.transactions > 1
-
+    See https://github.com/Psybernetics/Trust-Toolkit if you would like to
+    craft your own threat models against this class.
     """
     def __init__(self, router, *args, **kwargs):
-        self.router = router
-        dict.__init__(self, *args, **kwargs)
+        # Peers trusted by pre-trusted peers. These are peers we're observing
+        # for possible inclusion into the set of pre-trusted peers.
+        self.extent  = {}
         
-    def calculate_trust(self):
-        """
-        Weight peers by the ratings assigned to them via trusted peers.
-        Loosely based on EigenTrust++ with modifications due to not having
-        information about the amount of satisfactory downloads remote peers
-        have made.
-        """
-        def is_same_source(node):
-            if node[1] == self.router.node.ip and \
-                    node[2] == self.router.node.port:
-                return True
-            return False
+        # We require alpha satisfactory transactions and altruism(peer) = 1
+        # before we graduate a remote peer from the extended set into this set.
+        self.alpha   = 500
+        
+        # The minimum satisfactory transactions required with at least half of
+        # the members of this set, or if there are no members of this set, with
+        # ourselves before graduating remote peers into the extended set.
+        self.beta    = 250
+        
+        # Percentage of purportedly malicious downloads before a far peer can be
+        # pre-emptively dismissed for service. 0.5% by default. This means that
+        # we'll tolerate one unsatisfactory download out of every 200 per
+        # threat model F.
+        self.delta   = 0.005
+        
+        # Percentage of network peers we need to trust before we start
+        # letting them cut us off from peers they report to be malicious.
+        self.gamma = 0.04
+        
+        # Access to the routing table.
+        self.router  = router
+        
+        # Whether we're logging stats.
+        self.verbose = None
+        
+        dict.__init__(self, *args, **kwargs)
 
-        near_nodes = []
-        far_nodes  = []
-        nodes = self.values()
+    @property
+    def all(self):
+        copy = self.copy()
+        copy.update(self.extent)
+        return iter(copy.values())
+
+    def append(self, nodes):
+        if not isinstance(nodes, list):
+            nodes = [nodes]
 
         for node in nodes:
-            i = get(node, self.router.network) # get /v1/peers/<network_name>
-            if not i or not "data" in i:
+            if not hasattr(node, "long_id"):
                 continue
-            for j in i["data"]:
-                if is_same_source(j['node']):
-                    continue
-                near_node = Node(*j['node'])
-                existing  = self.router.get_existing_node(near_node)
-                if existing:
-                    near_node = existing
-                else:
-                    near_node = self.router.protocol.rpc_ping(near_node)
-                if not near_node:
-                    continue
-                if j['trust'] > 0: # peer of trusted peer has positive rating
-                    near_node.trust = node.trust / j['trust']
-                near_nodes.append(near_node)
+            self[node.long_id] = node
 
-                f = get(near_node, self.router.network)
-                if not f or not "data" in f:
-                    continue
-                for k in f['data']:
-                    if is_same_source(k['node']):
-                        continue
-                    far_node = Node(*k['node'])
-                    existing  = self.router.get_existing_node(far_node)
-                    if existing:
-                        far_node = existing
+    def get(self, node, about_node):
+        """
+        Ask a remote peer about a peer.
+        """
+        if not node:
+            return
+        
+        url = '/'.join([self.router.network, str(about_node.long_id)])
+        response = get(node, url)
+        
+        if not response: return {}
+        return response
+
+    def mean(self, ls):
+        if not isinstance(ls, (list, tuple)):
+            return
+        if numpy:
+            [ls.remove(_) for _ in ls if _ == None or _ is numpy.nan]
+        else:
+            [ls.remove(_) for _ in ls if _ == None]
+        if not ls: return 0.00
+        mean = sum(ls) / float(len(ls))
+        if self.verbose:
+            log("mean:   %s %f" % (ls, mean))
+        return mean
+
+    def med(self, ls):
+        if not numpy:
+            med = utils.median(ls)
+        else:
+            med =  numpy.median(numpy.array(ls))
+        if self.verbose:
+            log("med:    %s %f" % (ls, med))
+        return med
+
+    def median(self, l):
+        if numpy:
+            [l.remove(_) for _ in l if _ > 1 or _ < 0 \
+             or not isinstance(_, (int, float)) or _ is numpy.nan]
+        else:
+            [l.remove(_) for _ in l if _ > 1 or _ < 0 \
+             or not isinstance(_, (int, float))]
+        if not len(l): return 0.00
+        a = self.mean(l)
+        m = self.med(l)
+        me = self.mean([a, m])
+        if self.verbose:
+            log("me:     [%f, %f] %f" % (a, m, me))
+        median = min(max(me, 0), 1)
+        if self.verbose:
+            log("median: %s %f" % (l, median))
+        return median
+
+    def altruism(self, i):
+        # print i, 
+        if isinstance(i, Node):
+            i = {"trust": i.trust, "transactions": i.transactions}
+        divisor = (i['transactions'] * self.router.protocol.epsilon)
+        # print i, divisor
+        a = i['trust'] - self.router.node.trust
+        if not divisor and not a: return 1.00
+        if not divisor: return 0.00
+        # print a
+        return a / divisor
+
+    def calculate_trust(self):
+        # Any superficially simple behaviors here can be enhanced with
+        # decision trees.
+        all_responses = {} 
+
+        for peer in self.router:
+            responses             = []
+            ep_responses          = []
+            altruism              = []
+            local_altruism        = 0.00
+
+            # Multiplier is the amount of transactions more than ourselves we're
+            # checking a trusted peer is reporting they've satisfactorily had
+            # with an untrustworthy peer. For small networks we would find it
+            # interesting if a peer we depend on for consensus claims to have
+            # had more than twice as many satisfactory transactions than
+            # ourselves with a peer who we've only have had (100% - delta)
+            # satisfactory transactions with.
+            multiplier = 2.1 if len(self.router) < 40 else 1.1
+            
+            # Ask memebers of EP about the peer in question.
+            for extent_peer in self.extent.values():
+                if extent_peer == peer: continue
+                response = self.get(extent_peer, peer)
+                if responses:
+                    ep_responses.append(respond)
+
+            # Ask members of set P about the peer.
+            for trusted_peer in self.values():
+                if trusted_peer == peer: continue
+                response = self.get(trusted_peer, peer)
+                if response and response['transactions']:
+                    responses.append((trusted_peer, response))
+
+                    if not trusted_peer in all_responses:
+                        all_responses[trusted_peer] = [(peer, response)]
                     else:
-                        far_node = self.router.protocol.rpc_ping(far_node)
-                    if not far_node:
+                        all_responses[trusted_peer].append((peer, response))
+
+            for response in ep_responses:
+                if response and response['transactions']:
+                
+                    # Check for peers in EP reporting trust ratings greater or lower
+                    # than what they could be in relation to reported transaction counts.
+                    if (response['trust'] > 0.5 + (response['transactions'] * self.router.protocol.epsilon)) \
+                    or (response['trust'] < 0.5 - (response['transactions'] * self.router.protocol.epsilon)) \
+                    and response['trust'] and extent_peer.long_id in self.extent:
+                        extent_peer.trust = 0
+                        [setattr(_, "trust", 0) for _ in self.router if _ == extent_peer]
+                        log("Removing %s from EP for impossible trust ratings." % extent_peer)
+                        del self.extent[extent_peer.long_id]
                         continue
-                    if k['trust'] > 0: # k.trust = (t.trusted / j.trust) / k.trust
-                        far_node.trust = near_node.trust / k['trust']
-                    far_nodes.append(far_node)
-        near_nodes.extend(far_nodes)
-        for node in near_nodes:
-            self.router.add_contact(node)
+
+                    # Check for members of set EP reporting 100% unsatisfactory
+                    # transactions with the peer in question but not reporting the
+                    # peer as having trust == 0 when reporting altruism < 0.8.
+                    if self.altruism(response) <= 0.8 and response['trust'] > 0:
+                        if self.verbose:
+                            log((extent_peer, peer, response))
+                        if extent_peer.long_id in self:
+                            log("Removing %s from EP for deflating trust ratings." % \
+                                extent_peer)
+                            del self.extent[extent_peer.long_id]
+                            continue
+
+                    # Check for peers in EP reporting high transaction count and
+                    # high trust with peers we don't trust, indicating inflated scores.
+                    if not peer.trust and peer.transactions > 5 * multiplier \
+                        and response['transactions'] >= peer.transactions * multiplier \
+                        and float("%.1f" % self.altruism(response)) >= 1.0:
+                        # Check for at least two  members of set P to cross-reference with
+                        if len(responses) < 3: break
+                        c = 0
+                        for _, resp in responses:
+                            if len.altruism(resp) > 0.95: c += 1
+                        # Vet the next response from the enxt member of EP if
+                        # less than 90% of P find the current peer untrustworthy.
+                        if c < 0.9 * (len(responses) - 1):
+                            continue
+                        if self.verbose:
+                            log((peer, extent_peer, response))
+                        if extent_peer.long_id in self.extent:
+                            extent_peer.trust = 0
+                            [setattr(_, "trust", 0) for _ in self.router if _ == extent_peer]
+                            log("Removing %s from EP for inflating trust ratings." % extent_peer)
+                            del self.extent[extent_peer.long_id]
+
+
+            # Ask members of set P about everyone in our routing table.
+            for trusted_peer in self.values():
+                if trusted_peer == peer: continue
+                response = self.get(trusted_peer, peer)
+                if response and response['transactions']:
+                    responses.append((trusted_peer, response))
+                    
+                    if not trusted_peer in all_responses:
+                        all_responses[trusted_peer] = [(peer, response)]
+                    else:
+                        all_responses[trusted_peer].append((peer, response))
+
+            # Check for peers in P reporting trust ratings greater or lower
+            # than what they could be in relation to reported transaction counts.
+            for trusted_peer, response in responses:
+                if (response['trust'] > 0.5 + (response['transactions'] * self.router.protocol.epsilon)) \
+                or (response['trust'] < 0.5 - (response['transactions'] * self.router.protocol.epsilon)) \
+                and response['trust'] and trusted_peer.long_id in self:
+                    trusted_peer.trust = 0
+                    [setattr(_, "trust", 0) for _ in self.router if _ == trusted_peer]
+                    log("Removing %s from P for impossible trust ratings." % trusted_peer)
+                    del self[trusted_peer.long_id]
+                    del all_responses[trusted_peer]
+                    responses.remove((trusted_peer, response))
+                    continue
+
+                # Check for members of set P reporting 100% unsatisfactory
+                # transactions with the peer in question but not reporting the
+                # peer as having trust == 0 when reporting altruism < 0.5.
+                if response['trust'] > 0 and self.altruism(response) <= 0.5 \
+                    and response['transactions'] >= 5 * multiplier:
+                    if self.verbose:
+                        log((trusted_peer, peer, response))
+                        log(self.altruism(response))
+                    if trusted_peer.long_id in self:
+                        log("Removing %s from P for deflating trust ratings." % \
+                            trusted_peer)
+                        del self[trusted_peer.long_id]
+
+                # Check for peers in P reporting high transaction count and
+                # altruism > 1 - delta with peers we don't trust, which indicates
+                # trusted peers giving inflated trust ratings.
+                if not peer.trust and peer.transactions > 5 * multiplier \
+                    and response['transactions'] >= peer.transactions * multiplier \
+                    and float("%.1f" % self.altruism(response)) >= 1.0:
+                    # Check for at least two members of set P to cross-reference
+                    # with, ensuring at least a minimum of two pre-trusted peers.
+                    if len(responses) < 3: break
+                    c = 0
+                    for _, resp in responses:
+                        if self.altruism(resp) > 0.95: c += 1
+                    # Vet the next response from the next member of EP if
+                    # less than 90% of P find the current peer untrustworthy.
+                    if c < 0.9 * (len(responses) - 1):
+                        continue
+                    if self.verbose:
+                        log((peer, trusted_peer, response))
+                    if trusted_peer.long_id in self:
+                        trusted_peer.trust = 0
+                        [setattr(_, "trust", 0) for _ in self.router if _ == trusted_peer]
+                        log("Removing %s from P for inflating trust ratings." % \
+                            trusted_peer)
+                        del self[trusted_peer.long_id]
+                        del all_responses[trusted_peer]
+                        responses.remove((trusted_peer, response))
+                        continue
+            
+            if not peer.trust: continue
+
+            local_altruism = float("%.1f" % self.altruism(peer))
+            
+            if (local_altruism + self.delta) <= 1.0:
+                log("Local experience shows %s is malicious." % peer)
+                peer.trust = 0
+                continue
+
+            median_reported_altruism = 0.00
+            # Let our pre-trusted peers have some say about this if they
+            # A) Represent at least gamma percent of who we know in the network.
+            # B) Report having more experience than us with the peer in question.
+            if float(len(self)) / len(self.router) >= self.gamma:
+                
+                # Filter responses to those from peers who report having more
+                # experience than us with the peer in question if we're ascribing
+                # a 100% altruism rating to this peer.
+                filtered_responses = filter(lambda r:
+                                        r[1]['transactions'] >= peer.transactions and \
+                                        (float(r[1]['transactions'] - peer.transactions) / r[1]['transactions']) \
+                                        >= 0.01,
+                                        responses
+                                  )
+
+                # If we have good faith in the peer regardless of having had no
+                # transactions with them we'll require the votes to come from
+                # pre-trusted peers who've rendered excellent service to
+                # mitigate the effect of maximally deflationary pre-trusted peers.
+                if local_altruism >= 0.99:
+                    filtered_responses = filter(lambda r: r[0].transactions > self.alpha,
+                                                filtered_responses)
+
+
+                for response in filtered_responses:
+                    altruism.append(self.altruism(response[1]))
+
+                # continue if we've had good service from the peer in question
+                # and only received one vote, or if we've had perfect service
+                # from the peer so far. Listen to trusted peers if we have no
+                # prior transactions with the peer in question as this is really
+                # what the system's about: Pre-emptively identifying
+                # untrustworthy peers without having to transact with them.
+                if not len(altruism) or (local_altruism == 1.0 and len(altruism) == 1) or \
+                        (peer.transactions and local_altruism == 1.0):
+                    continue
+                
+                if numpy:
+                    [altruism.remove(_) for _ in altruism if _ == None or _ is numpy.nan]
+                else:
+                    [altruism.remove(_) for _ in altruism if _ == None]
+                
+                if self.verbose:
+                    log(filtered_responses)
+                    log("%s local_altruism %f" % (peer, local_altruism))
+
+                log("%s %s" % (peer, altruism))
+                
+                median_reported_altruism = self.median(altruism)
+                log("Median reported altruism: %f" % median_reported_altruism)
+                # Check if global altruism is below our accepted threshold (delta) and
+                # if it's reportedly less than our experience minus the accepted threshold
+                # gamma, which is made to be a function of routing table size. 
+                if (median_reported_altruism + self.delta) < 1.0:
+                    log("Consensus from our trusted peers is that %s is malicious." % peer)
+                    peer.trust = 0
+                    continue
+            
+            # Don't adjust a peers' trust rating to more closely reflect the consensus
+            # as this gives an innacurate reflection of their trust / transaction ratio
+            # from our perspective.
+
+            # Check who we can invite into the extended set.
+            if (len(self) and float("%.1f" % median_reported_altruism) != 1.0) \
+            or peer in self.all:
+                continue
+            
+            # If we haven't continued from this peer we'll see if they can be
+            # graduated into the extended set of pre-trusted peers using the
+            # responses obtained earlier.
+            #
+            # We do this based on the peer having median_reported_altruism == 1
+            # and either at least half of our trusted peers having at least
+            # the minimum required transaction count (beta) with this peer or
+            # if we're in need of some pre-trusted peers, this instance having
+            # the necessary transaction count.
+            votes = sum([1 for r in responses if r[1]['transactions'] >= self.beta])
+            if len(self) and not votes: continue
+            
+            if (not len(self) and peer.transactions >= self.beta) \
+            or (len(self) and votes >= (len(self) / 2)):
+                if len(self):
+                    log("votes: %s %i" % (peer, votes))
+                log("Graduating %s into EP." % peer)
+                self.extent[peer.long_id] = peer
+
+        for peer in self.extent.copy().values():
+            if float("%.1f" % self.altruism(peer)) != 1.0:
+                log("Removing %s from the extended set of pre-trusted peers." % peer)
+                del self.extent[peer.long_id]
+                continue
+            # Check if they're trustworthy enough to be a pre-trusted peer
+            if peer.transactions >= self.alpha:
+                log("Graduating %s from EP to P." % peer)
+                del self.extent[peer.long_id]
+                self[peer.long_id] = peer
+
+        for peer in self.copy().values():
+            if float("%.1f" % self.altruism(peer)) != 1.0:
+                log("Removing %s from the set of pre-trusted peers." % peer)
+                del self[peer.long_id]
+        
+        # Check the percentage of high transaction/altruism peers being
+        # reported as untrustworthy by this peer.
+        for trusted_peer, responses in all_responses.items():
+            if not trusted_peer.long_id in self: continue
+            x = 0
+            for peer, response in responses:
+                if not trusted_peer.long_id in self: break
+                if response['transactions'] < peer.transactions \
+                or peer.transactions < 20: continue
+                if self.altruism(peer) > 0.95 and self.altruism(response) <= 0:
+                    x += 1
+                for cmp_peer, cmp_responses in all_responses.items():
+                    if not cmp_peer in self.values() or cmp_peer == trusted_peer:
+                        continue
+                    for _peer, cmp_response in cmp_responses:
+                        if _peer == peer and self.altruism(cmp_response) > 0.95:
+                            x += 1
+            if self.verbose:
+                log("%s x: %i" % (trusted_peer, x))
+            if x > len(self.router) * 0.7:
+                log("Removing %s from P for deflating trust ratings." % trusted_peer)
+                del self[trusted_peer.long_id]
+
+        log("P:  %s" % str(self.values()))
+        log("EP: %s" % str(self.extent.values()))
+
+        for _ in sort_nodes_by_trust([p for p in self.router]):
+            log(_)
+
+        del all_responses
 
     def __repr__(self):
-        return "<TBucket of %i peers>" % len(self)
+        return "<TBucket with EP:%i P:%i>" % (len(self.extent), len(self))
 
 class Node(object):
     def __init__(self, id, ip=None, port=None, pubkey=None, router=None):
@@ -1386,7 +1749,7 @@ class Node(object):
         self.id        = id
         self.ip        = ip
         self.port      = port
-        self.trust     = 0.00
+        self.trust     = 0.50
         self.pubkey    = pubkey
         self.router    = router
         self.last_seen = time.time()
@@ -1420,8 +1783,8 @@ class Node(object):
         return iter([self.id, self.ip, self.port])
 
     def __repr__(self):
-        return "<Node %s:%s %.2fT>" % \
-            (self.ip, str(self.port), self.trust)
+        return "<Node %s:%s %.4fT/%i>" % \
+            (self.ip, str(self.port), self.trust, self.transactions)
 
     def __eq__(self, other):
         if other is None: return False
@@ -1628,7 +1991,7 @@ class Storage(object):
             return False
         c_hash, node = value
         node = node.threeple
-        t = time.time()
+        t    = time.time()
         if key in self.data:
             if c_hash in self.data[key]:
                 # Just update the timestamp if a node is republishing their keys
@@ -1642,7 +2005,7 @@ class Storage(object):
                 self.data[key][c_hash].append((t, node))
             else:
                 self.data[key][c_hash] = [(t, node)]
-        else:
+        elif key in self.data and len(self.data[key]) < self.revisions:
             self.data[key] = {c_hash: [(t, node)]}
         self.lock.release()
 
@@ -2034,7 +2397,7 @@ class ValueSpider(Spider):
             nodeple = self.protocol.get_address(Node(*node_data[1]))
             for known_node in self.protocol.router:
                if self.protocol.get_address(known_node) == nodeple \
-                    and known_node.trust < 0:
+                    and max(known_node.trust,  0) == 0:
                     revisions.remove(node_data)
 
         # Reduce the responses to one entry per node and their most recent timestamp.
@@ -2150,10 +2513,11 @@ def transmit(routes, addr, data):
         log(e.message, "error")
         return
 
-def get(addr, path):
+def get(addr, path, field="data", all=True):
     """
     Helper function for doing things like leafing through
     /v1/peers/<network> on remote peers.
+    
     """
     if isinstance(addr, Node):
         addr = (addr.ip, addr.port)
@@ -2162,15 +2526,28 @@ def get(addr, path):
         addr  = "http://%s:%i/v1/peers/" % addr
         addr += path
 
-    try:
-        r = requests.get(addr, timeout=app.config['HTTP_TIMEOUT'])
-        if r.status_code != 200:
-            log("Error contacting %s: %s" % (addr, r.text))
-            return
-        return r.json()
-    except Exception, e:
-        log(e.message, "error")
-        return
+    def next(addr):
+        result = []
+        
+        try:
+            r = requests.get(addr, timeout=app.config['HTTP_TIMEOUT'])
+            if r.status_code != 200:
+                log("Error contacting %s: %s" % (addr, r.text))
+                return result
+        except Exception, e:
+            log(e.message, "error")
+            return []
+
+        json_data = r.json()
+        if field in json_data:
+            result.append(json_data[field])
+
+        if all and "self" in json_data and "next" in json_data["self"]:
+           result.append(next(json_data["self"]["next"]))
+        
+        return result
+    
+    return next(addr)
 
 def receive(data):
     """
@@ -2198,7 +2575,7 @@ def sort_nodes_by_trust(nodes):
     if nodes == []: 
         return []
     else:
-        pivot = nodes[0]
-        lesser = sort_nodes_by_trust([x for x in nodes[1:] if x.trust < pivot.trust])
+        pivot   = nodes[0]
+        lesser  = sort_nodes_by_trust([x for x in nodes[1:] if x.trust < pivot.trust])
         greater = sort_nodes_by_trust([x for x in nodes[1:] if x.trust >= pivot.trust])
         return greater + [pivot] + lesser

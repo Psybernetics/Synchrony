@@ -15,3 +15,6 @@ HTTP_TIMEOUT = 1.00
 
 # Allow people to register accounts on the login screen
 PERMIT_NEW_ACCOUNTS = True
+
+# Zero peer trust ratings instead of decrementing them
+NO_PRISONERS = False

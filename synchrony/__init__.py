@@ -122,7 +122,6 @@ def init():
     api.add_resource(revisions.RevisionDownloadsResource,   "/revisions/downloads/<string:network>")
 #    api.add_resource(revisions.RevisionFeedbackResource,    "/revisions/downloads/<string:network>/<path:url>")
 
-
     api.add_resource(users.UserCollection,                  "/users")
     api.add_resource(users.UserResource,                    "/users/<string:username>")
     api.add_resource(users.UserSessionsResource,            "/users/<string:username>/sessions")
