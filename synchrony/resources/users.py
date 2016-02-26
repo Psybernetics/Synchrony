@@ -486,24 +486,24 @@ class UserAvatarResource(restful.Resource):
         return user.avatar.as_response
 
     def post(self, username):
-        user = auth(session, required=True)
+        user   = auth(session, required=True)
         parser = reqparse.RequestParser()
         parser.add_argument("avatar", type=str)
-        args = parser.parse_args()
+        args   = parser.parse_args()
         
         if not 'avatar' in request.files:
-            return {}
+            return {}, 400
         
-        f = request.files['avatar']
+        upload = request.files['avatar']
 
-        revision          = Revision()
-        revision.mimetype = f.mimetype
-        revision.bcontent = f.stream
-        user.avatar       = revision
+        revision = Revision()
+        revision.add(upload)
+        
+        user.avatar = revision
         user.revisions.append(revision)
 
         db.session.add(user)
         db.session.add(revision)
         db.session.commit()
         
-        return true
+        return True

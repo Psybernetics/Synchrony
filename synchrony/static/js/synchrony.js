@@ -859,6 +859,30 @@ function userView(username, params){
                     }
                 }
             },
+            search_revisions: function(event){
+                if (event.original.keyCode == 13) {
+                    event.original.preventDefault();
+                }
+                var search_query = this.get("search_query");
+                console.log(search_query);
+                if (search_query && search_query.length > 1){
+                    $.ajax({
+                        type: "GET",
+                        url: "/v1/revisions/search/" + search_query,
+                        success: function(response){
+                            console.log(response);
+                            if (response.data){
+                                App.Views.userpage.set({"revisions": response.data});
+                            }
+                        }
+                    });
+                } else {
+                    populate_table(
+                        App.Views.userpage,
+                        "revisions", "/v1/users/" + App.Config.user.username + "/revisions"
+                    );
+                }
+            },
             toggle_rename: function(event, type, index){
                 if (type == "friend"){
                     if ($("#friend-rename-" + index).css("display") == "none") {

@@ -90,7 +90,7 @@ class RevisionResource(restful.Resource):
 
     def delete(self, hash):
         """
-        Delete a revision object by hash.
+        Delete a revision object by content hash.
         """
         user = auth(session, required=True)
 
@@ -147,7 +147,7 @@ class RevisionDownloadsResource(restful.Resource):
         Provides an overview of revisions fetched via overlay network.
 
         Would be part of RevisionFeedbackResource except this has no need
-        for a "hash" param.
+        for a "hash" parameter.
         """
         user = auth(session, required=True)
 
@@ -203,4 +203,15 @@ class RevisionDownloadsResource(restful.Resource):
 
         return {}, 200
 
+class RevisionSearchResource(restful.Resource):
+    def get(self, query):
+        user   = auth(session, required=True)
+        parser = restful.reqparse.RequestParser()
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
+        args   = parser.parse_args()
 
+        revisions = [_ for _ in Revision.query.all() if query in _.url]
+        pages     = Pagination(revisions, args.page, args.per_page)
+        response  = make_response(request.url, pages)
+        return response

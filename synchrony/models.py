@@ -131,10 +131,11 @@ class Revision(db.Model):
 
     @property
     def url(self):
-        return "%s%s" % (
+        url = "%s%s" % (
             self.resource.domain.name if self.resource else "",
             self.resource.path if self.resource else ""
         )
+        return url or self.hash
 
     @property
     def url_hash(self):
@@ -154,8 +155,12 @@ class Revision(db.Model):
             response.headers['Overlay-Network'] = self.network.name
         return response
 
-    def add(self, response):
-        self.get_mimetype(response)
+    def add(self, container):
+        if hasattr(container, "content"):
+            self.get_mimetype(container)
+        elif hasattr(container, "stream"):
+            self.bcontent = container.stream
+            self.mimetype = container.mimetype
         self.hash = hashlib.sha1(self.read()).hexdigest()
         self.size = self.get_size()
 
