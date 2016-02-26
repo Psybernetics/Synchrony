@@ -116,14 +116,14 @@ App.Router = Backbone.Router.extend({
     },
 });
 
-/* Base class for page synchronisation
+/* This is the class for page synchronisation.
  * 
  * var synch = new Synchrony($('.iframe'));
  * synch.save();
  * Consider a map of {channel: Synchrony} pairs.
  *
  * The current strategy revolves around subscribing to a channel named after
- * the active url, a user id to follow or a shared channel name.
+ * the active url, a user addr or shared channel name.
  *
  * DOM nodes are matched up to two parent nodes and changes are then reintegrated
  * where they're found to match. The server stores an array of diffs and an array
@@ -137,21 +137,22 @@ App.Router = Backbone.Router.extend({
  * The protocol appears to want two major message types: "document" and "fragment"
  * where "document" is the entire tree and "fragment" is a subtree.
  *
- * This should be as simple as doing dom.patch(subtree)
+ * dom.patch(subtree)
 */
 function Synchrony (el) {
 
     this.el       = el;
-    this.socket   = undefined;
-    this.channel  = undefined;
-    this.endpoint = undefined;
+    
+    this.socket   = null;
+    this.channel  = null;
+    this.endpoint = null;
+
     this.connect  = function(endpoint, channel) {
         
         if (!endpoint) { this.endpoint = "/documents"; }
         if (!channel)  { this.channel  = "main"; }
 
-        this.socket  = io.connect(this.endpoint, {resource: "stream"});
-        
+        this.socket = io.connect(this.endpoint, {resource: "stream"});
         this.socket.emit('join', this.channel);
         
         this.socket.on("fragment", function(data){
@@ -208,8 +209,10 @@ function Synchrony (el) {
             }
         });
 
-    //    Only transmit when textnode characters have been modified
         this.el.contents().find('body').on('DOMCharacterDataModified', function(event){
+
+            if (!this.socket) { this.reconnect(); }
+
     //        Traverse to up to two parent elements and transmit the outerHTML.
             if (event.target.parentElement) {
                 if (event.target.parentElement.parentElement) {
@@ -222,7 +225,7 @@ function Synchrony (el) {
                 edit_data = event.target.outerHTML;
             }
             
-            socket.emit('edit', edit_data);
+            this.socket.emit('edit', edit_data);
 
             console.log(event);
             App.e = event;
@@ -230,7 +233,11 @@ function Synchrony (el) {
     }
 
     // Re-make the socket if asked
-    this.reconnect = function () {}
+    this.reconnect = function () {
+        if (this.endpoint && this.channel) {
+            this.connect(this.endpoint, this.channel);
+        }
+    }
 
     // Provide our last revision ID and get the latest copy
     this.poll             = function () {}

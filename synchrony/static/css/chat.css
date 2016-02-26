@@ -66,9 +66,10 @@
 	bottom: -1px;
 }
 .chat-input input {
-	background: #44525F;
+	background: #383838;
 /*	background: #567E66; */
 	color: #DFE5D3;
+    padding: 5px 0px 5px 5px;
 	border: 0px none;
 	width: 100%;
 	outline: 0px solid transparent;
