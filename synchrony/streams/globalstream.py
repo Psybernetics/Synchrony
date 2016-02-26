@@ -22,7 +22,7 @@ class GlobalStream(BaseNamespace, RoomsMixin, BroadcastMixin):
         self.user = None
 #        Make the channels a set
         self.channel = None
-        log("init global activity stream")
+        log("Activity stream init")
 
     def recv_connect(self):
         user = auth(self.request)
