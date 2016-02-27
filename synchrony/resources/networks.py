@@ -33,7 +33,7 @@ class NetworkCollection(restful.Resource):
         return response
 
         # If you're here because you're wondering what the "private" attribute
-        # in the responses means: It's for networks composed of nodes who all
+        # in the responses mean: It's for networks composed of nodes who all
         # have the same private/public keypair and will only accept new peers
         # who can decrypt for that key. This is useful for guaranteeing that
         # nodes using --autoreplicate only replicate for your instances.

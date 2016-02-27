@@ -673,7 +673,7 @@ hr {
 }
 
 .main_background {
-    background: url('/static/img/diagmonds.png');
+    background: url('/static/img/use_your_illusion.png');
     background-repeat: repeat;
     color: #222;
 }
@@ -687,10 +687,10 @@ hr {
 	z-index: 40;
 	background-color: rgba(255, 255, 255, 0.9);
 	font-family: 'Roboto';
-	font-size: 14px;
+	font-size: 14px
 }
 .main_inner {
-    color: #D7D8D5;
+    color: #CDD1C3;
     margin: 0 auto;
     width: 50%;
     margin-top: 3%;
