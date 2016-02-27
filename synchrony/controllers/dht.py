@@ -460,16 +460,16 @@ class RoutingTable(object):
         with the capacity to opt for most-recent so that resources may age out
         of the DHT. Peers can be asked to list their public revisions for a URL.
         """        
-        if isinstance(key, Revision):  # This permits rev = app.routes[content_hash]
+        if isinstance(key, Revision): # This permits rev = app.routes[content_hash]
             if key.url:
                 key = key.url
             else:
                 key = key.hash
 
-        # url here is passed to ValueSpider so it can be a param to
+        # url here is passed to ValueSpider so it can be a parameter to
         # SynchronyProtocol.fetch_revision, which can then set
-        # SynchronyProtocol.downloads correctly. The reason this is done is 
-        # because tracking resource requests for <link>, <script> and <img> elements via
+        # SynchronyProtocol.downloads correctly. This is done because tracking
+        # resource requests for <link>, <script> and <img> elements via
         # headers when that page is in an iframe isn't supposed to be possible.
         # It's a protection for visiting security-sensitive sites, which is a
         # good design. Instead we memorise all DHT downloads and let admins do
@@ -1891,7 +1891,7 @@ class Storage(object):
         self.data      = {}
         self.lock      = RLock()
         self.sites     = 1000000000
-        self.revisions = 1000000000
+        self.revisions = 10000
 
     def cull(self):
         self.lock.acquire()
@@ -2005,7 +2005,8 @@ class Storage(object):
                 self.data[key][c_hash].append((t, node))
             else:
                 self.data[key][c_hash] = [(t, node)]
-        elif key in self.data and len(self.data[key]) < self.revisions:
+        elif (key not in self.data) or key in self.data and len(self.data[key])\
+            < self.revisions:
             self.data[key] = {c_hash: [(t, node)]}
         self.lock.release()
 
