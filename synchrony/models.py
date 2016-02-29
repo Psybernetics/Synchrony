@@ -91,6 +91,7 @@ class Revision(db.Model):
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
     content_id    = db.Column(db.Integer(), db.ForeignKey('content.id'))
     network_id    = db.Column(db.Integer(), db.ForeignKey("networks.id")) 
+    friend_id     = db.Column(db.Integer(), db.ForeignKey("friends.id"))
     created       = db.Column(db.DateTime(), default=db.func.now())
     hash          = db.Column(db.String())
     public        = db.Column(db.Boolean(), default=False) # Publicly available
@@ -464,6 +465,7 @@ class Friend(db.Model):
     id            = db.Column(db.Integer(), primary_key=True)
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
     peer_id       = db.Column(db.Integer(), db.ForeignKey('peers.id'))
+    avatar        = db.relationship("Revision", uselist=False)
     name          = db.Column(db.String())
     received      = db.Column(db.Boolean(), default=None) # Can we set state to "Added"?
     state         = db.Column(db.Integer(), default=0)
