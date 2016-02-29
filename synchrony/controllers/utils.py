@@ -263,6 +263,7 @@ def generate_node_id(seed=None):
     """
     Guarantee a 160-bit binary string based on "ip:port:pubkey"
     """
+    
     id = hashlib.sha1(seed).digest()
     if len(str(bin(long(id.encode('hex'), 16))[2:])) != 160:
         return generate_node_id(seed + 'A')
@@ -279,6 +280,7 @@ def forward_port(port):
     Return a boolean denoting whether the port
     was fowarded and the upnp object used to do it.
     """
+    
     upnp = miniupnpc.UPnP()
     upnp.discoverdelay = 200
     upnp.discover()
@@ -303,6 +305,7 @@ def validate_signature(message):
     The reason for signing the time rather than the entire message is due to
     how the receive side recombines the attributes in a different order.
     """
+    
     assert isinstance(message, dict)
     if not 'signature' in message or not 'pubkey' in message or not 'time' in message:
         return False
@@ -325,10 +328,11 @@ def update_url(url, params):
 
 def make_response(url, query, jsonify=True):
     """
-     Take a paginated SQLAlchemy query and return
-     a response that's more easily reasoned about
-     by other programs.
+    Take a paginated SQLAlchemy query and return
+    a response that's more easily reasoned about
+    by other programs.
     """
+    
     response = {}
     if jsonify:
         response['data'] = [i.jsonify() for i in query.items]   
@@ -344,60 +348,8 @@ def make_response(url, query, jsonify=True):
 def median(ls):
     ls = sorted(ls)
     if len(ls) < 1:
-            return None
+        return None
     if len(ls) %2 == 1:
-            return ls[((len(ls)+1)/2)-1]
+        return ls[((len(ls)+1)/2)-1]
     else:
-            return float(sum(ls[(len(ls)/2)-1:(len(ls)/2)+1]))/2.0
-
-def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
-    """
-    Send JSON data to stream users either specifically or by access control.
-    """
-    for connection in httpd.sockets.values():
-        if connection.connected and connection.socket_type == socket_type:
-            for c in connection.active_ns.values():
-                if not hasattr(c, "socket_type") or c.socket_type != socket_type:
-                    continue
-                if not hasattr(c, "user"):
-                    continue
-                if priv and not c.user.can(priv):
-                    continue
-                if user and c.user.uid != user.uid:
-                    continue
-                c.emit(message_type, message)
-
-def check_availability(httpd, socket_type, user):
-    """
-    Return True if the specified user has an active connection to the specified
-    socket type, False otherwise.
-    """
-    for connection in httpd.sockets.values():
-        if connection.connected and connection.socket_type == socket_type:
-            for c in connection.active_ns.values():
-                if not hasattr(c, "socket_type") or c.socket_type != socket_type:
-                    continue
-                if not hasattr(c, "user"):
-                    continue
-                if c.user.uid != user.uid:
-                    continue
-                return True
-    return False
-
-def change_channel(httpd, socket_type, user, channel):
-    """
-    Force a stream user to join an in-stream channel.
-    Useful for enabling people to reply to RPC_CHAT messages.
-    """
-    for connection in httpd.sockets.values():
-        if connection.connected and connection.socket_type == socket_type:
-            for c in connection.active_ns.values():
-                if not hasattr(c, "socket_type") or c.socket_type != socket_type:
-                    continue
-                if not hasattr(c, "user"):
-                    continue
-                if user and c.user.uid != user.uid:
-                    continue
-                print "Joining %s to %s." % (user.username, channel) 
-                c.on_join(channel)
-
+        return float(sum(ls[(len(ls)/2)-1:(len(ls)/2)+1]))/2.0

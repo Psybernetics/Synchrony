@@ -9,10 +9,10 @@
  the process messages go through before being received by
  their counterpart methods in the protocol class.
 
- The basic gist of this namespace is that it and synchrony/resources/peers.py
- implement an overlay network heavily based Kademlia. If you're coming to this
- without having read the original paper take a couple of days to really grok
- it, hopefully it won't take that long because you have this software.
+ This namespace and synchrony/resources/peers.py implement an overlay network
+ heavily based on Kademlia. If you're coming to this without having read the
+ original paper you may want to take a couple of days to really grok it,
+ hopefully it won't take that long because you have this software.
 
  These modules make it as easy as possible to participate in multiple networks.
  Telling peers you have data and obtaining data from peers looks like this:
@@ -66,19 +66,6 @@ TODO/NOTES:
  /v1/peers/revisions/<string:hash> (direct download of public resources incl. binaries)
  use Content-Disposition: inline; filename="" to give a file its known name.
 
- Beware the initial public offering of a resource:
- < User visits site.com and performs APPEND_VALUE for site.com/path = (node_id1,hash_1)
- ! The content at site.com changes.
- < User 2 visits site.com and performs APPEND_VALUE for site.com/path = (node_id2,hash_2)
- < User 3 visits site.com and performs APPEND_VALUE for site.com/path = (node_id3,hash_2)
- ! site.com goes down.
- > Perform FIND_VALUE for site.com/path
- ! User hits the "errant content" button: Privately decrement the altrusim scores of the
-   nodes involved.
- > Otherwise, after ten minutes broadcast you have hash_2 content for site.com/path
- > Privately increment the altruism scores accordingly for nodes that routed you
-   and slightly more for the nodes that supplied you with content that retained integrity.
-
  Permit retrieval of files to start at an offset given (fsize / online_sufferers)
  > user visits example.com/picture.png and transmits the hash_1 made of the
    content
@@ -88,18 +75,23 @@ TODO/NOTES:
    users' pubkey can pick up the broadcast, enabling user to multicast her own
    files to friends.
 
+ Getting online video with a little help from our peers:
+ > perform FIND for the content hash of a hypermedia object such as video or
+   geometry.
+ > initiate a request to the highest ranking peer of the resulting set R to
+   obtain the size of the object.
+ > divide file size between the cardinality of R.
+ > initiate requests to the remaining members of R indicating you would like
+   the specified number of bytes beginning at the specified byte.
+
  Transmit and remember hash(content + pubkey + prev_hash) for a raft-like log:
  > user performs an edit on "http://google.com/"
  > broadcasts they have content for hash(content + pubkey + prev_hash) based on
    "http://google.com/"
- > nodes remember this for about a week and possibly relay it
+ > nodes remember this and relay it
  < "friend made public edit based on http://google.com/"
 
- Getting the word out about revisions to a resource will be more about
- telling peers you have a different hash of a resource, or telling known
- peers directly. Problems may arise if popular destinations have many
- competing revisions. Sum the number of hashes and generally go with the
- most-replicated.
+ TODO: Weighting of most recent-to-most-replicated.
 
  Can also present the user with a list of "addr | hash | count" of
  revisions we become privy to when querying for a URL, allowing the user
@@ -155,6 +147,7 @@ from synchrony.controllers import utils
 from binascii import hexlify, unhexlify
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
+from synchrony.streams.utils import change_channel, broadcast
 from synchrony.models import Revision, User, Friend, Network, Peer
 
 try:
@@ -198,11 +191,8 @@ class RoutingTable(object):
         ksize is the bucket size, alpha is the amount of parallel requests to deal in,
         id is the previously used node ID for this instance as a peer.
 
-        alpha is the amount of concurrent requests at a time to use when spidering
-        for values.
-
         id may come from the database if we've previously been in the network before.
-        nodes is a list of (address,port) tuples to bootstrap into the network with.
+        nodes is a list of (address, port) tuples to bootstrap into the network with.
         """
         if not network:
             network = "Test Network"
@@ -214,7 +204,7 @@ class RoutingTable(object):
                              # we only accept peers who can also sign
                              # data using the same public key as ours.
 
-        seed      = "%s:%i:%s" % (addr,port,pubkey)
+        seed      = "%s:%i:%s" % (addr, port, pubkey)
         self.node = Node(id or utils.generate_node_id(seed),
                          addr,
                          port,
@@ -229,19 +219,15 @@ class RoutingTable(object):
         self.protocol = SynchronyProtocol(self, Storage(), ksize)
 
         # This makes it easy for test suites select which method to use.
-        # Note that if you use a different storage method then it's up to you
-        # to set self.protocol up with any corresponding storage class.
+        # Note that if you are using a different store method then it's up to
+        # you to set self.protocol up with any corresponding storage class(es).
         self.storage_method = self.protocol.rpc_append
 
-        # Introduce previously known nodes 
+        # Introduce previously known nodes.
         nodes = self.load(nodes)
 
         # Contact these peers and discover their peers
         self.bootstrap(nodes)
-
-        # Place those who responded from the initial set in the set of trusted
-        # peers
-        self.trust_peers(nodes)
 
         if self.httpd:
             self.httpd.loop.run_callback(self.loop)
@@ -439,19 +425,6 @@ class RoutingTable(object):
                 break
         return map(operator.itemgetter(1), heapq.nsmallest(k, nodes))
 
-    def trust_peers(self, nodes):
-        """
-        Take a list of (addr, port) tuples from the list of bootstrap nodes
-        and add any corresponding Node instance to self.TBucket.
-
-        Given that we don't have node IDs for this list we have to iterate
-        through all known peers.
-        """
-        for nodeple in nodes:
-            for node in self:
-                if node.ip == nodeple[0] and node.port == nodeple[1]:
-                    self.tbucket[node.id] = node
-
     def __getitem__(self, key):
         """
         Get a revision if the network has it.
@@ -467,20 +440,20 @@ class RoutingTable(object):
                 key = key.hash
 
         # url here is passed to ValueSpider so it can be a parameter to
-        # SynchronyProtocol.fetch_revision, which can then set
-        # SynchronyProtocol.downloads correctly. This is done because tracking
-        # resource requests for <link>, <script> and <img> elements via
-        # headers when that page is in an iframe isn't supposed to be possible.
-        # It's a protection for visiting security-sensitive sites, which is a
-        # good design. Instead we memorise all DHT downloads and let admins do
-        # the trust rating feedback.
+        # SynchronyProtocol.fetch_revision, which then sets
+        # SynchronyProtocol.downloads correctly.
+        # This is because tracking resource requests for <link>, <script> and
+        # <img> elements via headers when the page is in an iframe isn't
+        # supposed to be possible.
+        # Instead, we memorise all DHT downloads and let admins provide feedback.
         url  = key
         node = Node(digest(key))
         nearest = self.find_neighbours(node)
         if len(nearest) == 0:
             log("There are no known neighbours to get %s" % key)
             return None
-        # Unfortunately long list of arguments but it helps us map {url: peer_who_served}
+        
+        # Long list of arguments but it helps us map {url: peer_who_served}
         spider = ValueSpider(
                 self.protocol,
                 node,
@@ -489,8 +462,9 @@ class RoutingTable(object):
                 self.alpha,
                 url
                 )
+       
         # If spider.find() returns a revision object then it's only this method
-        # that can associate it with the correct Resource and Domain.
+        # you're reading that can associate it with the correct Resource and Domain.
         return spider.find()
 
     def __setitem__(self, url, content_hash):
@@ -521,7 +495,7 @@ class RoutingTable(object):
 
         def store(nodes):
             """
-            A closure for a dictionary of responses from ALPHA nodes containing
+            A closure for a dictionary of responses from alpha nodes containing
             peer information for neighbours close to a target key.
 
             These responses don't contain their own 'peers' field at the moment.
@@ -569,22 +543,22 @@ class SynchronyProtocol(object):
         Methods beginning with rpc_ define our outward calls and their
         handle_ counterparts define how we deal with their receipt.
         Also requires a storage object.
-        Check RoutingTable.__init__ out to see how that looks.
+        Check RoutingTable.__init__ to see how that works.
         
-        As well as node ID generation we also use cryptographic
-        keys here to encrypt some RPCs like RPC_CHAT and RPC_EDIT.
-        There is a possible Man-in-the-Middle attack here whereby a 
-        malicious eavesdropping party intercepts the introduction
-        of two peers to one another and replaces their keys with a new
-        pair of public keys, deciphering communications in-transit and
-        re-encrypting with the peers' real public keys on rebroadcast.
+        As well as node ID generation we also use cryptographic keys here to
+        encrypt methods such as RPC_CHAT and RPC_EDIT.
+        There is a possible Man-in-the-Middle attack whereby a  malicious
+        eavesdropping party intercepts the introduction of two peers to one
+        another and replaces their keys with a new pair of public keys,
+        deciphering communications in-transit and re-encrypting with the peers'
+         real public keys on rebroadcast.
 
         This is best evaded by sharing your public key separately ahead of time.
         
         """
         self.ksize         = ksize
         self.router        = router
-        self.epsilon       = 0.0001 # Don't use a different trust increment publicly.
+        self.epsilon       = 0.0001 # DON'T use a different trust increment publicly.
         self.storage       = storage
         self.source_node   = router.node
         self.downloads     = ForgetfulStorage()         # content_hash -> (n.ip, n.port)
@@ -705,13 +679,13 @@ class SynchronyProtocol(object):
 
     def rpc_edit(self, node, data):
         """
-        Implements inter-instance EDIT.
+        Inter-instance EDIT.
 
         Message data should be of the form
         { 
-           'stream': 'stream_id',
-           'from': ['uid', 'username'],
-           'edit': '<span>Some DOM nodes to match and replace</span>'
+           'channel': 'network/node_id/user_id',
+           'from':    ['uid', 'username'],
+           'edit':    '<span>DOM nodes to match and replace</span>'
         }   
         """
         data = base64.b64encode(json.dumps(data))
@@ -897,22 +871,25 @@ class SynchronyProtocol(object):
                 # Enable the recipient to reply by forcing them into the channel
                 log("Changing chat channel of %s to %s." % \
                     (user.username, friend.address), "debug")
-                utils.change_channel(self.router.httpd,
-                                     "chat",
-                                     user,
-                                     friend.address)
-                utils.broadcast(self.router.httpd,
-                                "chat",
-                                "rpc_chat_init",
-                                data['from'],
-                                user=user)
+
+                # change_channel and broadcast are from streams.utils.
+                change_channel(self.router.httpd,
+                               "chat",
+                               user,
+                               friend.address)
+                broadcast(self.router.httpd,
+                          "chat",
+                          "rpc_chat_init",
+                          data['from'],
+                          user=user)
             
             if data['type'] == "message":
-                utils.broadcast(self.router.httpd,
-                                "chat",
-                                "rpc_chat",
-                                data,
-                                user=user)
+                broadcast(self.router.httpd,
+                          "chat",
+                          "rpc_chat",
+                          data,
+                          user=user)
+
         return {"state": "delivered"}
 
     def handle_edit(self, data):
@@ -957,7 +934,7 @@ class SynchronyProtocol(object):
         """
         Handle messages of the form {'rpc_append': {'url_hash': 'content_hash'}}
         We do this by inserting the data into a structure that looks like
-        { 'url_hash': {'content_hash': [(ts,nodeple)]}}
+        { 'url_hash': {'content_hash': [(timestamp, nodeple)]}}
         """
         node = self.read_envelope(data)
         if max(node.trust, 0) == 0:
@@ -1076,7 +1053,6 @@ class SynchronyProtocol(object):
                 log("Decremented trust rating for %s." % node, "warning")
             else:
                 # Adjust mimetype, set the network and increment bytes_rcvd
-                # TODO: Make the trust increment proportionate to Revision.size
                 log("Incrementing trust rating for %s." % node)
                 node.trust += self.epsilon
                 if 'content-type' in response.headers:
@@ -1095,7 +1071,7 @@ class SynchronyProtocol(object):
                 app.bytes_received += revision.size
 
                 # Remember this download in case we have feedback on it
-                # Ideal data structure: {url: {hash: peerple}}
+                # Ideal data structure: {url: {hash: nodeple}}
                 host = urlparse.urlparse(response.url)
                 if ':' in host.netloc:
                     addr    = host.netloc.split(':')
@@ -1179,15 +1155,15 @@ class SynchronyProtocol(object):
         Implements the feedback mechanism for our trust metric.
         
         "addr" is an (ip, port) tuple to match to a known peer.
-        "severity" is a floating point severity level indicating how bad the
-        content in question was perceived to be.
 
-        Notes on how this all works in sum as a distributed system are here:
+        Loosely based on EigenTrust++.
+
+        A dedicated testing framework can be cloned from here:
+        https://github.com/Psybernetics/Trust-Toolkit
+
         http://nlp.stanford.edu/pubs/eigentrust.pdf
         http://www.cc.gatech.edu/~lingliu/papers/2012/XinxinFan-EigenTrust++.pdf
         http://dimacs.rutgers.edu/Workshops/InformationSecurity/slides/gamesandreputation.pdf
-
-        The second PDF is recommended.
         """
         for node in self.router:
             if node.ip == addr[0] and node.port == addr[1]:
@@ -1516,7 +1492,7 @@ class TBucket(dict):
                         c = 0
                         for _, resp in responses:
                             if len.altruism(resp) > 0.95: c += 1
-                        # Vet the next response from the enxt member of EP if
+                        # Vet the next response from the next member of EP if
                         # less than 90% of P find the current peer untrustworthy.
                         if c < 0.9 * (len(responses) - 1):
                             continue
@@ -2248,10 +2224,10 @@ class Spider(object):
         Get either a value or a list of nodes.
 
         The process:
-          1. Calls find_* to current ALPHA nearest not already queried nodes,
+          1. Calls find_* to current alpha nearest not already queried nodes,
              adding results to current nearest list of k nodes.
           2. Current nearest list needs to keep track of who has been queried already.
-             Sort by nearest, keep KSIZE.
+             Sort by nearest, keep ksize.
           3. If list is same as last time, next call should be to everyone not
              yet queried.
           4. Repeat, unless nearest list has all been queried, then you're done.
