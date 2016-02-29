@@ -56,13 +56,6 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
         App.Config.user = data;
     });
 
-//    var m = new moment();
-//    if (m.hour() >= 20 || m.hour() <= 6){
-        setTimeout(function(){
-            $('.main').addClass("after-hours");
-        }, 50);
-//    }
-
 })();
 
 // Tell Ractive.load where our mustache templates live.
@@ -1052,26 +1045,64 @@ Ractive.load({
     This is the content area of the page that holds external resources in an iframe
     it's loaded here so it can be displayed at all times alongside SPA templates.
 
+    Also responsible for the toolbar of editor controls.
+
 */    App.Views['content'] = new components.content({
         el: $('.content'),
         data: {events: App.stream},
         adaptor: ['Backbone'],
     });
-    App.Views.content.editor = new SynchronyEditor($('.iframe'));
-    App.Views.content.editor.connect();
     
-    $('.toolbar').show();
-   
+    if (App.Config.user != undefined) {
+        App.Views.content.editor = new SynchronyEditor($('.iframe'));
+        App.Views.content.editor.connect();
+    }
+
+    $('.toolbar').hide();   
+
     App.Views.content.on({
         exec: function(event, button_name) {
             App.Views.content.editor.exec(button_name, true);
         
         },
-        toggle_toolbar: function(event){
-            if ($(".toolbar_buttons").is(":visible")){
-                $(".toolbar_buttons").hide();
-            } else {
-                $(".toolbar_buttons").show();
+        inserthtml: function(event){
+            if (event.original.keyCode == 13){
+                event.original.preventDefault();
+                var data = App.Views.content.get("insert_html");
+                App.Views.editor.exec("insertHTML", true, data);
+                App.Views.content.set("insert_html", "");
+            }
+        },
+        insertimage: function(event){
+            if (event.original.keyCode == 13){
+                event.original.preventDefault();
+                var data = App.Views.content.get("image_url");
+                App.Views.editor.exec("insertImage", true, data);
+                App.Views.content.set("insert_html", "");
+            }
+        },
+        createlink: function(event){
+            if (event.original.keyCode == 13){
+                event.original.preventDefault();
+                var data = App.Views.content.get("link_url");
+                App.Views.editor.exec("insertLink", true, data);
+                App.Views.content.set("insert_html", "");
+            }
+        },
+        toggle: function(event, type){
+            if (type == "toolbar"){
+                if ($(".toolbar_buttons").is(":visible")){
+                    $(".toolbar_buttons").hide();
+                } else {
+                    $(".toolbar_buttons").show();
+                }
+            }
+            if (type == "inserthtml" || type == "insertimage" || type == "createlink"){
+                if ($("#toggle_" + type).is(":visible")){
+                    $("#toggle_" + type).hide();
+                } else {
+                    $("#toggle_" + type).show();
+                }
             }
         }
     });
@@ -1099,8 +1130,10 @@ Ractive.load({
         edit: function(event){
             if ($('.edit_button').hasClass('active_button')) {
                 $('.edit_button').removeClass('active_button');
+                $('.toolbar').hide();
             } else {
                 $('.edit_button').addClass('active_button');
+                $('.toolbar').show();
             }
             iframe = $('.iframe');
             var attr = iframe.contents().find('body').attr('contenteditable');
@@ -1145,6 +1178,14 @@ Ractive.load({
                 type:    "DELETE",
                 data:    {timestamp: App.Config.user.session.created},
                 success: function(data){
+                    
+                    if ($(".control_panel").is(":visible")) {
+                        toggle_synchrony();
+                    }
+                   
+                    $(".toolbar").hide();
+
+                    delete App.Config.user;
                     window.location.hash = "#login";
                 },
                 error:   function(data){
@@ -1212,7 +1253,7 @@ function chatView() {
         // We've connected to chat before authenticating and the
         // server is telling us to reconnect.
         App.Views.chat.socket.on("reconnect", function(data){
-            $('.chat-messages').append('<br />Reconnecting...');
+            $('.chat-messages').append('<br />Reconnecting . . .');
             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
             // Actually recreate the connection to re-auth.
             // Using chat.socket.disconnect and socket.connect doesn't work.
@@ -1275,7 +1316,7 @@ function chatView() {
                     } else {
                         response = App.Views.chat.socket.emit('msg', message);
                         if (!response.socket.connected) {
-                            $('.chat-messages').append("Intensify connection . . .");
+                            $('.chat-messages').append("No connection . . .");
                             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
                         }
                         console.log(this.get("message"));
@@ -1402,7 +1443,7 @@ function loginView() {
                         data: {
                             username: username,
                             password: pass1,
-                            email: email
+                            email:    email
                         },
                         success: function(data, status){
                             console.log(data);

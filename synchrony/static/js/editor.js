@@ -1,8 +1,8 @@
 /* This is the class for page synchronisation.
  * 
- * var synch = new Synchrony($('.iframe'));
- * synch.save();
- * Consider a map of {channel: Synchrony} pairs.
+ * var editor = new SynchronyEditor($('.iframe'));
+ * editor.save();
+ * Consider a map of {channel: SynchronyEditor} pairs.
  *
  * The current strategy revolves around subscribing to a channel named after
  * the active url, a user addr or shared channel name.

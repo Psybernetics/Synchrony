@@ -7,6 +7,16 @@
     padding: 10px;
     border-radius: 5px;
 }
-.toolbar i { flex: 1; }
+.toolbar i {
+    flex: 1;
+    font-size: 110%;
+}
+.toolbar input {
+    padding: 5px 0px 5px 5px;
+    outline: none;
+    border: none;
+    background-color: rgba(240, 240, 240, 0.6);
+}
+
 .toolbar_buttons { flex: 1; }
 .fa { padding-right: 10px; }
