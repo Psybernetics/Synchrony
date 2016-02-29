@@ -1,7 +1,7 @@
 .toolbar {
     display: flex;
     position: fixed;
-    bottom: 5px;
+    bottom: 20px;
     right: 30px;
     background-color: rgba(255, 255, 255, 0.8);
     padding: 10px;
