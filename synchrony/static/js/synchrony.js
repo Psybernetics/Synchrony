@@ -1057,16 +1057,31 @@ Ractive.load({
         data: {events: App.stream},
         adaptor: ['Backbone'],
     });
-    App.Views.content.synchrony = new SynchronyEditor($('.iframe'));
-    App.Views.content.synchrony.connect();
+    App.Views.content.editor = new SynchronyEditor($('.iframe'));
+    App.Views.content.editor.connect();
     
-    
+    $('.toolbar').show();
+   
+    App.Views.content.on({
+        exec: function(event, button_name) {
+            App.Views.content.editor.exec(button_name, true);
+        
+        },
+        toggle_toolbar: function(event){
+            if ($(".toolbar_buttons").is(":visible")){
+                $(".toolbar_buttons").hide();
+            } else {
+                $(".toolbar_buttons").show();
+            }
+        }
+    });
+
     App.Views['synchrony'] = new components.synchrony({
         el: $('.synchrony'),
         data: {
-        Config: App.Config,
-        edit_button:"Edit",
-        stream: App.stream,
+            Config: App.Config,
+            edit_button:"Edit",
+            stream: App.stream,
         },
         adaptor: ['Backbone'],
     });

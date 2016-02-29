@@ -24,18 +24,24 @@
 function SynchronyEditor (el) {
 
     this.el         = el;
+    
+    this.document   = el.contents().get(0);
+
     this.socket     = null;
-    this.channel    = null;
-    this.endpoint   = null;
+    
+    this.config     = {endpoint: "/documents",
+                       channel: "main"}
+
     this.last_event = null;
 
     this.connect  = function(endpoint, channel) {
         
-        if (!endpoint) { this.endpoint = "/documents"; }
-        if (!channel)  { this.channel  = "main"; }
+        if (endpoint) { this.config.endpoint = endpoint; }
+        if (channel)  { this.config.channel  = channel; }
 
-        var socket = io.connect(this.endpoint, {resource: "stream"});
-        socket.emit('join', this.channel);
+        var socket  = io.connect(this.config.endpoint, {resource: "stream"});
+        this.socket = socket;
+        socket.emit('join', this.config.channel);
         
         socket.on("fragment", function(data){
             // Someone is sending us some DOM nodes.
@@ -115,8 +121,8 @@ function SynchronyEditor (el) {
 
     // Re-make the socket if asked
     this.reconnect = function () {
-        if (this.endpoint && this.channel) {
-            this.connect(this.endpoint, this.channel);
+        if (this.config.endpoint && this.config.channel) {
+            this.connect(this.config.endpoint, this.config.channel);
         }
     }
 
@@ -127,6 +133,9 @@ function SynchronyEditor (el) {
     // undo, redo, insert element etc
     this.commands         = {}
     this.keyBindings      = {}
+    this.exec             = function(cmd, toggle, value){
+        this.document.execCommand(cmd, toggle, value);
+    }
     this.collaborators    = function () {}
 }
 
