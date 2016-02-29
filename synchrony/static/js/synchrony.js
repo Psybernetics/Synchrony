@@ -8,8 +8,9 @@
    MIT License.
 
     This file contains the frontend for a peer-to-peer caching proxy that can
-    make hyperdocuments collaboratively editable in near real time.
-    It may also implement a friends list, chat and WebRTC session initiation.
+    make hyperdocuments collaboratively editable over the network.
+    It also implements a friends list, chat and may implement WebRTC session
+    initiation.
 
 TODO:
 /#request/:url     JavaScript to load /request/:url into .content
