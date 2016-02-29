@@ -1,0 +1,12 @@
+.toolbar {
+    display: flex;
+    position: fixed;
+    bottom: 20px;
+    right: 30px;
+    background-color: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+}
+.toolbar i { flex: 1; }
+.toolbar_buttons { flex: 1; }
+.fa { padding-right: 10px; }

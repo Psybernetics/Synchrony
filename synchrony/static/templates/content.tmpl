@@ -1,1 +1,15 @@
 <iframe class="iframe" height="100%" width="100%"></iframe>
+<div class="toolbar">
+    <div class="toolbar_buttons" style="display:none;">
+        <i on-click="exec:{{"bold"}}" class="fa fa-bold"></i>
+        <i on-click="exec:{{"underline"}}" class="fa fa-underline"></i>
+        <i on-click="exec:{{"italic"}}" class="fa fa-italic"></i>
+        <i on-click="exec:{{"indent"}}" class="fa fa-indent"></i>
+        <i on-click="exec:{{"outdent"}}" class="fa fa-outdent"></i>
+        <i on-click="exec:{{"undo"}}" class="fa fa-undo"></i>
+        <i on-click="exec:{{"redo"}}" class="fa fa-repeat"></i>
+    </div>
+    
+    <span on-click="toggle_toolbar" id="toggle_toolbar"><i class="fa fa-angle-double-left"></i></span>
+
+</div>
