@@ -16,8 +16,8 @@ class RevisionCollection(restful.Resource):
         user = auth(session, required=True)
 
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("page",type=int, help="", required=False, default=1)
-        parser.add_argument("per_page",type=int, help="", required=False, default=10)
+        parser.add_argument("page",     type=int, default=1)
+        parser.add_argument("per_page", type=int, default=10)
         args = parser.parse_args()  
 
         if user.can("see_all"):
@@ -27,7 +27,6 @@ class RevisionCollection(restful.Resource):
                 .order_by(desc(Revision.created)).paginate(args.page, args.per_page)
 
         return make_response(request.url, query)
-
 
 class RevisionResource(restful.Resource):
     def get(self, hash):

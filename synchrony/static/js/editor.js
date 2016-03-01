@@ -134,7 +134,9 @@ function SynchronyEditor (el) {
     this.commands         = {}
     this.keyBindings      = {}
     this.exec             = function(cmd, toggle, value){
-        this.document.execCommand(cmd, toggle, value);
+        var mutation = this.document.execCommand(cmd, toggle, value);
+        if (cmd == "createLink") { mutation.target = "_blank"; }
+        return mutation;
     }
     this.collaborators    = function () {}
 }

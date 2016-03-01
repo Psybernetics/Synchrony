@@ -1037,6 +1037,7 @@ function groupView(name, params){
 
 Ractive.load({
     content:   'content.tmpl',
+    toolbar:   'toolbar.tmpl',
     synchrony: 'synchrony.tmpl',
 
 }).then(function(components){
@@ -1047,20 +1048,24 @@ Ractive.load({
 
     Also responsible for the toolbar of editor controls.
 
-*/    App.Views['content'] = new components.content({
+*/   App.Views['content'] = new components.content({
         el: $('.content'),
         data: {events: App.stream},
         adaptor: ['Backbone'],
     });
     
-    if (App.Config.user != undefined) {
-        App.Views.content.editor = new SynchronyEditor($('.iframe'));
-        App.Views.content.editor.connect();
-    }
+    App.Views.content.editor = new SynchronyEditor($('.iframe'));
+    App.Views.content.editor.connect();
+
+    App.Views['toolbar'] = new components.toolbar({
+        el: $('.toolbar'),
+        data: {events: App.stream},
+        adaptor: ['Backbone'],
+    });
 
     $('.toolbar').hide();   
 
-    App.Views.content.on({
+    App.Views.toolbar.on({
         exec: function(event, button_name) {
             App.Views.content.editor.exec(button_name, true);
         
@@ -1068,25 +1073,25 @@ Ractive.load({
         inserthtml: function(event){
             if (event.original.keyCode == 13){
                 event.original.preventDefault();
-                var data = App.Views.content.get("insert_html");
-                App.Views.editor.exec("insertHTML", true, data);
-                App.Views.content.set("insert_html", "");
+                var data = App.Views.toolbar.get("insert_html");
+                App.Views.content.editor.exec("insertHTML", true, data);
+                App.Views.toolbar.set("insert_html", "");
             }
         },
         insertimage: function(event){
             if (event.original.keyCode == 13){
                 event.original.preventDefault();
-                var data = App.Views.content.get("image_url");
-                App.Views.editor.exec("insertImage", true, data);
-                App.Views.content.set("insert_html", "");
+                var data = App.Views.toolbar.get("image_url");
+                App.Views.content.editor.exec("insertImage", true, data);
+                App.Views.toolbar.set("image_url", "");
             }
         },
         createlink: function(event){
             if (event.original.keyCode == 13){
                 event.original.preventDefault();
-                var data = App.Views.content.get("link_url");
-                App.Views.editor.exec("insertLink", true, data);
-                App.Views.content.set("insert_html", "");
+                var data = App.Views.toolbar.get("link_url");
+                App.Views.content.editor.exec("createLink", true, data);
+                App.Views.toolbar.set("link_url", "");
             }
         },
         toggle: function(event, type){
@@ -1103,6 +1108,13 @@ Ractive.load({
                 } else {
                     $("#toggle_" + type).show();
                 }
+            }
+        },
+        select: function(event, cls){
+            if ($("." + cls).hasClass("toolbar_selection")){
+                $("." + cls).removeClass("toolbar_selection");
+            } else {
+                $("." + cls).addClass("toolbar_selection");
             }
         }
     });

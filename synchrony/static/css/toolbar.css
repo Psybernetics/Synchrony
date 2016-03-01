@@ -11,6 +11,12 @@
     flex: 1;
     font-size: 110%;
 }
+
+.toolbar_selection {
+    color: #000;
+    cursor: pointer;
+}
+
 .toolbar input {
     padding: 5px 0px 5px 5px;
     outline: none;
@@ -18,5 +24,8 @@
     background-color: rgba(240, 240, 240, 0.6);
 }
 
-.toolbar_buttons { flex: 1; }
+.toolbar_buttons {
+    flex: 1;
+    color: #424242;
+}
 .fa { padding-right: 10px; }

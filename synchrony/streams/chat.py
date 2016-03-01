@@ -6,13 +6,8 @@ Consider also WebRTC session initiation.
 """
 from cgi import escape
 from synchrony import app, log
-from socketio import socketio_manage
-from socketio.packet import encode, decode
-from synchrony.controllers.dht import Node
 from synchrony.controllers.auth import auth
-from flask import session, request, Response
-from socketio.namespace import BaseNamespace
-from socketio.mixins import RoomsMixin, BroadcastMixin
+from synchrony.streams.utils import Stream, require_auth
 
 class AnonUser(object):
     username = "Unknown"
@@ -25,7 +20,7 @@ class Channel(object):
         self.modes = []
         self.clients = set()
 
-class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
+class ChatStream(Stream):
     socket_type = "chat"
 
     def initialize(self):
@@ -34,6 +29,7 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
 #        admin users to access via /eval
         self.routes   = app.routes
         self.channels = {}
+        self.modes    = []
 
         # This lets us cycle through stream connections on
         # the httpd and easily determine the session type.
@@ -68,12 +64,13 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
 
     def recv_json(self, data):
         self.emit("test", data)
-        self.emit_to_room("test", data)
+        self.broadcast("test", data)
         if self.user:
             log("Received JSON from %s: %s" % (self.user.username, str(data)))
         else:
             log("Received JSON: %s" % str(data))
 
+    @require_auth
     def on_join(self, channel_name):
         """
         Join a channel by name. If the channel name is the address of a friend
@@ -112,7 +109,7 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
     def on_appear_offline(self, state):
         """
         Flip the boolean self.socket.appearing_offline
-        so we're omitted from emit_to_room events on other users.
+        so we're omitted from broadcast events on other users.
         """
         if state:
             self.socket.appearing_offline = True
@@ -121,22 +118,23 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
             self.socket.appearing_offline = False
             self.emit("appear_offline", False)
    
-    def emit_to_room(self, room, event, *args):
+    def broadcast(self, channel, event, *args):
         """
-        This is sent to all in the room in this particular namespace.
+        This is sent to all in the channel in this particular namespace.
         """
         pkt = dict(type="event",
                     name=event,
                     args=args,
                     endpoint=self.ns_name)
-        room_name = self._get_room_name(room)
+        channel_name = self.get_channel_name(channel)
         for sessid, socket in self.socket.server.sockets.iteritems():
-            if 'rooms' not in socket.session:
+            if 'channels' not in socket.session:
                 continue
-            if room_name in socket.session['rooms'] and self.socket != socket \
+            if channel_name in socket.session['channels'] and self.socket != socket \
             and not socket.appearing_offline:
                 socket.send_packet(pkt)
-                
+               
+    @require_auth
     def on_msg(self, msg):
         """
         Handle sending a message to a local user or a friend on a remote instance.
@@ -173,11 +171,12 @@ class ChatStream(BaseNamespace, RoomsMixin, BroadcastMixin):
                     self.emit("privmsg", body)
                 return
             log("Message to %s from %s: %s" % (channel.name, self.user.username, msg))
-            self.emit_to_room(channel.name, "privmsg", body)
+            self.broadcast(channel.name, "privmsg", body)
             self.emit("privmsg", body)
         else:
             self.request_reconnect()
 
+    @require_auth
     def on_cmd(self, command):
         if self.user and self.channels.values():
             if command == "help":

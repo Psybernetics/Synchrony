@@ -2,18 +2,14 @@
 from cgi import escape
 from synchrony import log
 from synchrony.controllers.auth import auth
-from flask import session, request, Response
-from socketio import socketio_manage
-from socketio.packet import encode, decode
-from socketio.namespace import BaseNamespace
-from socketio.mixins import RoomsMixin, BroadcastMixin
+from synchrony.streams.utils import Stream, require_auth
 
 class AnonUser(object):
+    created  = None
     username = "Unknown"
-    created = False
 
 # Business logic for the global activity stream
-class GlobalStream(BaseNamespace, RoomsMixin, BroadcastMixin):
+class GlobalStream(Stream):
     socket_type = "global_stream"
 
     def initialize(self):
@@ -29,12 +25,7 @@ class GlobalStream(BaseNamespace, RoomsMixin, BroadcastMixin):
         if user:
             log("Received activity stream connection from %s" % user.username)
             self.user = user
-#            if not can(user.username, "chat"):
-#                body = {"message":"Your user group doesn't have permission to chat"}
-#                self.emit("disconnect", body)
-#                self.send("disconnect")
-#                log("%s isn't permitted to chat." % user.username)
-#        else:
+            return
         self.user = AnonUser()
 
     def recv_message(self, data):
@@ -50,6 +41,7 @@ class GlobalStream(BaseNamespace, RoomsMixin, BroadcastMixin):
         else:
             log("Received JSON: %s" % str(data))
 
+    @require_auth
     def on_join(self, channel):
         # Keep everyone on the same stream generally.
         channel = "public"
@@ -61,6 +53,7 @@ class GlobalStream(BaseNamespace, RoomsMixin, BroadcastMixin):
 #            else:
 #                log("%s tried to join %s" % (self.user.username, channel))
 
+    @require_auth
     def on_poll(self):
         if self.inbox:
             last_message = self.inbox[-1]
@@ -69,6 +62,7 @@ class GlobalStream(BaseNamespace, RoomsMixin, BroadcastMixin):
                 self.buffer.append(key)
                 self.emit("message", value)
 
+    @require_auth
     def on_msg(self, msg):
         if self.user and self.channel:
             if self.user.created:

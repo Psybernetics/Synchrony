@@ -1,0 +1,18 @@
+<div class="toolbar_buttons" style="display:none;">
+    <input id="toggle_inserthtml" placeholder="HTML" on-keydown="inserthtml" value="{{insert_html}}" style="display:none;" />
+    <i on-mouseover="select:{{"fa-code"}}" on-mouseout="select:{{"fa-code"}}" on-click="toggle:{{"inserthtml"}}" class="fa fa-code"></i>
+    <input id="toggle_insertimage" placeholder="Image URL" on-keydown="insertimage" value="{{image_url}}" style="display:none;" />
+    <i on-mouseover="select:{{"fa-image"}}" on-mouseout="select:{{"fa-image"}}" on-click="toggle:{{"insertimage"}}" class="fa fa-image"></i>
+    <i on-mouseover="select:{{"fa-unlink"}}" on-mouseout="select:{{"fa-unlink"}}" on-click="exec:{{"unlink"}}" class="fa fa-unlink"></i>
+    <input id="toggle_createlink" placeholder="URL" on-keydown="createlink" value="{{link_url}}" style="display:none;" />
+    <i on-mouseover="select:{{"fa-chain"}}" on-mouseout="select:{{"fa-chain"}}" on-click="toggle:{{"createlink"}}" class="fa fa-chain"></i>
+    <i on-mouseover="select:{{"fa-bold"}}" on-mouseout="select:{{"fa-bold"}}" on-click="exec:{{"bold"}}" class="fa fa-bold"></i>
+    <i on-mouseover="select:{{"fa-underline"}}" on-mouseout="select:{{"fa-underline"}}" on-click="exec:{{"underline"}}" class="fa fa-underline"></i>
+    <i on-mouseover="select:{{"fa-underline"}}" on-mouseout="select:{{"fa-underline"}}" on-click="exec:{{"italic"}}" class="fa fa-italic"></i>
+    <i on-mouseover="select:{{"fa-indent"}}" on-mouseout="select:{{"fa-indent"}}" on-click="exec:{{"indent"}}" class="fa fa-indent"></i>
+    <i on-mouseover="select:{{"fa-outdent"}}" on-mouseout="select:{{"fa-outdent"}}" on-click="exec:{{"outdent"}}" class="fa fa-outdent"></i>
+    <i on-mouseover="select:{{"fa-undo"}}" on-mouseout="select:{{"fa-undo"}}" on-click="exec:{{"undo"}}" class="fa fa-undo"></i>
+    <i on-mouseover="select:{{"fa-repeat"}}" on-mouseout="select:{{"fa-repeat"}}"  on-click="exec:{{"redo"}}" class="fa fa-repeat"></i>
+</div>
+
+<span on-mouseover="toggle:{{"toolbar"}}" id="toggle_toolbar"><i class="fa fa-angle-double-left"></i></span>
