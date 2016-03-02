@@ -312,6 +312,32 @@ function request(event){
     }
 }
 
+function toggle_editing (event){
+    if ($('.edit_button').hasClass('active_button')) {
+        $('.edit_button').removeClass('active_button');
+        $('.toolbar').hide();
+    } else {
+        $('.edit_button').addClass('active_button');
+        $('.toolbar').show();
+    }
+    iframe = $('.iframe');
+    var attr = iframe.contents().find('body').attr('contenteditable');
+//            console.log(attr);
+    if (typeof attr === typeof undefined || attr == false || attr == "false") {
+        iframe.contents().find('body').attr('contenteditable','true');
+        iframe.contents().find('body').attr('autocorrect','false');
+        iframe.contents().find('body').attr('spellcheck','false');
+        App.Views.synchrony.set('edit_button', "Done");
+        $('.edit_button').html("Done");
+        App.Views.synchrony.set("showing_save_button", true);
+   } else {
+        iframe.contents().find('body').attr('contenteditable','false');
+        App.Views.synchrony.set('edit_button', "Edit");
+        $('.edit_button').html("Edit");
+        App.Views.synchrony.set("showing_save_button", false);
+    }
+}
+
 // This function is pretty general in terms of populating tables
 function populate_table(view, table_type, url){
     // Grab the data
@@ -1151,31 +1177,32 @@ Ractive.load({
     App.Views.synchrony.on({
         request: request, // Globally available request function
 
-        edit: function(event){
-            if ($('.edit_button').hasClass('active_button')) {
-                $('.edit_button').removeClass('active_button');
-                $('.toolbar').hide();
-            } else {
-                $('.edit_button').addClass('active_button');
-                $('.toolbar').show();
-            }
-            iframe = $('.iframe');
-            var attr = iframe.contents().find('body').attr('contenteditable');
-//            console.log(attr);
-            if (typeof attr === typeof undefined || attr == false || attr == "false") {
-                iframe.contents().find('body').attr('contenteditable','true');
-                iframe.contents().find('body').attr('autocorrect','false');
-                iframe.contents().find('body').attr('spellcheck','false');
-                App.Views.synchrony.set('edit_button', "Done");
-                $('.edit_button').html("Done");
-                App.Views.synchrony.set("showing_save_button", true);
-           } else {
-                iframe.contents().find('body').attr('contenteditable','false');
-                App.Views.synchrony.set('edit_button', "Edit");
-                $('.edit_button').html("Edit");
-                App.Views.synchrony.set("showing_save_button", false);
-            }
-        },
+        edit: toggle_editing,
+//            function(event){
+//            if ($('.edit_button').hasClass('active_button')) {
+//                $('.edit_button').removeClass('active_button');
+//                $('.toolbar').hide();
+//            } else {
+//                $('.edit_button').addClass('active_button');
+//                $('.toolbar').show();
+//            }
+//            iframe = $('.iframe');
+//            var attr = iframe.contents().find('body').attr('contenteditable');
+// /            console.log(attr);
+//            if (typeof attr === typeof undefined || attr == false || attr == "false") {
+//                iframe.contents().find('body').attr('contenteditable','true');
+//                iframe.contents().find('body').attr('autocorrect','false');
+//                iframe.contents().find('body').attr('spellcheck','false');
+//                App.Views.synchrony.set('edit_button', "Done");
+//                $('.edit_button').html("Done");
+//                App.Views.synchrony.set("showing_save_button", true);
+//           } else {
+//                iframe.contents().find('body').attr('contenteditable','false');
+//                App.Views.synchrony.set('edit_button', "Edit");
+//                $('.edit_button').html("Edit");
+//                App.Views.synchrony.set("showing_save_button", false);
+//            }
+//        },
         save:      function(event){
            $.ajax({
                url: "/v1/revisions/" + App.current_hash,

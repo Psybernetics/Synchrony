@@ -28,6 +28,11 @@ function SynchronyEditor (el) {
     // This assumes el is an <iframe>. 
     this.document   = el.contents().get(0);
 
+    // Global hotkeys
+    $(this.document).keydown(function(event){
+        if (event.keyCode == 27) { toggle_editing(); }
+    });
+
     this.socket     = null;
     
     this.config     = {endpoint: "/documents",
@@ -46,21 +51,38 @@ function SynchronyEditor (el) {
         if (endpoint) { this.config.endpoint = endpoint; }
         if (channel)  { this.config.channel  = channel; }
 
-        this.socket  = io.connect(this.config.endpoint, {resource: "stream"});
+        this.socket = io.connect(this.config.endpoint, {resource: "stream"});
         this.socket.emit('join', this.config.channel);
         
         this.socket.on("fragment", function(data){
-            // Someone is sending us some DOM nodes.
+            
+            // Someone is sending us some DOM nodes as a string,
+            // let's instantiate a parser and turn them into DOM node objects.
             console.log(data);
             parser = new DOMParser();
-            doc = parser.parseFromString(data.document, "text/xml");
-            // Clean out errors found by the parser.
+            
+            doc    = parser.parseFromString(data.document, "text/xml");
+            
+            // Lets' clean out errors found by the parser.
             var element = doc.getElementsByTagName("parsererror");
             for (index = element.length - 1; index >= 0; index--) {
-                    element[index].parentNode.removeChild(element[index]);
+                element[index].parentNode.removeChild(element[index]);
             }
+            
             console.log(doc);
+
+            // for (p in doc){ console.log(p, doc[p]); }
+            // doc.children.attributes.childNodes.nodeValue
+
             console.log(element);
+           
+            // TODO: Match childNode attributes: An <a href="..."> should be matched etc.
+            // Ie. Given the following DOM fragment, reintregrate it:
+            // <span class="sitebit comhead"> (<a href="/request/news.ycombinator.com/from?site=spiegel.de"><span class="sitestr">spie</span></a>)</span>
+            // var selector = $(this.document).find
+            // var original_subtree = $(selector).clone, $(target).replaceWith(subtree)
+
+
             var doc_text = $(doc).text();
             console.log("doc_text: "+ doc_text);
             var nodes = "";
@@ -78,50 +100,62 @@ function SynchronyEditor (el) {
             } else {
                 text_data = doc.children[0].innerHTML
             }
+            
             console.log("nodes: " + nodes);
             console.log("text_data: " + text_data);
+
+            // This basic algorithm goes on the length of the text data.
+            // A smarter way is to match the parent node and other subnodes.
+            // IE using up to three parent node, match subtrees on either side of the
+            // modified element.
             var length = text_data.length;
+            
             // First half
-            var c = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')');
-            var swapped = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')').first().html(data.document);
+            var c = $(this.document).find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')');
+            var swapped = $(this.document).find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')').first().html(data.document);
+            
             console.log("swap attempt 1:");
             console.log(swapped.length);
             console.log(swapped.text());
+            
             // Second half
             if (swapped.length != 1) {
-                c.push.apply(c, $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')'));
-                var swapped = $('.iframe').contents().find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')').first().html(data.document);
+                c.push.apply(c, $(this.document).find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')'));
+                var swapped = $(this.document).find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')').first().html(data.document);
                 console.log("swap attempt 2:")
                 console.log(swapped.length);
                 console.log(swapped.text());
             }
+            
             console.log("c: " + c.length);
             console.log(c);
             for (var i = 0; i < c.length; i++) {
                 console.log($(c[i]).text());
             }
+        
         }.bind(this));
 
+        // The majority of editing events.
         $(this.document).on('DOMCharacterDataModified', function(event){
 
             if (!this.socket) { this.reconnect(); }
 
-            // Traverse up to two parent nodes and transmit the outerHTML.
-            if (event.target.parentElement) {
-                if (event.target.parentElement.parentElement) {
-                    edit_data = event.target.parentElement.parentElement.outerHTML;
-                } else {
-                    edit_data = event.target.parentElement.outerHTML;
+            // Traverse up to ... parent nodes and transmit the outerHTML.
+
+            var subtree = event.target;
+            for (var i = 0; i <= 1; i++){
+                if ("parentNode" in subtree){
+                    subtree = subtree.parentNode;
                 }
-            } else {
-                console.log("1")
-                edit_data = event.target.outerHTML;
             }
-            
-            this.socket.emit('edit', edit_data);
+            console.log(subtree);
+            console.log(subtree.outerHTML);
+            this.socket.emit("edit", subtree.outerHTML);
             this.appendEvent(event);
         }.bind(this));
 
+        // <br />'s inserted when the return key's hit.
+        // Also arbitrary subtrees.
         $(this.document).on("DOMNodeInserted", function(event){
             console.log(event);
             this.appendEvent(event);
@@ -132,6 +166,7 @@ function SynchronyEditor (el) {
             this.appendEvent(event);
         }.bind(this));
  
+        // Rarely seen in the wild(?)
         $(this.document).on("DOMNodeSubtreeModified", function(event){
             console.log(event);
             this.appendEvent(event);
