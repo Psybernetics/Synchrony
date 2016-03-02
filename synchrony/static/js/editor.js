@@ -24,7 +24,8 @@
 function SynchronyEditor (el) {
 
     this.el         = el;
-    
+   
+    // This assumes el is an <iframe>. 
     this.document   = el.contents().get(0);
 
     this.socket     = null;
@@ -32,18 +33,23 @@ function SynchronyEditor (el) {
     this.config     = {endpoint: "/documents",
                        channel: "main"}
 
-    this.last_event = null;
+    this.events     = [];
+    this.appendEvent = function(event){
+        if (this.events.length >= 10){
+            this.events.shift();
+        }
+        this.events.push(event);
+    }
 
     this.connect  = function(endpoint, channel) {
         
         if (endpoint) { this.config.endpoint = endpoint; }
         if (channel)  { this.config.channel  = channel; }
 
-        var socket  = io.connect(this.config.endpoint, {resource: "stream"});
-        this.socket = socket;
-        socket.emit('join', this.config.channel);
+        this.socket  = io.connect(this.config.endpoint, {resource: "stream"});
+        this.socket.emit('join', this.config.channel);
         
-        socket.on("fragment", function(data){
+        this.socket.on("fragment", function(data){
             // Someone is sending us some DOM nodes.
             console.log(data);
             parser = new DOMParser();
@@ -94,11 +100,11 @@ function SynchronyEditor (el) {
             for (var i = 0; i < c.length; i++) {
                 console.log($(c[i]).text());
             }
-        });
+        }.bind(this));
 
-        this.el.contents().find('body').on('DOMCharacterDataModified', function(event){
+        $(this.document).on('DOMCharacterDataModified', function(event){
 
-            if (!socket) { this.reconnect(); }
+            if (!this.socket) { this.reconnect(); }
 
             // Traverse up to two parent nodes and transmit the outerHTML.
             if (event.target.parentElement) {
@@ -112,11 +118,24 @@ function SynchronyEditor (el) {
                 edit_data = event.target.outerHTML;
             }
             
-            socket.emit('edit', edit_data);
+            this.socket.emit('edit', edit_data);
+            this.appendEvent(event);
+        }.bind(this));
 
+        $(this.document).on("DOMNodeInserted", function(event){
             console.log(event);
-            this.last_event = event;
-        });
+            this.appendEvent(event);
+        }.bind(this));
+ 
+        $(this.document).on("DOMNodeRemoved", function(event){
+            console.log(event);
+            this.appendEvent(event);
+        }.bind(this));
+ 
+        $(this.document).on("DOMNodeSubtreeModified", function(event){
+            console.log(event);
+            this.appendEvent(event);
+        }.bind(this));
     }
 
     // Re-make the socket if asked
@@ -127,7 +146,6 @@ function SynchronyEditor (el) {
     }
 
     // Provide our last revision ID and get the latest copy
-    this.poll             = function () {}
     this.save             = function () {}
     this.load             = function () {}
     // undo, redo, insert element etc

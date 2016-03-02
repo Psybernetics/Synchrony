@@ -347,6 +347,18 @@ function populate_table(view, table_type, url){
     });
 }
 
+function Friend(){
+    this.username = null;
+    this.address  = null;
+    this.online   = null;
+    this.avatar   = null;
+}
+
+function Contacts(){
+    this.list        = [];
+    this.chat_socket = null;
+}
+
 // Start the Backbone URL hash monitor
 new App.Router();
 Backbone.history.start();
@@ -1223,7 +1235,7 @@ function chatView() {
         }
        
         $('.chat').draggable();
-        var welcome_message = "Use <em>/help</em> to see a list of commands.<br />";
+        var welcome_message = "Use <em>/help</em> for a list of commands.<br />";
         $('.chat-messages').append(welcome_message);
 
         App.Views.chat.visible = false;
