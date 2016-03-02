@@ -293,10 +293,11 @@ function request(event){
                 // is appended to App.history when clicked.
                 iframe.contents().find('a').on('click', function(){
                     var url = $(this).attr('href').split('/');
-                    url     = url.slice(2, url.length).join('/');
+                    url = url.slice(2, url.length).join('/');
                     App.history.push(url);
                     update_address_bars(url);
                 });
+                
                 // Also caching the unedited document in the event it's ever
                 // sent directly over webrtc.
                 App.document = data;
@@ -309,6 +310,32 @@ function request(event){
                 iframe.contents().find('body').html(message);
             }
         });
+    }
+}
+
+function toggle_editing (event){
+    if ($('.edit_button').hasClass('active_button')) {
+        $('.edit_button').removeClass('active_button');
+        $('.toolbar').hide();
+    } else {
+        $('.edit_button').addClass('active_button');
+        $('.toolbar').show();
+    }
+    iframe = $('.iframe');
+    var attr = iframe.contents().find('body').attr('contenteditable');
+//            console.log(attr);
+    if (typeof attr === typeof undefined || attr == false || attr == "false") {
+        iframe.contents().find('body').attr('contenteditable','true');
+        iframe.contents().find('body').attr('autocorrect','false');
+        iframe.contents().find('body').attr('spellcheck','false');
+        App.Views.synchrony.set('edit_button', "Done");
+        $('.edit_button').html("Done");
+        App.Views.synchrony.set("showing_save_button", true);
+   } else {
+        iframe.contents().find('body').attr('contenteditable','false');
+        App.Views.synchrony.set('edit_button', "Edit");
+        $('.edit_button').html("Edit");
+        App.Views.synchrony.set("showing_save_button", false);
     }
 }
 
@@ -345,6 +372,18 @@ function populate_table(view, table_type, url){
     }).fail(function(){
        view.set(table_type + "_paging_error", true);
     });
+}
+
+function Friend(){
+    this.username = null;
+    this.address  = null;
+    this.online   = null;
+    this.avatar   = null;
+}
+
+function Contacts(){
+    this.list        = [];
+    this.chat_socket = null;
 }
 
 // Start the Backbone URL hash monitor
@@ -1139,32 +1178,8 @@ Ractive.load({
     App.Views.synchrony.on({
         request: request, // Globally available request function
 
-        edit: function(event){
-            if ($('.edit_button').hasClass('active_button')) {
-                $('.edit_button').removeClass('active_button');
-                $('.toolbar').hide();
-            } else {
-                $('.edit_button').addClass('active_button');
-                $('.toolbar').show();
-            }
-            iframe = $('.iframe');
-            var attr = iframe.contents().find('body').attr('contenteditable');
-//            console.log(attr);
-            if (typeof attr === typeof undefined || attr == false || attr == "false") {
-                iframe.contents().find('body').attr('contenteditable','true');
-                iframe.contents().find('body').attr('autocorrect','false');
-                iframe.contents().find('body').attr('spellcheck','false');
-                App.Views.synchrony.set('edit_button', "Done");
-                $('.edit_button').html("Done");
-                App.Views.synchrony.set("showing_save_button", true);
-           } else {
-                iframe.contents().find('body').attr('contenteditable','false');
-                App.Views.synchrony.set('edit_button', "Edit");
-                $('.edit_button').html("Edit");
-                App.Views.synchrony.set("showing_save_button", false);
-            }
-        },
-        save:      function(event){
+        edit: toggle_editing,
+        save: function(event){
            $.ajax({
                url: "/v1/revisions/" + App.current_hash,
                type: "PUT",
@@ -1223,7 +1238,7 @@ function chatView() {
         }
        
         $('.chat').draggable();
-        var welcome_message = "Use <em>/help</em> to see a list of commands.<br />";
+        var welcome_message = "Use <em>/help</em> for a list of commands.<br />";
         $('.chat-messages').append(welcome_message);
 
         App.Views.chat.visible = false;
