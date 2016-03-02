@@ -293,10 +293,11 @@ function request(event){
                 // is appended to App.history when clicked.
                 iframe.contents().find('a').on('click', function(){
                     var url = $(this).attr('href').split('/');
-                    url     = url.slice(2, url.length).join('/');
+                    url = url.slice(2, url.length).join('/');
                     App.history.push(url);
                     update_address_bars(url);
                 });
+                
                 // Also caching the unedited document in the event it's ever
                 // sent directly over webrtc.
                 App.document = data;
@@ -309,6 +310,32 @@ function request(event){
                 iframe.contents().find('body').html(message);
             }
         });
+    }
+}
+
+function toggle_editing (event){
+    if ($('.edit_button').hasClass('active_button')) {
+        $('.edit_button').removeClass('active_button');
+        $('.toolbar').hide();
+    } else {
+        $('.edit_button').addClass('active_button');
+        $('.toolbar').show();
+    }
+    iframe = $('.iframe');
+    var attr = iframe.contents().find('body').attr('contenteditable');
+//            console.log(attr);
+    if (typeof attr === typeof undefined || attr == false || attr == "false") {
+        iframe.contents().find('body').attr('contenteditable','true');
+        iframe.contents().find('body').attr('autocorrect','false');
+        iframe.contents().find('body').attr('spellcheck','false');
+        App.Views.synchrony.set('edit_button', "Done");
+        $('.edit_button').html("Done");
+        App.Views.synchrony.set("showing_save_button", true);
+   } else {
+        iframe.contents().find('body').attr('contenteditable','false');
+        App.Views.synchrony.set('edit_button', "Edit");
+        $('.edit_button').html("Edit");
+        App.Views.synchrony.set("showing_save_button", false);
     }
 }
 
@@ -345,6 +372,18 @@ function populate_table(view, table_type, url){
     }).fail(function(){
        view.set(table_type + "_paging_error", true);
     });
+}
+
+function Friend(){
+    this.username = null;
+    this.address  = null;
+    this.online   = null;
+    this.avatar   = null;
+}
+
+function Contacts(){
+    this.list        = [];
+    this.chat_socket = null;
 }
 
 // Start the Backbone URL hash monitor
@@ -1037,6 +1076,7 @@ function groupView(name, params){
 
 Ractive.load({
     content:   'content.tmpl',
+    toolbar:   'toolbar.tmpl',
     synchrony: 'synchrony.tmpl',
 
 }).then(function(components){
@@ -1047,20 +1087,24 @@ Ractive.load({
 
     Also responsible for the toolbar of editor controls.
 
-*/    App.Views['content'] = new components.content({
+*/   App.Views['content'] = new components.content({
         el: $('.content'),
         data: {events: App.stream},
         adaptor: ['Backbone'],
     });
     
-    if (App.Config.user != undefined) {
-        App.Views.content.editor = new SynchronyEditor($('.iframe'));
-        App.Views.content.editor.connect();
-    }
+    App.Views.content.editor = new SynchronyEditor($('.iframe'));
+    App.Views.content.editor.connect();
+
+    App.Views['toolbar'] = new components.toolbar({
+        el: $('.toolbar'),
+        data: {events: App.stream},
+        adaptor: ['Backbone'],
+    });
 
     $('.toolbar').hide();   
 
-    App.Views.content.on({
+    App.Views.toolbar.on({
         exec: function(event, button_name) {
             App.Views.content.editor.exec(button_name, true);
         
@@ -1068,25 +1112,25 @@ Ractive.load({
         inserthtml: function(event){
             if (event.original.keyCode == 13){
                 event.original.preventDefault();
-                var data = App.Views.content.get("insert_html");
-                App.Views.editor.exec("insertHTML", true, data);
-                App.Views.content.set("insert_html", "");
+                var data = App.Views.toolbar.get("insert_html");
+                App.Views.content.editor.exec("insertHTML", true, data);
+                App.Views.toolbar.set("insert_html", "");
             }
         },
         insertimage: function(event){
             if (event.original.keyCode == 13){
                 event.original.preventDefault();
-                var data = App.Views.content.get("image_url");
-                App.Views.editor.exec("insertImage", true, data);
-                App.Views.content.set("insert_html", "");
+                var data = App.Views.toolbar.get("image_url");
+                App.Views.content.editor.exec("insertImage", true, data);
+                App.Views.toolbar.set("image_url", "");
             }
         },
         createlink: function(event){
             if (event.original.keyCode == 13){
                 event.original.preventDefault();
-                var data = App.Views.content.get("link_url");
-                App.Views.editor.exec("insertLink", true, data);
-                App.Views.content.set("insert_html", "");
+                var data = App.Views.toolbar.get("link_url");
+                App.Views.content.editor.exec("createLink", true, data);
+                App.Views.toolbar.set("link_url", "");
             }
         },
         toggle: function(event, type){
@@ -1103,6 +1147,13 @@ Ractive.load({
                 } else {
                     $("#toggle_" + type).show();
                 }
+            }
+        },
+        select: function(event, cls){
+            if ($("." + cls).hasClass("toolbar_selection")){
+                $("." + cls).removeClass("toolbar_selection");
+            } else {
+                $("." + cls).addClass("toolbar_selection");
             }
         }
     });
@@ -1127,32 +1178,8 @@ Ractive.load({
     App.Views.synchrony.on({
         request: request, // Globally available request function
 
-        edit: function(event){
-            if ($('.edit_button').hasClass('active_button')) {
-                $('.edit_button').removeClass('active_button');
-                $('.toolbar').hide();
-            } else {
-                $('.edit_button').addClass('active_button');
-                $('.toolbar').show();
-            }
-            iframe = $('.iframe');
-            var attr = iframe.contents().find('body').attr('contenteditable');
-//            console.log(attr);
-            if (typeof attr === typeof undefined || attr == false || attr == "false") {
-                iframe.contents().find('body').attr('contenteditable','true');
-                iframe.contents().find('body').attr('autocorrect','false');
-                iframe.contents().find('body').attr('spellcheck','false');
-                App.Views.synchrony.set('edit_button', "Done");
-                $('.edit_button').html("Done");
-                App.Views.synchrony.set("showing_save_button", true);
-           } else {
-                iframe.contents().find('body').attr('contenteditable','false');
-                App.Views.synchrony.set('edit_button', "Edit");
-                $('.edit_button').html("Edit");
-                App.Views.synchrony.set("showing_save_button", false);
-            }
-        },
-        save:      function(event){
+        edit: toggle_editing,
+        save: function(event){
            $.ajax({
                url: "/v1/revisions/" + App.current_hash,
                type: "PUT",
@@ -1211,7 +1238,7 @@ function chatView() {
         }
        
         $('.chat').draggable();
-        var welcome_message = "Use <em>/help</em> to see a list of commands.<br />";
+        var welcome_message = "Use <em>/help</em> for a list of commands.<br />";
         $('.chat-messages').append(welcome_message);
 
         App.Views.chat.visible = false;
