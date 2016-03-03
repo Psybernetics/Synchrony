@@ -139,8 +139,7 @@ function SynchronyEditor (el) {
             var length = text_data.length;
             
             // First half
-            var c = $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')');
-            var subtree = $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')').first().get(0);
+            var subtree = $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(0, Math.ceil(length / 2)) + ')').first().get(0);
             console.log("subtree", subtree);
             for (var i = 0; i <= 1; i++) {
                 if (subtree.parentNode){
@@ -159,20 +158,18 @@ function SynchronyEditor (el) {
             
             // Second half
             if (swapped.length != 1) {
-                c.push.apply(c, $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')'));
                 var subtree = $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')').first();
+                for (var i = 0; i <= 1; i++) {
+                    if (subtree.parentNode){
+                        subtree = subtree.parentNode
+                    }
+                    console.log("subtree", subtree);
+                }
                 var swapped = subtree.html(data.document);
                 console.log("swap attempt 2:")
                 console.log(swapped.length);
                 console.log(swapped.text());
             }
-            
-//            console.log("c: " + c.length);
-//            console.log(c);
-//            for (var i = 0; i < c.length; i++) {
-//                console.log($(c[i]).text());
-//            }
-        
         }.bind(this));
 
         // The majority of editing events.
