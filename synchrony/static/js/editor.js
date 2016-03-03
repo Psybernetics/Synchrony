@@ -16,10 +16,10 @@
  * The hardest fragment to match is a single character that's the only inhabitant of
  * its parent element.
  *
- * The protocol appears to want two major message types: "document" and "fragment"
- * where "document" is the entire tree and "fragment" is a subtree.
+ * The protocol appears to want two major message types: "document" and "fragment".
  *
  * dom.patch(subtree)
+ * $(selector).replaceWith(subtree)
 */
 function SynchronyEditor (el) {
 
@@ -45,6 +45,12 @@ function SynchronyEditor (el) {
         }
         this.events.push(event);
     }
+
+    this.patch = function(subtree){
+        var subtrees = $(this.document).find(subtree);
+        console.log(subtrees);
+    }
+
 
     this.connect  = function(endpoint, channel) {
         
@@ -79,20 +85,36 @@ function SynchronyEditor (el) {
             // TODO: Match childNode attributes: An <a href="..."> should be matched etc.
             // Ie. Given the following DOM fragment, reintregrate it:
             // <span class="sitebit comhead"> (<a href="/request/news.ycombinator.com/from?site=spiegel.de"><span class="sitestr">spie</span></a>)</span>
-            // var selector = $(this.document).find
-            // var original_subtree = $(selector).clone, $(target).replaceWith(subtree)
+            //      var selector = $(this.document).find("element[attr*='attr']").get(0);
+            // or 
+            //      var selector = this.document.querySelectorAll("el.class.class");
+            //      var selector = this.document.querySelectorAll("el[attr*='attr']");
+            // var original_subtree = $(selector).clone, $(selector).replaceWith(subtree)
 
+            // match attrs of root element
+            // match attrs of next child until done.
+
+            // .find("span.sitebit.comhead a[href*='git']").get(0);
+            // Notice how this combines first and last element names.
 
             var doc_text = $(doc).text();
             console.log("doc_text: "+ doc_text);
-            var nodes = "";
-            var text_data = "";
-    //        doc.children[0].className
-            nodes = nodes + doc.children[0].nodeName
+            var selector   = "";
+            var nodes      = [];
+            var text_data  = "";
+            var class_list = ""
+            
+            for (var i = 0; i < doc.documentElement.classList.length; i++){
+                class_list = class_list + '.' + doc.documentElement.classList[i];
+            };
+            console.log(class_list);
+            //console.log(doc.documentElement.getAttribute("id"));
+            
+            nodes.push(doc.children[0].nodeName)
             if (doc.children[0].children) {
-                nodes = nodes + ' ' + doc.children[0].children[0].nodeName
+                nodes.push(doc.children[0].children[0].nodeName);
                 if (doc.children[0].children[0].children) {
-                    nodes = nodes + ' ' + doc.children[0].children[0].children[0].nodeName
+                    nodes.push(doc.children[0].children[0].children[0].nodeName);
                     text_data = doc.children[0].children[0].children[0].innerHTML
                 } else {
                     text_data = doc.children[0].children[0].innerHTML
@@ -101,8 +123,14 @@ function SynchronyEditor (el) {
                 text_data = doc.children[0].innerHTML
             }
             
-            console.log("nodes: " + nodes);
+            console.log("nodes: ", nodes);
             console.log("text_data: " + text_data);
+
+            selector = nodes[0] + class_list;
+            if (nodes.length > 1) { selector = selector + " " + nodes[nodes.length - 1]; }
+
+            console.log("selector: " + selector);
+            console.log($(this.document).find(selector).first());
 
             // This basic algorithm goes on the length of the text data.
             // A smarter way is to match the parent node and other subnodes.
@@ -111,8 +139,19 @@ function SynchronyEditor (el) {
             var length = text_data.length;
             
             // First half
-            var c = $(this.document).find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')');
-            var swapped = $(this.document).find(nodes + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')').first().html(data.document);
+            var c = $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')');
+            var subtree = $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(0,Math.ceil(length / 2)) + ')').first().get(0);
+            console.log("subtree", subtree);
+            for (var i = 0; i <= 1; i++) {
+                if (subtree.parentNode){
+                    subtree = subtree.parentNode
+                }
+                console.log("subtree", subtree);
+            }
+            console.log(data.document);
+            //this.last_subtree = subtree;
+            //if (subtree.length){ subtree.get(0).replaceWith(data.document); }
+            var swapped = $(subtree).html(data.document);
             
             console.log("swap attempt 1:");
             console.log(swapped.length);
@@ -120,18 +159,19 @@ function SynchronyEditor (el) {
             
             // Second half
             if (swapped.length != 1) {
-                c.push.apply(c, $(this.document).find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')'));
-                var swapped = $(this.document).find(nodes + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')').first().html(data.document);
+                c.push.apply(c, $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')'));
+                var subtree = $(this.document).find(nodes.join(" ") + ':contains(' + text_data.slice(Math.ceil(length / 2), length) + ')').first();
+                var swapped = subtree.html(data.document);
                 console.log("swap attempt 2:")
                 console.log(swapped.length);
                 console.log(swapped.text());
             }
             
-            console.log("c: " + c.length);
-            console.log(c);
-            for (var i = 0; i < c.length; i++) {
-                console.log($(c[i]).text());
-            }
+//            console.log("c: " + c.length);
+//            console.log(c);
+//            for (var i = 0; i < c.length; i++) {
+//                console.log($(c[i]).text());
+//            }
         
         }.bind(this));
 
@@ -157,12 +197,13 @@ function SynchronyEditor (el) {
         // <br />'s inserted when the return key's hit.
         // Also arbitrary subtrees.
         $(this.document).on("DOMNodeInserted", function(event){
-            console.log(event);
+            // Iterate to up to three parentNodes.
+            //console.log(event);
             this.appendEvent(event);
         }.bind(this));
  
         $(this.document).on("DOMNodeRemoved", function(event){
-            console.log(event);
+            //console.log(event);
             this.appendEvent(event);
         }.bind(this));
  
