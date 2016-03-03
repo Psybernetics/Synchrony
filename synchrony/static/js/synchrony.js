@@ -381,9 +381,10 @@ function Friend(){
     this.avatar   = null;
 }
 
-function Contacts(){
-    this.list        = [];
-    this.chat_socket = null;
+function Friends(){
+    this.list          = [];
+    this.chat_stream   = null;
+    this.global_stream = null;
 }
 
 // Start the Backbone URL hash monitor
