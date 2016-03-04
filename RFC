@@ -60,7 +60,7 @@ Abstract
 
 Brooks, et al.              Standards Track                     [Page 1]
 
-RFC 2616                        HTTP/1.1                    Febuary 2016
+RFC ____                       DHTTP/0.1                    Febuary 2016
 
    1   Introduction ...................................................7
    2   Routing Topology ...............................................7
@@ -99,17 +99,24 @@ Table of Contents
    This specification uses a number of terms to refer to the roles
    played by participants in, and objects of, Distributed HTTP networks.
 
-   user agent
-      An instance of a distributed HTTP proxy that implements this
-      protocol.
+   instance
+      An instance of a distributed HTTP proxy that implements 
+      and supports this protocol.
+
+   peer node
+      The local perspective of a remote instance.
 
    overlay network
       A routing table containing references to known peer nodes.
 
    message
       The basic unit of distributed HTTP communication which may consist
-      of references to known neighbour peer nodes in order to passively
-      reinforce the routing topology.
+      of references to known peer nodes in order to passively reinforce
+      the routing topology.
+
+   RPC
+      Remote Procedure Call.
+      A local procedure called from a remote instance.
 
    append
       APPEND procedure calls use the SHA1 hash of a URL or piece of
@@ -122,3 +129,27 @@ Table of Contents
       FIND procedure calls indicate lookups for a given SHA1 hash by
       using it as a node ID and asking peer 
 
+2 Routing Topology
+
+
+3 Collaborative Editing
+
+
+4 Distributed Trust
+
+
+5 Attribution and Licensing
+
+5.1 Introducing the license attribute
+
+   "Information wants to be free. Information also wants to be
+   expensive".
+   
+   A REQUIRED safeguard for protecting the livelihoods of economic
+   producers is the recognition of a "license" attribute when referencing
+   copywritten hypermedia objects.
+   
+   Eg.
+    <img src="/portfolio_item.png" license="Copywrite Site. Owner 2016" />
+   should cause instances to either omit retrieval or demarcate the object
+   as unpublicizable to network peers.
