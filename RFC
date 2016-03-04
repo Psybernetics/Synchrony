@@ -149,7 +149,9 @@ Table of Contents
    producers is the recognition of a "license" attribute when referencing
    copywritten hypermedia objects.
    
-   Eg.
-    <img src="/portfolio_item.png" license="Copywrite Site. Owner 2016" />
-   should cause instances to either omit retrieval or demarcate the object
-   as unpublicizable to network peers.
+   E.G.
+    <img src="/portfolio_item.png" license="Copyright Site. Owner 2016" />
+   SHALL cause instances to either omit retrieval or demarcate the object
+   as unpublicizable to network peers, whereas
+    <img src="/vacation_snap.ipng" license="CC BY" />
+   SHALL NOT.
