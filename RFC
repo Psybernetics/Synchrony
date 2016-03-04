@@ -1,0 +1,124 @@
+
+
+
+
+
+
+                                                              L. Brooks
+Request for Comments:                                                
+Obsoletes:                                                           
+Category: Standards Track                                            
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                                     
+                                                           Febuary 2016
+
+
+                Distributed Hypertext Transfer Protocol
+
+Status of this Memo
+
+   This document specifies an Internet standards track protocol for the
+   Internet community, and requests discussion and suggestions for
+   improvements.  Please refer to the current edition of the "Internet
+   Official Protocol Standards" (STD 1) for the standardization state
+   and status of this protocol.  Distribution of this memo is unlimited.
+
+Copyright Notice
+
+   Copyright (C) Luke Brooks (2016).  All Rights Reserved.
+
+Abstract
+
+   Distributed HTTP is a form of HTTP mediated by caching proxies
+   that speak a common protocol to one another. This is
+   implemented through the relationships between domains, resources
+   and revisions.
+
+   Instances of compatible proxies respect a routing topology based
+   on Kademlia with free node ID generation seeded by the nodes' IP
+   address, port number and public RSA key.
+
+   All revisions objects have an associated SHA1
+   hash associated with them to be used as their identifier.
+   
+   Stored resources may optionally be made public where their original
+   URL is SHA1 hashed and used as a Kademlia node ID. The corresponding
+   node is then searched for and informed that you are willing and able
+   to serve data corresponding to the content hash for the resource
+   in question.
+   
+   Distributed trust computation is discussed further on.
+
+
+Brooks, et al.              Standards Track                     [Page 1]
+
+RFC 2616                        HTTP/1.1                    Febuary 2016
+
+   1   Introduction ...................................................7
+   2   Routing Topology ...............................................7
+   3   Collaborative Editing ..........................................7
+   4   Distributed Trust ..............................................7
+   5   Attribution and Licensing ......................................7
+
+Table of Contents
+
+
+1 Introduction
+
+1.1 Purpose
+
+   Distributed HTTP is set of fundamental principles for peer-to-peer
+   networks sharing Hyptertext resources amongst nodes engaging in
+   shared overlay network namespaces, making HTTP resistant to server
+   downtime, domain name forfeiture and optionally, dedicated servers.
+
+1.2 Requirements
+
+   The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+   "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and "OPTIONAL" in this
+   document are to be interpreted as described in RFC 2119 [34].
+
+   An implementation is not compliant if it fails to satisfy one or more
+   of the MUST or REQUIRED level requirements for the protocols it
+   implements. An implementation that satisfies all the MUST or REQUIRED
+   level and all the SHOULD level requirements for its protocols is said
+   to be "unconditionally compliant"; one that satisfies all the MUST
+   level requirements but not all the SHOULD level requirements for its
+   protocols is said to be "conditionally compliant."
+
+1.3 Terminology
+
+   This specification uses a number of terms to refer to the roles
+   played by participants in, and objects of, Distributed HTTP networks.
+
+   user agent
+      An instance of a distributed HTTP proxy that implements this
+      protocol.
+
+   overlay network
+      A routing table containing references to known peer nodes.
+
+   message
+      The basic unit of distributed HTTP communication which may consist
+      of references to known neighbour peer nodes in order to passively
+      reinforce the routing topology.
+
+   append
+      APPEND procedure calls use the SHA1 hash of a URL or piece of
+      content and use them as a node ID, contact the peer in question
+      or neighbouring peers and storing appending a reference to
+      ourselves indicating we will serve the data that corresponds to
+      the given content hash.
+
+   find
+      FIND procedure calls indicate lookups for a given SHA1 hash by
+      using it as a node ID and asking peer 
+
