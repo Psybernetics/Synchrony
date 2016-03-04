@@ -1,5 +1,10 @@
 ##Synchrony
 #####A collaborative hyperdocument editor.
+
+![Alt text](doc/img/synchrony1.png?raw=true "Collaborative Editor")
+![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
+![Alt text](doc/img/synchrony3.png?raw=true "Distributed HTTP")
+
 Installation:
 <pre>
 sudo python2 setup.py install

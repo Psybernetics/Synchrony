@@ -210,7 +210,8 @@ class RevisionSearchResource(restful.Resource):
         parser.add_argument("per_page", type=int, default=10)
         args   = parser.parse_args()
 
-        revisions = [_ for _ in Revision.query.all() if query in _.url]
+        revisions = [_ for _ in Revision.query.all() if query in _.url and \
+                    (_.user == user or _.public)]
         pages     = Pagination(revisions, args.page, args.per_page)
         response  = make_response(request.url, pages)
         return response
