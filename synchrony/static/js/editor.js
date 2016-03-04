@@ -76,6 +76,8 @@ function SynchronyEditor (el) {
             }
             
             console.log(doc);
+            this.last_doc = doc;
+
 
             // for (p in doc){ console.log(p, doc[p]); }
             // doc.children.attributes.childNodes.nodeValue
@@ -150,7 +152,8 @@ function SynchronyEditor (el) {
             console.log(data.document);
             //this.last_subtree = subtree;
             //if (subtree.length){ subtree.get(0).replaceWith(data.document); }
-            var swapped = $(subtree).html(data.document);
+            // var swapped = $(subtree).html(data.document);
+            var swapped = $(subtree).replaceWith(data.document);
             
             console.log("swap attempt 1:");
             console.log(swapped.length);
