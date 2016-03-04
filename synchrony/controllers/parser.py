@@ -19,24 +19,27 @@ def parse(html, url):
 
     request_endpoint = "/request/"
 
-    for a in soup.findAll('a'):
-        try:
-            log("%s -> %s%s%s" % (str(a['href']), request_endpoint, domain, str(a['href'])), "debug")
-            if a['href'].startswith('https'): a['href'] = a['href'].replace("https://", request_endpoint)
-            elif a['href'].startswith('http'): a['href'] = a['href'].replace("http://", request_endpoint)
-            elif a['href'].startswith('/'): a['href'] = '%s%s%s' % (request_endpoint, domain, a['href'])
-            else: a['href'] = '%s%s/%s' % (request_endpoint, domain, a['href'])
-        except: continue
+    # Known to omit some images such as the main one on uk.reuters.com
+    # Also far slower than the previous implementation (it's simply doing more).
+    def correct(soup, element):
+        for _ in soup.findAll(element):
+            
+            if _.has_key("href"):
+                log("%s -> %s%s%s" % (str(_['href']), request_endpoint, domain, str(_['href'])), "debug")
+                if    _['href'].startswith('https'):  _['href'] = _['href'].replace("https://", request_endpoint)
+                elif  _['href'].startswith('http'):   _['href'] = _['href'].replace("http://",  request_endpoint)
+                elif  _['href'].startswith('/'):      _['href'] = '%s%s%s' % (request_endpoint, domain, _['href'])
+                else: _['href'] = '%s%s/%s' % (request_endpoint, domain, _['href'])
 
-    for link in soup.findAll('link'):
-        try:
-            log(str(link['href']))
-            if link['href'].startswith('https'): link['href'] = link['href'].replace("https://", request_endpoint)
-            elif link['href'].startswith('http'): link['href'] = link['href'].replace("http://", request_endpoint)
-            elif link['href'].startswith('/'): link['href'] = '%s%s%s' % (request_endpoint, domain, link['href'])
-            else: link['href'] = '%s%s/%s' % (request_endpoint,domain, link['href'])
-        except: continue
+            elif _.has_key("src"):
+                log("%s -> %s%s%s" % (str(_['src']), request_endpoint, domain, str(_['src'])), "debug")
+                if    _['src'].startswith('https'):  _['src'] = _['src'].replace("https://", request_endpoint)
+                elif  _['src'].startswith('http'):   _['src'] = _['src'].replace("http://",  request_endpoint)
+                elif  _['src'].startswith('/'):      _['src'] = '%s%s%s' % (request_endpoint, domain, _['src'])
+                else: _['src'] = '%s%s/%s' % (request_endpoint, domain, _['src'])
     
+    [correct(soup, element) for element in ["a", "link", "img", "script"]]
+
     log('Should have cycled through urls by now.')
     try:
         soup.head.append(appendage)
@@ -44,3 +47,6 @@ def parse(html, url):
     except: pass
     
     return unicode(soup)
+
+
+

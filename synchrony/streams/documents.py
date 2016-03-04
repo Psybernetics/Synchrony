@@ -33,29 +33,39 @@ class DocumentStream(Stream):
         are left with the official history.
         """
         log("Document stream init")
+        self.url         = ""
         self.user        = None
         self.socket_type = "document"
         self.fragments   = []
         self.documents   = []
         self.channel     = () # Available types: url, addr, name.
-                            # Eg. ("addr", "alpha/1252322141974278745698082250347869678457931551015/f50068d167fc6")
-                            # This type implies we should synchronise with the local
-                            # or remote user when they navigate.
+                              # Eg. ("addr", "alpha/1252322141974278745698082250347869678457931551015/f50068d167fc6")
+                              # This type implies we should synchronise with the local
+                              # or remote user when they navigate.
 
         if 'channels' not in self.session:
             self.session['channels'] = set()
 
     @require_auth
     def on_join(self, channel):
-        user = auth(self.request)
-        if user:
-            self.user = user
-            log('%s has subscribed to the document stream for "%s"' % \
+        log('%s has subscribed to the document stream for "%s".' % \
             (self.user.username, channel))
-        else:
-            log('An anonymous user has subscribed to the document stream for "%s"' % \
-            channel)
         self.join(channel)
+        self.broadcast(self.channel[1], "join", self.user.jsonify())
+
+    @require_auth
+    def on_part(self, channel):
+        if not self.authenticate(): return
+        self.leave(channel)
+        self.broadcast(self.channel[1], "part", self.user.jsonify())
+
+    @require_auth
+    def on_change_url(self, url):
+        self.url = url
+        log("DocumentStream: URL change for %s to %s." % (self.user.username, url))
+        if self.channel:
+            body = {"user": self.user.jsonify(), "url": url}
+            self.broadcast(self.channel[1], "url_change", body)
 
     @require_auth
     def on_names(self, channel):
@@ -71,15 +81,9 @@ class DocumentStream(Stream):
         self.emit({"names": response})
 
     @require_auth
-    def on_part(self, channel):
-        if not self.authenticate(): return
-        self.leave(channel)
-        self.broadcast(self.channel[1], "part", self.user.jsonify())
-
-    @require_auth
     def on_edit(self, update):
         if self.channel:
-            log('DocumentStream: %s "%s":%i' % \
+            log('DocumentStream: %s %s:%i.' % \
             (self.user.username, self.channel, len(update)))
             
             body = {"user":self.user.username,"document":update}
@@ -94,7 +98,7 @@ class DocumentStream(Stream):
     @require_auth
     def recv_disconnect(self):
         if self.user and self.channel:
-            log('%s has disconnected from channel %s' % \
+            log('%s has disconnected from channel %s.' % \
             (self.user.username, str(self.channel)))
         elif self.user:
             log('%s has disconnected from an unspecified document stream.' % \
