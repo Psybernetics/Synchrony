@@ -44,11 +44,13 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
 // App init
 (function(){
     window.App = {
-        Config:  {},
-        Views:   {},
-        stream:  [],
-        history: [],
-        title: " - Synchrony",
+        Config:   {},
+        Views:    {},
+        stream:   [],
+        history:  [],
+        editor:   undefined,
+        title:    " - Synchrony",
+        Contacts: new Contacts(),
     }
 
     // Ask the server who we are.
@@ -271,6 +273,10 @@ function request(event){
         update_address_bars(url);
         App.history.push(url);
 
+        if (App.editor) {
+            App.editor.socket.emit("change_url", url);
+        }
+
         $('iframe').contents().find('body').html("Loading...");
 
         var response = $.ajax({
@@ -381,7 +387,7 @@ function Friend(){
     this.avatar   = null;
 }
 
-function Friends(){
+function Contacts(){
     this.list          = [];
     this.chat_stream   = null;
     this.global_stream = null;
@@ -1095,7 +1101,11 @@ Ractive.load({
     });
     
     App.Views.content.editor = new SynchronyEditor($('.iframe'));
+    
+    App.editor = App.Views.content.editor;
+    
     App.Views.content.editor.connect();
+
 
     App.Views['toolbar'] = new components.toolbar({
         el: $('.toolbar'),

@@ -51,7 +51,6 @@ function SynchronyEditor (el) {
         console.log(subtrees);
     }
 
-
     this.connect  = function(endpoint, channel) {
         
         if (endpoint) { this.config.endpoint = endpoint; }

@@ -30,3 +30,13 @@ Visit :8080/v1/peers/test to tell peers you're serving whatever revision is foun
 Visit :8090/v1/peers/url_for_revision to pull the resource through the first peer and serve with the second peer.
 
 Currently a work-in-progess as RPCs undergo refinement.
+
+----
+
+#####How you can support this project
+
+Suggestions can be made on IRC: irc.psybernetics.org #synchrony
+
+Donations are accepted [here](https://paypal.me/LukeB42).
+
+All contributions go towards the development of this software, including porting to Go.
