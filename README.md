@@ -9,11 +9,11 @@ Installation:
 <pre>
 sudo python setup.py install
 synchrony --help
-synchrony --debug
+synchrony --debug --address 127.0.0.1
 </pre>
 From another shell:
 <pre>
-synchrony --debug --port 8090 --bootstrap localhost:8080
+synchrony --debug --address 127.0.0.1 --port 8090 --bootstrap 127.0.0.1:8080
 </pre>
 
 Visit localhost:8080 in a browser, make an account, hover over the scaled fish icon and
