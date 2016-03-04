@@ -640,6 +640,10 @@ input.switch:empty ~ label:after
     color: #F3F6EA;
 }
 
+.synchrony.addressbar {
+    max-width: 60%;
+}
+
 .stream {
     width: 100%;
     height: 60%;
