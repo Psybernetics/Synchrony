@@ -25,6 +25,10 @@ def parse(html, url):
         for _ in soup.findAll(element):
             
             if _.has_key("href"):
+                if _.has_key("license") and _['license'].lower() != "cc by":
+                    log("Ignoring licensed object %s" % _['href'])
+                    _['href'] = ""
+                    continue
                 log("%s -> %s%s%s" % (str(_['href']), request_endpoint, domain, str(_['href'])), "debug")
                 if    _['href'].startswith('https'):  _['href'] = _['href'].replace("https://", request_endpoint)
                 elif  _['href'].startswith('http'):   _['href'] = _['href'].replace("http://",  request_endpoint)
@@ -32,13 +36,18 @@ def parse(html, url):
                 else: _['href'] = '%s%s/%s' % (request_endpoint, domain, _['href'])
 
             elif _.has_key("src"):
+                if _.has_key("license") and _['license'].lower() != "cc by":
+                    log("Ignoring licensed object %s" % _['src'])
+                    _['src'] = ""
+                    continue
                 log("%s -> %s%s%s" % (str(_['src']), request_endpoint, domain, str(_['src'])), "debug")
                 if    _['src'].startswith('https'):  _['src'] = _['src'].replace("https://", request_endpoint)
                 elif  _['src'].startswith('http'):   _['src'] = _['src'].replace("http://",  request_endpoint)
                 elif  _['src'].startswith('/'):      _['src'] = '%s%s%s' % (request_endpoint, domain, _['src'])
                 else: _['src'] = '%s%s/%s' % (request_endpoint, domain, _['src'])
-    
-    [correct(soup, element) for element in ["a", "link", "img", "script"]]
+  
+
+    [correct(soup, element) for element in ["a", "link", "img", "script", "audio", "video"]]
 
     log('Should have cycled through urls by now.')
     try:
