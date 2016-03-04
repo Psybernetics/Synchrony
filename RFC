@@ -118,16 +118,23 @@ Table of Contents
       Remote Procedure Call.
       A local procedure called from a remote instance.
 
-   append
-      APPEND procedure calls use the SHA1 hash of a URL or piece of
-      content and use them as a node ID, contact the peer in question
-      or neighbouring peers and storing appending a reference to
-      ourselves indicating we will serve the data that corresponds to
-      the given content hash.
+   node ID
+      A 160-bit binary value.
+      Free node ID generation MUST be limited to the SHA1 hash of an
+      instances' public IP address, port number and public RSA
+      key. This prevents users from obtaining node IDs that can permit
+      the collection of valuable usage data for a URL of interest.
 
-   find
+   APPEND
+      The APPEND RPC uses the SHA1 hash of a URL or hypermedia object
+      and uses this as a node ID, contacting the node in question or
+      neighbouring nodes and appending a reference to our own instance,
+      indicating we will serve data that corresponds to the given
+      content hash.
+
+   FIND
       FIND procedure calls indicate lookups for a given SHA1 hash by
-      using it as a node ID and asking peer 
+      using it as a node ID and asking peers 
 
 2 Routing Topology
 
