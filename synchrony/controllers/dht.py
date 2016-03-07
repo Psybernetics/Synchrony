@@ -646,6 +646,7 @@ class SynchronyProtocol(object):
         if not isinstance(message_body, list):
             message_body = [message_body]
 
+        node    = None
         payload = []
 
         for message in message_body:
@@ -693,8 +694,12 @@ class SynchronyProtocol(object):
 
                 payload.append(message)
 
+
+        if not node:
+            log("Unrecognised message type: %s" % message_type)
+            return False, None
+
         response = transmit(self.router, node, {"rpc_friend": payload})
-        log(response)
 
         if not isinstance(response, dict) or not "response" in response:
             return False, None
@@ -874,7 +879,7 @@ class SynchronyProtocol(object):
 
                 network = Network.query.filter(Network.name == self.router.network).first()
                 
-                if network != None:
+                if network == None:
                     network = Network(name = self.router.network)
 
                 peer = Peer.query.filter(
