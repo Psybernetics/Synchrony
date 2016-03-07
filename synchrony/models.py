@@ -500,6 +500,23 @@ class Friend(db.Model):
             return "<Friend of %s %s>" % (self.user.username, self.name)
         return "<Friend>"
 
+    def get_state(self, routers, local_uid):
+        if not self.address:
+            return
+        network, node_id, uid = self.address.split("/")
+        router  = routers.get(network, None)
+        if not router:
+            return
+
+        message = {"status": {
+                       "from": local_uid,
+                       "to": self.address,
+                       "type": "GET"
+                       }
+                  }
+
+        return router.protocol.rpc_friend(message_body)
+
     def jsonify(self):
         response = {}
         response['name']     = self.name

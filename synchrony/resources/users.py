@@ -352,7 +352,8 @@ class UserFriendsCollection(restful.Resource):
             network, node_id, uid = address.split('/')
             router = app.routes.get(network, None)
             if router != None:
-                remote_state = router.protocol.rpc_add_friend(user.uid, address)
+                message_body = {"add": {"from": user.uid, "to": address}}
+                remote_state = router.protocol.rpc_friend(message_body)
                 if remote_state[0]:
                     response['data'][i]['status'] = remote_state[0]['status']
 
@@ -371,8 +372,6 @@ class UserFriendsCollection(restful.Resource):
 
         # Parse the address and contact the node in question.
         # node = NodeSpider(node)
-        # rpc_add_friend      {to: uid, from:uid}
-        # handle_add_friend   {from: uid, to:uid, confirm:true}
         if args.address.count("/") != 2:
             return False
 
@@ -382,7 +381,8 @@ class UserFriendsCollection(restful.Resource):
             return {}, 404
 
         log("%s is adding a remote friend." % user.username)
-        response, node = router.protocol.rpc_add_friend(user.uid, args.address)
+        request        = {"add": {"from": user.uid, "to": args.address}}
+        response, node = router.protocol.rpc_friend(request)
 
         if not response:
             return {}, 404
@@ -410,7 +410,6 @@ class UserFriendsCollection(restful.Resource):
             peer.ip      = node.ip
             peer.port    = node.port
             peer.network = network
-
 
         friend       = Friend(address=args.address)
         friend.name  = args.name

@@ -555,10 +555,26 @@ class SynchronyProtocol(object):
 
         This is best evaded by sharing your public key separately ahead of time.
         
+        {"rpc_append":     {"url_hash":"content_hash"}}
+        {"rpc_edit":       {"channel": [], "edit": subtree}}
+        {"rpc_chat":       {'to': 'uid', 'from': ['uid', 'username'],
+                            'type': "message" or "init" or "close" or "rtc",
+                            'body': {'m':'content'}}}
+        {"rpc_find_node":  "node_id"}
+        {"rpc_find_value": "url_hash"}
+        {"rpc_friend":
+            [
+                {"add": {"from": "uid", "to": "addr"}},
+                {"remove": {"from": "uid", "to": "addr"}},
+                {"status": {"from": "uid", "to": "addr", "type": "AO"}},
+            ]
+         "network": "alpha"
+         "peers":   [...]
+        }
         """
         self.ksize         = ksize
         self.router        = router
-        self.epsilon       = 0.0001 # DON'T use a different trust increment publicly.
+        self.epsilon       = 0.0001  # Don't use a different trust increment publicly.
         self.storage       = storage
         self.source_node   = router.node
         self.downloads     = ForgetfulStorage()         # content_hash -> (n.ip, n.port)
@@ -604,47 +620,82 @@ class SynchronyProtocol(object):
         """
         pass
 
-    def rpc_add_friend(self, local_uid, addr):
+    def rpc_friend(self, message_body):
         """
-        addr is of the form "network_name/node_id/remote_user_id"
-        Implements ADD_FRIEND where we find the node in addr and
-        tell them a local user wants to add the remote UID as a friend.
-        """
-        if addr.count("/") != 2:
-            return False, None
-        network, node_id, remote_uid = addr.split("/")
+        {"rpc_friend":
+            [
+                {"add": {"from": "uid", "to": "addr"}},
+                {"remove": {"from": "uid", "to": "addr"}},
+                {"status": {"from": "uid", "to": "addr", "type": "AO"}},
+            ]
+         "network": "alpha"
+         "peers":   [...]
+        }
+
+        addr is of the form "network_name/node_id/remote_user_id".
+        RPC_FRIEND messages can be batched together.
         
-        if network != self.router.network:
-            return False, None
+        TODO: The type field for status messages should support
+            
+            AFK - Away
+            A   - Available
+            AO  - Appear Offline
+            GET - Request status of remote friend
 
-        node = Node(long(node_id))
-        nearest = self.router.find_neighbours(node)
-        if len(nearest) == 0:
-            log("There are no neighbours to help us add users on %s as friends." % node_id)
-            return False, None
-        spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
-        nodes   = spider.find()
+        """
+        if not isinstance(message_body, list):
+            message_body = [message_body]
 
-        if len(nodes) != 1:
-            return False, None
+        payload = []
 
-        node    = nodes[0]
+        for message in message_body:
+            message_type = message.keys()[0]
+            if message_type == "add":
+                addr = message[message_type]["to"]
+    
+                if addr.count("/") != 2:
+                    log("Invalid address %s" % addr)
+                    return False, None
+                network, node_id, remote_uid = addr.split("/")
+                
+                if network != self.router.network:
+                    return False, None
 
-        # Sometimes spidering doesn't get us all the way there.
-        # Check who we already know:
-        if node.long_id != long(node_id):
-            nodes = [n for n in self.router if n.long_id == long(node_id)]
-            if len(nodes) != 1:
-                return False, None
-            node = nodes[0]
+                node = Node(long(node_id))
+                nearest = self.router.find_neighbours(node)
+                if len(nearest) == 0:
+                    log("There are no neighbours to help us add users on %s as friends." % \
+                        node_id)
+                    return False, None
+                spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
+                nodes   = spider.find()
 
-        log(node_id, "debug")
-        log(node.long_id, "debug")
+                if len(nodes) != 1:
+                    log("Unable to narrow search down to one particular node: %s" % \
+                        str(nodes))
+                    return False, None
 
-        log("Found remote instance %s." % node)
-        message = {"rpc_add_friend": {"from": local_uid, "to": remote_uid}}
+                node = nodes[0]
 
-        response = transmit(self.router, node, message)
+                # Sometimes spidering doesn't get us all the way there.
+                # Check who we already know:
+                if node.long_id != long(node_id):
+                    nodes = [n for n in self.router if n.long_id == long(node_id)]
+                    if len(nodes) != 1:
+                        log("Peer not found via spidering.")
+                        return False, None
+                    node = nodes[0]
+
+                log(node_id, "debug")
+                log(node.long_id, "debug")
+
+                log("Found remote instance %s." % node)
+
+                payload.append(message)
+
+        response = transmit(self.router, node, {"rpc_friend": payload})
+        log(response)
+
         if not isinstance(response, dict) or not "response" in response:
             return False, None
 
@@ -659,7 +710,7 @@ class SynchronyProtocol(object):
         { 
            'to': 'uid',
            'from': ['uid', 'username'],
-           'type': Can be any of "message", "init", "close"
+           'type': "message" or "init" or "close" or "rtc"
            'body': {'m':'content'}
         }
         """
@@ -779,65 +830,82 @@ class SynchronyProtocol(object):
         log("Received rpc_ping from %s." % node)
         return envelope(self.router, {'ping':"pong"})
 
-    def handle_add_friend(self, data):
+    def handle_friend(self, data):
         """
+        {"rpc_friend":
+            [
+                {"add": {"from": "uid", "to": "addr"}},
+                {"remove": {"from": "uid", "to": "addr"}},
+                {"status": {"from": "uid", "to": "addr", "type": "AO"}},
+            ]
+         "network": "alpha"
+         "peers":   [...]
+        }
+        
         Match to UID and return a new Friend instance representing our side.
         """
-        assert "rpc_add_friend" in data
+        node = self.read_envelope(data)
+        
+        for message in data['rpc_friend']:
+            message_type = str(message.keys()[0])
+            payload = message.values()[0]
+            
+            if not "from" in payload or not "to" in payload:
+                continue
+           
+            # Currently only one FRIEND RPC is recognised.
+            # TODO(ljb): Remove friend, update status.
+            if message_type == "add":
+                
+                local_uid = payload['to'].split('/', 2)[-1]
+                user      = User.query.filter(User.uid == local_uid).first()
+                if not user:
+                    log("No user.", "error")
+                    return None
+                from_addr = "/".join([self.router.network, str(node.long_id), payload['from']])
+                friend    =  Friend.query.filter(
+                                    and_(Friend.address == from_addr, Friend.user == user)
+                                ).first()
+                if friend:
+                    # This permits the remote side to see if they're added or blocked.
+                    return envelope(self.router, {"response": friend.jsonify()})
+                
+                node = Node(*data['node'])
 
-        log(data, "debug")
-        request   = data['rpc_add_friend']
+                network = Network.query.filter(Network.name == self.router.network).first()
+                
+                if network != None:
+                    network = Network(name = self.router.network)
 
-        if not "from" in request or not "to" in request:
-            return False
-
-        node         = self.read_envelope(data)
-        user         = User.query.filter(User.uid == request['to']).first()
-        if not user: return None
-        from_addr    = "/".join([self.router.network, str(node.long_id), request['from']])
-        friend       =  Friend.query.filter(
-                            and_(Friend.address == from_addr, Friend.user == user)
+                peer = Peer.query.filter(
+                            and_(Peer.network == network,
+                                 Peer.ip      == node.ip,
+                                 Peer.port    == node.port)
                         ).first()
-        if friend:
-            # This permits the remote side to see if they're added or blocked.
-            return envelope(self.router, {"response": friend.jsonify()})
-        
-        node = Node(*data['node'])
 
-        network = Network.query.filter(Network.name == self.router.network).first()
-        
-        if network != None:
-            network = Network(name = self.router.network)
+                if peer == None:
+                    peer = Peer()
+                    peer.ip      = node.ip
+                    peer.port    = node.port
+                    peer.pubkey  = node.pubkey
+                    peer.network = network
 
-        peer = Peer.query.filter(
-                    and_(Peer.network == network,
-                         Peer.ip      == node.ip,
-                         Peer.port    == node.port)
-                ).first()
+                friend          = Friend(address=from_addr)
+                friend.state    = 1
+                friend.received = True
+                friend.ip       = node.ip
+                friend.port     = node.port
+                
+                user.friends.append(friend)
+                peer.friends.append(friend)
 
-        if peer == None:
-            peer = Peer()
-            peer.ip      = node.ip
-            peer.port    = node.port
-            peer.pubkey  = node.pubkey
-            peer.network = network
-
-        friend          = Friend(address=from_addr)
-        friend.state    = 1
-        friend.received = True
-        friend.ip       = node.ip
-        friend.port     = node.port
-        
-        user.friends.append(friend)
-        peer.friends.append(friend)
-
-        db.session.add(user)
-        db.session.add(peer)
-        db.session.add(friend)
-        db.session.add(network)
-        db.session.commit()
-
-        return envelope(self.router, {"response": friend.jsonify()})
+                db.session.add(user)
+                db.session.add(peer)
+                db.session.add(friend)
+                db.session.add(network)
+                db.session.commit()
+                
+                return envelope(self.router, {"response": friend.jsonify()})
 
     def handle_chat(self, data):
         """
@@ -2538,9 +2606,22 @@ def receive(data):
     data = json.loads(data)
     return data
 
+def suppress_unicode_repr(object, context, maxlevels, level):
+    typ = pprint._type(object)
+    if typ is unicode:
+        object = str(object)
+    return pprint._safe_repr(object, context, maxlevels, level)
+
 def log(message, loglevel="info"):
-    if isinstance(message, dict) or isinstance(message, list):
-        message =  '\n' + pprint.pformat(message)
+    if not message:
+        return
+    
+    if isinstance(message, (list, dict, tuple)):
+        printer = pprint.PrettyPrinter()
+        printer.format = suppress_unicode_repr
+        [log(_) for _ in printer.pformat(message).split("\n")]
+        return
+    
     _log("DHT: %s" % str(message), loglevel)
 
 def digest(s):
