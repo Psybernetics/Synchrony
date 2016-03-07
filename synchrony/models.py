@@ -368,6 +368,8 @@ class User(db.Model):
     friends       = db.relationship("Friend", backref="user")
     sessions      = db.relationship("Session", backref="user")
     revisions     = db.relationship("Revision", backref="user")
+    status        = db.Column(db.String(), default="A")
+
 
     def __init__(self, username, password):
         self.username = username
@@ -494,11 +496,28 @@ class Friend(db.Model):
         if not self.state:
             return self.states[0]
         return self.states.get(self.state, None)
+    
+    def get_state(self, routers):
+        """
+        Given a controllers.dht.Routers object, return the remote status of
+        this friend.
+        """
+        if not self.address or not self.user:
+            return
 
-    def __repr__(self):
-        if self.address and self.user:
-            return "<Friend of %s %s>" % (self.user.username, self.name)
-        return "<Friend>"
+        network, node_id, uid = self.address.split("/")
+        router  = routers.get(network, None)
+        if not router:
+            return
+
+        message = {"status": {
+                       "from": self.user.uid,
+                       "to": self.address,
+                       "type": "GET"
+                       }
+                  }
+
+        return router.protocol.rpc_friend(message)
 
     def jsonify(self):
         response = {}
@@ -514,6 +533,11 @@ class Friend(db.Model):
         if self.user:
             response['user'] = self.user.username
         return response
+
+    def __repr__(self):
+        if self.address and self.user:
+            return "<Friend of %s %s>" % (self.user.username, self.name)
+        return "<Friend>"
 
 class Network(db.Model):
     """

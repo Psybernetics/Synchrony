@@ -1,8 +1,6 @@
 /* This is the class for page synchronisation.
  * 
  * var editor = new SynchronyEditor($('.iframe'));
- * editor.save();
- * Consider a map of {channel: SynchronyEditor} pairs.
  *
  * The current strategy revolves around subscribing to a channel named after
  * the active url, a user addr or shared channel name.
@@ -18,7 +16,10 @@
  *
  * The protocol appears to want two major message types: "document" and "fragment".
  *
- * dom.patch(subtree)
+ * Do not consider a map of {channel: SynchronyEditor} pairs.
+ * Do consider:
+ *      this.patch(subtree)
+ *      this.save()
  * $(selector).replaceWith(subtree)
 */
 function SynchronyEditor (el) {

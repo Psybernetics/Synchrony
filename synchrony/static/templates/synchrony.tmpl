@@ -1,6 +1,7 @@
 <img class="fish" src="/static/img/synchrony.png" onmouseover="javascript:toggle_synchrony();"/>
 <div class="control_panel" style="display: none;"> 
 
+{{^showing_friends}}
 <span class="synchrony_buttons">
     {{#showing_home_button}}
     <a href="/#"><button class="button big_button">Home</button></a><br />
@@ -18,8 +19,10 @@
 	<button class="button big_button edit_button" on-click="save">Save</button><br />
     {{/showing_save_button}}
 	<button class="button big_button" on-click="chat">Chat</button><br />
+	<button class="button big_button" on-click="friends">Friends</button><br />
 	<button class="button big_button" on-click="logout">Log out</button><br />
 </span>
+{{/showing_friends}}
 <span>
 	<a id="profile_link" href="/#user/{{Config.user.username}}">
         <img src="/v1/users/{{Config.user.username}}/avatar" class="small circular" />
@@ -29,6 +32,17 @@
     {{domains}} domains.<br />
 	<br />
 </span>
+{{#showing_friends}}
+<span class="synchrony_buttons">
+	<button class="button big_button" on-click="friends">Back</button><br />
+</span>
+<div class="friends_list">
+    {{#friends}}
+        {{name}}
+        <hr />
+    {{/friends}}
+</div>
+{{/showing_friends}}
 <div class="stream">
     {{#stream}}
         {{&this}}<br />

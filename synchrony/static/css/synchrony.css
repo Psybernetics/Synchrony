@@ -656,6 +656,19 @@ input.switch:empty ~ label:after
     font-style: italic;
 }
 
+.friends_list {
+    overflow: auto;
+    display: inline-block;
+    height: 60%;
+    min-width: 345px;
+    font-family: Roboto;
+    font-size: 80%;
+}
+
+.friends_list hr {
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), rgba(133, 133, 133, 0.75), rgba(0, 0, 0, 0));
+}
+
 #profile_link {
 	color: #D7FF57;
 	font-style: italic;

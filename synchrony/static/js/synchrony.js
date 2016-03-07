@@ -1179,6 +1179,8 @@ Ractive.load({
         adaptor: ['Backbone'],
     });
 
+    App.Views.synchrony.set("showing_friends", false);
+
     App.Views.synchrony.socket = io.connect('/global', {resource:"stream"});
     App.Views.synchrony.socket.emit('join', "global");
     App.Views.synchrony.socket.on("message", function(data){
@@ -1209,6 +1211,14 @@ Ractive.load({
         },
         chat:      function(event){
             window.location.hash = "#chat";
+        },
+        friends: function(event){
+            var current_value = App.Views.synchrony.get("showing_friends");
+            App.Views.synchrony.set("showing_friends", !current_value);
+            $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
+                console.log(response);
+                App.Views.synchrony.set("friends", response.data);
+            });
         },
         logout:    function(event){
             $.ajax({
