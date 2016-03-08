@@ -50,7 +50,7 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
         history:  [],
         editor:   undefined,
         title:    " - Synchrony",
-        Contacts: new Contacts(),
+        Friends: new Friends(),
     }
 
     // Ask the server who we are.
@@ -380,17 +380,19 @@ function populate_table(view, table_type, url){
     });
 }
 
-function Friend(){
-    this.username = null;
-    this.address  = null;
-    this.online   = null;
-    this.avatar   = null;
-}
-
-function Contacts(){
+function Friends(){
+    // Filtering this array is what we have
+    // Underscore present for
     this.list          = [];
     this.chat_stream   = null;
     this.global_stream = null;
+    this.poll          = function(){
+        $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
+            this.list.length = 0;
+            this.list.push.apply(this.list, response.data);
+        }.bind(this));
+    }
+    this.change_status = function(){}
 }
 
 // Start the Backbone URL hash monitor
@@ -1172,12 +1174,15 @@ Ractive.load({
     App.Views['synchrony'] = new components.synchrony({
         el: $('.synchrony'),
         data: {
-            Config: App.Config,
-            edit_button:"Edit",
-            stream: App.stream,
+            Config:      App.Config,
+            stream:      App.stream,
+            friends:     App.Friends,
+            edit_button: "Edit"
         },
         adaptor: ['Backbone'],
     });
+
+    App.Views.synchrony.set("showing_friends", false);
 
     App.Views.synchrony.socket = io.connect('/global', {resource:"stream"});
     App.Views.synchrony.socket.emit('join', "global");
@@ -1209,6 +1214,17 @@ Ractive.load({
         },
         chat:      function(event){
             window.location.hash = "#chat";
+        },
+        friends: function(event){
+            var showing_friends = App.Views.synchrony.get("showing_friends");
+            App.Views.synchrony.set("showing_friends", !showing_friends);
+            if (!showing_friends) {
+                App.Friends.poll();
+                $(".control_panel").addClass("friends_list_mode");
+            } else {
+                $(".control_panel").removeClass("friends_list_mode");
+            
+            }
         },
         logout:    function(event){
             $.ajax({

@@ -368,6 +368,8 @@ class User(db.Model):
     friends       = db.relationship("Friend", backref="user")
     sessions      = db.relationship("Session", backref="user")
     revisions     = db.relationship("Revision", backref="user")
+    status        = db.Column(db.String(), default="A")
+
 
     def __init__(self, username, password):
         self.username = username
@@ -395,6 +397,7 @@ class User(db.Model):
             response['uid']             = self.uid
             response['email']           = self.email
             response['active']          = self.active
+            response['status']          = self.status
             response['created']         = time.mktime(self.created.timetuple())
             response['revision_count']  = len(self.revisions)
             if sessions:
@@ -494,28 +497,28 @@ class Friend(db.Model):
         if not self.state:
             return self.states[0]
         return self.states.get(self.state, None)
-
-    def __repr__(self):
-        if self.address and self.user:
-            return "<Friend of %s %s>" % (self.user.username, self.name)
-        return "<Friend>"
-
-    def get_state(self, routers, local_uid):
-        if not self.address:
+    
+    def get_state(self, routers):
+        """
+        Given a controllers.dht.Routers object, return the remote status of
+        this friend.
+        """
+        if not self.address or not self.user:
             return
+
         network, node_id, uid = self.address.split("/")
         router  = routers.get(network, None)
         if not router:
             return
 
         message = {"status": {
-                       "from": local_uid,
+                       "from": self.user.uid,
                        "to": self.address,
                        "type": "GET"
                        }
                   }
 
-        return router.protocol.rpc_friend(message_body)
+        return router.protocol.rpc_friend(message)
 
     def jsonify(self):
         response = {}
@@ -523,6 +526,7 @@ class Friend(db.Model):
         response['status']   = self.parse_status()
         response['address']  = self.address
         response['name']     = self.name
+        response['uid']      = self.uid
         response['received'] = self.received
         response['ip']       = self.ip
         response['port']     = self.port
@@ -531,6 +535,11 @@ class Friend(db.Model):
         if self.user:
             response['user'] = self.user.username
         return response
+
+    def __repr__(self):
+        if self.address and self.user:
+            return "<Friend of %s %s>" % (self.user.username, self.name)
+        return "<Friend>"
 
 class Network(db.Model):
     """

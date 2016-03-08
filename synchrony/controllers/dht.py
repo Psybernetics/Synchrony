@@ -646,56 +646,57 @@ class SynchronyProtocol(object):
         if not isinstance(message_body, list):
             message_body = [message_body]
 
+        node    = None
         payload = []
 
         for message in message_body:
             message_type = message.keys()[0]
-            if message_type == "add":
-                addr = message[message_type]["to"]
-    
-                if addr.count("/") != 2:
-                    log("Invalid address %s" % addr)
-                    return False, None
-                network, node_id, remote_uid = addr.split("/")
-                
-                if network != self.router.network:
-                    return False, None
+            addr = message[message_type]["to"]
 
-                node = Node(long(node_id))
-                nearest = self.router.find_neighbours(node)
-                if len(nearest) == 0:
-                    log("There are no neighbours to help us add users on %s as friends." % \
-                        node_id)
-                    return False, None
-                spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
-                nodes   = spider.find()
+            if addr.count("/") != 2:
+                log("Invalid address %s" % addr)
+                return False, None
+            network, node_id, remote_uid = addr.split("/")
+            
+            if network != self.router.network:
+                return False, None
 
+            node = Node(long(node_id))
+            nearest = self.router.find_neighbours(node)
+            if len(nearest) == 0:
+                log("There are no neighbours to help us add users on %s as friends." % \
+                    node_id)
+                return False, None
+            spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
+            nodes   = spider.find()
+
+            if len(nodes) != 1:
+                log("Unable to narrow search down to one particular node: %s" % \
+                    str(nodes))
+                return False, None
+
+            node = nodes[0]
+
+            # Sometimes spidering doesn't get us all the way there.
+            # Check who we already know:
+            if node.long_id != long(node_id):
+                nodes = [n for n in self.router if n.long_id == long(node_id)]
                 if len(nodes) != 1:
-                    log("Unable to narrow search down to one particular node: %s" % \
-                        str(nodes))
+                    log("Peer not found via spidering.")
                     return False, None
-
                 node = nodes[0]
 
-                # Sometimes spidering doesn't get us all the way there.
-                # Check who we already know:
-                if node.long_id != long(node_id):
-                    nodes = [n for n in self.router if n.long_id == long(node_id)]
-                    if len(nodes) != 1:
-                        log("Peer not found via spidering.")
-                        return False, None
-                    node = nodes[0]
+            log(node_id, "debug")
+            log(node.long_id, "debug")
 
-                log(node_id, "debug")
-                log(node.long_id, "debug")
+            log("Found remote instance %s." % node)
 
-                log("Found remote instance %s." % node)
+        if not node:
+            log("No peer node found for RPC_FRIEND %s" % message_type.upper())
+            return False, None
 
-                payload.append(message)
-
-        response = transmit(self.router, node, {"rpc_friend": payload})
-        log(response)
-
+        response = transmit(self.router, node, {"rpc_friend": message_body})
+    
         if not isinstance(response, dict) or not "response" in response:
             return False, None
 
@@ -874,7 +875,7 @@ class SynchronyProtocol(object):
 
                 network = Network.query.filter(Network.name == self.router.network).first()
                 
-                if network != None:
+                if network == None:
                     network = Network(name = self.router.network)
 
                 peer = Peer.query.filter(
@@ -906,6 +907,23 @@ class SynchronyProtocol(object):
                 db.session.commit()
                 
                 return envelope(self.router, {"response": friend.jsonify()})
+            
+            if message_type == "status":
+                if not "to" in payload or not "from" in payload or not "type"\
+                    in payload:
+                    return None
+
+                local_uid = payload['to'].split("/", 2)[-1]
+                if payload["type"].lower() == "get":
+                    user = User.query.filter(User.uid == local_uid).first()
+                    if not user:
+                        return None
+
+                    friend = [f for f in user.friends if f.uid == payload['from']]
+                    if not any(friend):
+                        return None
+
+                    return envelope(self.router, {"response": user.jsonify()})
 
     def handle_chat(self, data):
         """
