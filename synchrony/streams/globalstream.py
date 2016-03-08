@@ -75,7 +75,7 @@ class GlobalStream(Stream):
             self.emit_to_room(self.channel, "privmsg", body)
             self.emit("privmsg", body)
         
-
+    @require_auth
     def recv_disconnect(self):
 #        print "received disconnect"
         pass

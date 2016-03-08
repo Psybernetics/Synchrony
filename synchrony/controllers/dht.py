@@ -591,7 +591,7 @@ class SynchronyProtocol(object):
 
     def rpc_ping(self, addr):
         # "addr" may be an (addr, port) tuple
-        data = transmit(self.router, addr, {"rpc_ping":True})
+        data = transmit(self.router, addr, {"rpc_ping": True})
         # Remove peer
         if not data:
             if isinstance(addr, Node):
@@ -639,7 +639,7 @@ class SynchronyProtocol(object):
             
             AFK - Away
             A   - Available
-            AO  - Appear Offline
+            O   - (Appear) Offline
             GET - Request status of remote friend
 
         """

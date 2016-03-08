@@ -381,18 +381,35 @@ function populate_table(view, table_type, url){
 }
 
 function Friends(){
-    // Filtering this array is what we have
-    // Underscore present for
     this.list          = [];
+    this.visible_list  = [];
     this.chat_stream   = null;
     this.global_stream = null;
     this.poll          = function(){
         $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
             this.list.length = 0;
             this.list.push.apply(this.list, response.data);
+            this.visible_list.length = 0;
+            this.visible_list.push.apply(this.visible_list, response.data);
         }.bind(this));
     }
     this.change_status = function(){}
+    this.repopulate_list = function(list, replacement_data){
+        list.length = 0;
+        list.push.apply(list, replacement_data);
+    }
+    this.filter = function(query){
+        if (query.length < 2) {
+            this.repopulate_list(this.visible_list, this.list);
+        } else {
+            var filtered_data = _.filter(this.visible_list, function(e){
+                return e.name.indexOf(query) > -1;
+            });
+            this.repopulate_list(this.visible_list, filtered_data);
+        
+        }
+    }
+
 }
 
 // Start the Backbone URL hash monitor
@@ -1226,7 +1243,16 @@ Ractive.load({
             
             }
         },
-        logout:    function(event){
+        filter_friends: function(event){
+            if (event.original.keyCode == 13){
+                event.original.preventDefault();
+                App.Views.synchrony.set("filter_value", "");
+            }
+            var query = App.Views.synchrony.get("filter_value");
+            App.Friends.filter(query);
+
+        },
+        logout: function(event){
             $.ajax({
                 url:     "/v1/users/" + App.Config.user.username + "/sessions",
                 type:    "DELETE",

@@ -642,6 +642,14 @@ input.switch:empty ~ label:after
     background-color: rgba(241, 243, 240, 0.9);
 }
 
+.friends_list_mode > .synchrony_buttons {
+    margin-top: -31px;
+}
+
+.friends_list > .search {
+    margin-bottom: 5px;
+}
+
 .control_panel a {
     color: #F3F6EA;
 }
