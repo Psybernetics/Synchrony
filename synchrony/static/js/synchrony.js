@@ -1218,7 +1218,13 @@ Ractive.load({
         friends: function(event){
             var showing_friends = App.Views.synchrony.get("showing_friends");
             App.Views.synchrony.set("showing_friends", !showing_friends);
-            if (!showing_friends) { App.Friends.poll(); }
+            if (!showing_friends) {
+                App.Friends.poll();
+                $(".control_panel").addClass("friends_list_mode");
+            } else {
+                $(".control_panel").removeClass("friends_list_mode");
+            
+            }
         },
         logout:    function(event){
             $.ajax({

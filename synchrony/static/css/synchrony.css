@@ -627,13 +627,19 @@ input.switch:empty ~ label:after
 .control_panel {
 	padding-left: 10px;
 /*	color: #A3C246; */
-	color: #F3F6EA;
-	font-family: 'Noto';
+    color: #F3F6EA;
+	background-color: rgba(34, 34, 34, 0.92);
+    font-family: 'Noto';
+
 	font-size: 16px;
 	line-height: 25px;
-	background-color: rgba(34, 34, 34, 0.92);
 	height: 80%;
 	border-radius: 4px;
+}
+
+.friends_list_mode {
+    color: #41423E;
+    background-color: rgba(241, 243, 240, 0.9);
 }
 
 .control_panel a {
@@ -670,7 +676,8 @@ input.switch:empty ~ label:after
 }
 
 #profile_link {
-	color: #D7FF57;
+/*	color: #D7FF57; */
+    color: #CDEC6A;
 	font-style: italic;
 	text-decoration: none;
 }

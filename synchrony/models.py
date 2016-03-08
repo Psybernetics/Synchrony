@@ -397,6 +397,7 @@ class User(db.Model):
             response['uid']             = self.uid
             response['email']           = self.email
             response['active']          = self.active
+            response['status']          = self.status
             response['created']         = time.mktime(self.created.timetuple())
             response['revision_count']  = len(self.revisions)
             if sessions:
@@ -525,6 +526,7 @@ class Friend(db.Model):
         response['status']   = self.parse_status()
         response['address']  = self.address
         response['name']     = self.name
+        response['uid']      = self.uid
         response['received'] = self.received
         response['ip']       = self.ip
         response['port']     = self.port
