@@ -234,7 +234,7 @@ label { display: inline-block; }
 }
 
 .search { 
-    background-color: #F8F8F8;
+    background-color: rgba(248, 248, 248, 0.55);
 	border: none;
 	padding: 5px;
     min-width: 250px;
@@ -337,6 +337,13 @@ label { display: inline-block; }
 
 .view table {
     width: 100%;
+}
+
+.scrollable{
+    word-break: break-all;
+    overflow: auto;
+    display: inline-block;
+    height: 350px;
 }
 
 .rename-input {

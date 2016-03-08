@@ -385,7 +385,12 @@ function Friends(){
     this.visible_list  = [];
     this.chat_stream   = null;
     this.global_stream = null;
-    this.poll          = function(){
+
+    this.connect = function(){
+        this.global_stream = io.connect('/global', {resource:"stream"});
+        this.global_stream.emit('join', "global");
+    }
+    this.poll = function(){
         $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
             this.list.length = 0;
             this.list.push.apply(this.list, response.data);
@@ -1201,26 +1206,27 @@ Ractive.load({
 
     App.Views.synchrony.set("showing_friends", false);
 
-    App.Views.synchrony.socket = io.connect('/global', {resource:"stream"});
-    App.Views.synchrony.socket.emit('join', "global");
-    App.Views.synchrony.socket.on("message", function(data){
+    App.Friends.connect();
+
+    App.Friends.global_stream.on("message", function(data){
         App.stream.push(data.message);
         setTimeout(function(){ App.stream.pop(); }, 1000)
     });
 
     App.Views.synchrony.on({
         request: request, // Globally available request function
-
-        edit: toggle_editing,
-        save: function(event){
-           $.ajax({
-               url: "/v1/revisions/" + App.current_hash,
-               type: "PUT",
-               data: {"document": $('.iframe').contents()[0].all[0].innerHTML},
-               success: function(response){
-                   console.log(response);
-               },
-               error:   function(response){}
+        edit:    toggle_editing,
+        save:    function(event){
+            $.ajax({
+                url: "/v1/revisions/" + App.current_hash,
+                type: "PUT",
+                data: {"document": $('.iframe').contents()[0].all[0].innerHTML},
+                success: function(response){
+                    console.log(response);
+                },
+                error: function(response){
+                    console.log(response);
+                }
            });
         },
         settings:  function(event){
