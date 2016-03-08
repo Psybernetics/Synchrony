@@ -351,22 +351,26 @@ class UserGroup(db.Model):
 class User(db.Model):
     """
     A local user account.
+
+    User.status values are:
+        
+        AFK - Away
+        A   - Available
+        O   - Offline
     """
     __tablename__ = "users"
-    id            = db.Column(db.Integer(), primary_key=True)          # User.uid permits encrypted chat messages to be directed to, eg:
-    uid           = db.Column(db.String(), default=uid(short_id=True)) # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
+    id            = db.Column(db.Integer(), primary_key=True)           # User.uid permits encrypted chat messages to be directed to, eg:
+    uid           = db.Column(db.String(),  default=uid(short_id=True)) # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
     username      = db.Column(db.String())
     password      = db.Column(db.String())
     email         = db.Column(db.String())
     avatar        = db.relationship("Revision", uselist=False)
-#    admin         = db.Column(db.Boolean(), default=False)
-    public        = db.Column(db.Boolean(), default=False)
-    active        = db.Column(db.Boolean(), default=True)
-#    can_store     = db.Column(db.Boolean(), default=True)
-    created       = db.Column(db.DateTime(), default=db.func.now())
-    last_login    = db.Column(db.DateTime(), default=db.func.now())
-    friends       = db.relationship("Friend", backref="user")
-    sessions      = db.relationship("Session", backref="user")
+    public        = db.Column(db.Boolean(),     default=False)
+    active        = db.Column(db.Boolean(),     default=True)
+    created       = db.Column(db.DateTime(),    default=db.func.now())
+    last_login    = db.Column(db.DateTime(),    default=db.func.now())
+    friends       = db.relationship("Friend",   backref="user")
+    sessions      = db.relationship("Session",  backref="user")
     revisions     = db.relationship("Revision", backref="user")
     status        = db.Column(db.String(), default="A")
 
