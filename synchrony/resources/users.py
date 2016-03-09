@@ -43,7 +43,7 @@ class UserCollection(restful.Resource):
             return {}, 403
 
         query = User.query.order_by(desc(User.created)).paginate(args.page, args.per_page)
-        return make_response(request.url, query)
+        return make_response(request.url, query, revisions=True)
 
     def put(self):
         """

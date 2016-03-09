@@ -15,8 +15,8 @@
             <tr>
                 <td>Name</td>
                 <td>UID</td>
-                <td>Email</td>
                 <td>Revisions</td>
+                <td>Public Revisions</td>
                 <td>Active</td>
                 <td>Created</td>
             </tr>
@@ -24,8 +24,8 @@
             <tr on-mouseover="select:{{"user"}},{{@index}}" on-mouseout="select:{{"user"}},{{@index}}" id="user-{{@index}}">
                 <td><a href="/#user/{{username}}">{{username}}</a></td>
                 <td>{{uid}}</td>
-                <td>{{email}}</td>
-                <td>{{revision_count}}</td>
+                <td>{{revisions}}</td>
+                <td>{{public_revisions}}</td>
                 <td>{{#if active}}Yes{{else}}No{{/if}}</td>
                 <td>{{created}}</td>
             </tr>
