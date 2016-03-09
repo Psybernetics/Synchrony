@@ -394,7 +394,7 @@ class User(db.Model):
             password.encode(), bcrypt.gensalt(16)
         ).decode()
 
-    def jsonify(self, revision_count=False, groups=False, sessions=False):
+    def jsonify(self, revisions=False, groups=False, sessions=False):
         response = {}
         if self.username:
             response['username']        = self.username
@@ -405,7 +405,7 @@ class User(db.Model):
             response['created']         = time.mktime(self.created.timetuple())
             response['public_revisions'] = len([_ for _ in self.revisions \
                                                   if  _.public])
-            if revision_count:
+            if revisions:
                 response['revisions']   = len(self.revisions)
             if sessions:
                 response['sessions']    = [s.jsonify() for s in self.sessions]

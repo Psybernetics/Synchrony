@@ -36,14 +36,18 @@
 <span class="synchrony_buttons">
 	<button class="button big_button" on-click="friends">Back</button><br />
 </span>
+<input on-keydown="filter_friends" value="{{filter_value}}" class="search" placeholder="Filter . . ." />
 <div class="friends_list">
-    <input on-keydown="filter_friends" value="{{filter_value}}" class="search" placeholder="Filter . . ." />
-    <br /> 
     {{#friends.visible_list}}
-        {{name}}
+        {{username}}
         <hr />
     {{/friends.visible_list}}
 </div>
+<form>
+  <input on-click="update_status" type="radio" name="{{status}}" value="available" checked> Available
+  <input on-click="update_status" type="radio" name="{{status}}" value="away">Away
+  <input on-click="update_status" type="radio" name="{{status}}" value="offline"> Offline
+</form>
 {{/showing_friends}}
 <div class="stream">
     {{#stream}}

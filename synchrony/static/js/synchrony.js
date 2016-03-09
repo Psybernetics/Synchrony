@@ -1,3 +1,4 @@
+'use strict';
 /* 
    Synchrony 0.0.1
    Copyright Luke Joshua Brooks 2015.
@@ -245,6 +246,15 @@ function toggleMain(){
 }
 
 function request(event){
+    function update_address_bars(url) {
+        location.hash = "request/" + url;
+        if (App.Views.index != undefined) {
+            App.Views.index.set({url: url});
+        }
+        if (App.Views.synchrony != undefined) {
+            App.Views.synchrony.set({url: url});
+        }
+    }
     if (event.original.keyCode == 13){
         event.original.preventDefault();
 
@@ -258,16 +268,6 @@ function request(event){
         }
         if ($('.main').is(':visible')) {
             toggleMain();
-        }
-
-        function update_address_bars(url) {
-            location.hash = "request/" + url;
-            if (App.Views.index != undefined) {
-                App.Views.index.set({url: url});
-            }
-            if (App.Views.synchrony != undefined) {
-                App.Views.synchrony.set({url: url});
-            }
         }
         
         update_address_bars(url);
@@ -327,9 +327,8 @@ function toggle_editing (event){
         $('.edit_button').addClass('active_button');
         $('.toolbar').show();
     }
-    iframe = $('.iframe');
+    var iframe = $('.iframe');
     var attr = iframe.contents().find('body').attr('contenteditable');
-//            console.log(attr);
     if (typeof attr === typeof undefined || attr == false || attr == "false") {
         iframe.contents().find('body').attr('contenteditable','true');
         iframe.contents().find('body').attr('autocorrect','false');
@@ -388,23 +387,32 @@ function Friends(){
 
     // Connect to /global and join a shared channel
     this.connect = function(){
-        this.global_stream = io.connect('/global', {resource:"stream"});
-        this.global_stream.emit('join', "global");
-        this.global_stream.on("friend state", function(data){
-            console.log(data);
-        });
-    }
+        this.global_stream = io.connect('/global', {resource: "stream"});
+        // With the activity stream, joining a shared channel is taken care of
+        // for us automatically.
+//        this.global_stream.emit('join', "global");
+   
+        // Results of polling everyone for friend state
+        this.global_stream.on("friend_state", function(data){
+            this.repopulate_list(this.list, data);
+            this.repopulate_list(this.visible_list, data);
+        }.bind(this));
 
-    // GET /v1/users/<username>/friends
-    this.poll = function(){
-        $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
-            this.list.length = 0;
-            this.list.push.apply(this.list, response.data);
-            this.visible_list.length = 0;
-            this.visible_list.push.apply(this.visible_list, response.data);
+        // A friend or ourselves performed a status update
+        this.global_stream.on("update_status", function(data){
+            console.log(data);
         }.bind(this));
     }
-    this.change_status = function(){}
+
+    this.poll = function(){
+        // Ask relevant nodes about relevant user accounts.
+        this.global_stream.emit("poll_friends");
+    }
+    
+    this.update_status = function(status){
+        if (!this.global_stream) { this.connect(); }
+        this.global_stream.emit("update_status", status);
+    }
 
     // Zero a list in place.
     this.repopulate_list = function(list, replacement_data){
@@ -418,7 +426,7 @@ function Friends(){
             this.repopulate_list(this.visible_list, this.list);
         } else {
             var filtered_data = _.filter(this.visible_list, function(e){
-                return e.name.indexOf(query) > -1;
+                return e.username.indexOf(query) > -1;
             });
             this.repopulate_list(this.visible_list, filtered_data);    
         }
@@ -1265,6 +1273,10 @@ Ractive.load({
             var query = App.Views.synchrony.get("filter_value");
             App.Friends.filter(query);
 
+        },
+        update_status: function(event){
+            var status = App.Views.synchrony.get("status");
+            App.Friends.update_status(status);
         },
         logout: function(event){
             $.ajax({
