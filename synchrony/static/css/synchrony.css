@@ -641,8 +641,10 @@ input.switch:empty ~ label:after
 
 .friends_list_mode form {
     text-align: center;
-    font-family: Terminus;
-    margin-top: -15px;
+/*    font-family: Terminus; */
+    font-family: Noto;
+    font-size: 80%;
+    margin-top: -10px;
     margin-left: -15px;
     outline: none;
 }
