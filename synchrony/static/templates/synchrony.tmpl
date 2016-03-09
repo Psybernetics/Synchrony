@@ -43,6 +43,11 @@
         <hr />
     {{/friends.visible_list}}
 </div>
+<form>
+  <input on-click="update_status" type="radio" name="{{status}}" value="available" checked> Available
+  <input on-click="update_status" type="radio" name="{{status}}" value="away">Away
+  <input on-click="update_status" type="radio" name="{{status}}" value="offline"> Offline
+</form>
 {{/showing_friends}}
 <div class="stream">
     {{#stream}}

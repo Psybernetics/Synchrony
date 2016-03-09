@@ -639,6 +639,14 @@ input.switch:empty ~ label:after
     margin-top: -35px;
 }
 
+.friends_list_mode form {
+    text-align: center;
+    font-family: Terminus;
+    margin-top: -15px;
+    margin-left: -15px;
+    outline: none;
+}
+
 .friends_list_mode #profile_link {
     color: #9CBB3A;
 }
@@ -670,7 +678,7 @@ input.switch:empty ~ label:after
 .friends_list {
     overflow: auto;
     display: inline-block;
-    height: 60%;
+    height: 55%;
     min-width: 345px;
     font-family: Roboto;
     font-size: 80%;

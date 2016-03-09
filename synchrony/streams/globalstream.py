@@ -4,20 +4,16 @@ from synchrony import app, log, db
 from synchrony.controllers.auth import auth
 from synchrony.streams.utils import Stream, require_auth
 
-class AnonUser(object):
-    created  = None
-    username = "Unknown"
-
 # Business logic for the global activity stream
 class GlobalStream(Stream):
     socket_type = "global_stream"
 
     def initialize(self):
-        self.buffer  = []
-        self.inbox   = None
-        self.user    = None
-#        Make the channels a set
-        self.channel = None
+        self.buffer          = []
+        self.inbox           = None
+        self.user            = None
+        self.channel         = None
+        self.default_channel = "#main"
         log("Activity stream init")
 
     @require_auth
@@ -27,22 +23,28 @@ class GlobalStream(Stream):
         to their appear-offline state.
         """
         log("Received activity stream connection from %s" % self.user.username)
+        db.session.add(self.user)
+        self.join(self.default_channel)
 
     @require_auth
     def on_poll_friends(self):
-        self.emit("friend state", self.user.poll_friends(app.routes))
+        self.emit("friend_state", self.user.poll_friends(app.routes))
+
+    @require_auth
+    def on_update_status(self, status):
+        if not self.channel:
+            self.join(self.default_channel)
+        log("%s changed status to %s." % (self.user.username, status.title()))
+        self.user.status = status
+        #db.session.commit()
+        self.broadcast(self.channel[1], "update_status", self.user.jsonify())
 
     @require_auth
     def on_join(self, channel):
-        # Keep everyone on the same stream generally.
-        channel = "public"
-        if self.user:
-#            if can(self.user.username, "rx_stream"):
-            log('%s joined activity stream "%s"' % (self.user.username, channel))
-            self.channel = channel
-            self.join(channel)
-#            else:
-#                log("%s tried to join %s" % (self.user.username, channel))
+#       if can(self.user.username, "rx_stream"):
+        log('%s joined activity stream "%s"' % (self.user.username, channel))
+        self.channel = channel
+        self.join(channel)
 
     @require_auth
     def on_poll(self):

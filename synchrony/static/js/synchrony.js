@@ -387,11 +387,20 @@ function Friends(){
 
     // Connect to /global and join a shared channel
     this.connect = function(){
-        this.global_stream = io.connect('/global', {resource:"stream"});
-        this.global_stream.emit('join', "global");
-        this.global_stream.on("friend state", function(data){
+        this.global_stream = io.connect('/global', {resource: "stream"});
+        // With the activity stream, joining a shared channel is taken care of
+        // for us automatically.
+//        this.global_stream.emit('join', "global");
+   
+        // Results of polling everyone for friend state
+        this.global_stream.on("friend_state", function(data){
             this.repopulate_list(this.list, data);
             this.repopulate_list(this.visible_list, data);
+        }.bind(this));
+
+        // A friend or ourselves performed a status update
+        this.global_stream.on("update_status", function(data){
+            console.log(data);
         }.bind(this));
     }
 
@@ -399,7 +408,11 @@ function Friends(){
         // Ask relevant nodes about relevant user accounts.
         this.global_stream.emit("poll_friends");
     }
-    this.change_status = function(){}
+    
+    this.update_status = function(status){
+        if (!this.global_stream) { this.connect(); }
+        this.global_stream.emit("update_status", status);
+    }
 
     // Zero a list in place.
     this.repopulate_list = function(list, replacement_data){
@@ -1260,6 +1273,10 @@ Ractive.load({
             var query = App.Views.synchrony.get("filter_value");
             App.Friends.filter(query);
 
+        },
+        update_status: function(event){
+            var status = App.Views.synchrony.get("status");
+            App.Friends.update_status(status);
         },
         logout: function(event){
             $.ajax({
