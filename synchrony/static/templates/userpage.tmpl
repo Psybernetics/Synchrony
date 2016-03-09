@@ -7,13 +7,12 @@
     <form>
         <input class="search" on-keydown="search_revisions" value="{{search_query}}" size="25" placeholder="Search..." spellcheck="false">
     </form>
-    <table>
+    <table class="scrollable">
        <tbody>
             <tr>
                 <td>URL</td>
                 <td>MIME</td>
                 <td></td>
-                <td>Bytes</td>
                 <td>Public</td>
                 <td></td>
             </tr>
@@ -22,7 +21,6 @@
                 <td><a class="blue" href="/v1/revisions/{{hash}}/content">{{url}}</a></td>
                 <td>{{mimetype}}</td>
                 <td>{{network}}</td>
-                <td>{{size}}</td>
                 <td id="public-revision-{{@index}}">
                     <span id="public-revision-text-{{@index}}">{{#if public}}Yes{{else}}No{{/if}}</span>
                     <button on-click="toggle_public:{{@index}}" style="visibility:hidden" class="button big_button" id="public-revision-button-{{@index}}">
