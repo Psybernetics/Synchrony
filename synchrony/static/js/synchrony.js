@@ -386,10 +386,16 @@ function Friends(){
     this.chat_stream   = null;
     this.global_stream = null;
 
+    // Connect to /global and join a shared channel
     this.connect = function(){
         this.global_stream = io.connect('/global', {resource:"stream"});
         this.global_stream.emit('join', "global");
+        this.global_stream.on("friend state", function(data){
+            console.log(data);
+        });
     }
+
+    // GET /v1/users/<username>/friends
     this.poll = function(){
         $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
             this.list.length = 0;
@@ -399,10 +405,14 @@ function Friends(){
         }.bind(this));
     }
     this.change_status = function(){}
+
+    // Zero a list in place.
     this.repopulate_list = function(list, replacement_data){
         list.length = 0;
         list.push.apply(list, replacement_data);
     }
+
+    // Filter a list in place with Underscore.
     this.filter = function(query){
         if (query.length < 2) {
             this.repopulate_list(this.visible_list, this.list);
@@ -410,11 +420,9 @@ function Friends(){
             var filtered_data = _.filter(this.visible_list, function(e){
                 return e.name.indexOf(query) > -1;
             });
-            this.repopulate_list(this.visible_list, filtered_data);
-        
+            this.repopulate_list(this.visible_list, filtered_data);    
         }
     }
-
 }
 
 // Start the Backbone URL hash monitor

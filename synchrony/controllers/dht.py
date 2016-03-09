@@ -147,8 +147,8 @@ from synchrony.controllers import utils
 from binascii import hexlify, unhexlify
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
-from synchrony.streams.utils import change_channel, broadcast
 from synchrony.models import Revision, User, Friend, Network, Peer
+from synchrony.streams.utils import change_channel, check_availability, broadcast
 
 try:
     import numpy
@@ -848,21 +848,33 @@ class SynchronyProtocol(object):
         node = self.read_envelope(data)
         
         for message in data['rpc_friend']:
-            message_type = str(message.keys()[0])
-            payload = message.values()[0]
+            message_type = message.keys()[0]
+            payload      = message.values()[0]
             
             if not "from" in payload or not "to" in payload:
                 continue
            
+            network, node_id, local_uid = payload['to'].split('/', 2)
+            user      = User.query.filter(User.uid == local_uid).first()
+
+            if network != self.router.network:
+                log("Mismatched network: Message for %s on %s." % \
+                   (network, self.router.network), "error")
+                return False
+
+            elif long(node_id) != self.router.node.long_id:
+                log("Message for %s delivered to %s." % \
+                    (network, str(self.router.node.long_id)), "error")
+                return False
+
+            elif not user:
+                log("No user %s." % local_uid, "error")
+                return False
+            
             # Currently only one FRIEND RPC is recognised.
             # TODO(ljb): Remove friend, update status.
             if message_type == "add":
                 
-                local_uid = payload['to'].split('/', 2)[-1]
-                user      = User.query.filter(User.uid == local_uid).first()
-                if not user:
-                    log("No user.", "error")
-                    return None
                 from_addr = "/".join([self.router.network, str(node.long_id), payload['from']])
                 friend    =  Friend.query.filter(
                                     and_(Friend.address == from_addr, Friend.user == user)
@@ -909,16 +921,10 @@ class SynchronyProtocol(object):
                 return envelope(self.router, {"response": friend.jsonify()})
             
             if message_type == "status":
-                if not "to" in payload or not "from" in payload or not "type"\
-                    in payload:
+                if not "type" in payload:
                     return None
 
-                local_uid = payload['to'].split("/", 2)[-1]
                 if payload["type"].lower() == "get":
-                    user = User.query.filter(User.uid == local_uid).first()
-                    if not user:
-                        return None
-
                     friend = [f for f in user.friends if f.uid == payload['from']]
                     if not any(friend):
                         return None
@@ -930,6 +936,10 @@ class SynchronyProtocol(object):
         Move a message from a remote node up to the UI if the recipient
         UID has an active connection to the chat stream.
         """
+        # TODO(ljb): Ensure this conforms to the channel system and rethink
+        #            this in terms of group chats where users are subscribed
+        #            to a shared name with a minimum of 3 delivery retries.
+
         node            = self.read_envelope(data)
         # With the ciphertext being a binary string we also b64encode it
         message_content = base64.b64decode(data['rpc_chat'])
@@ -949,7 +959,7 @@ class SynchronyProtocol(object):
                                     ).first()
         if friend:
 
-            available = utils.check_availability(self.router.httpd, "chat", user)
+            available = check_availability(self.router.httpd, "chat", user)
             if not available:
                 return {"error": "The intended recipient isn't connected to chat."}
 

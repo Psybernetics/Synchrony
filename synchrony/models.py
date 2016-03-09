@@ -3,6 +3,7 @@ import os
 import time
 import magic
 import bcrypt
+import gevent
 import hashlib
 from io import BytesIO
 from sqlalchemy import and_
@@ -374,7 +375,6 @@ class User(db.Model):
     revisions     = db.relationship("Revision", backref="user")
     status        = db.Column(db.String(), default="A")
 
-
     def __init__(self, username, password):
         self.username = username
         self.password = bcrypt.hashpw(
@@ -394,7 +394,7 @@ class User(db.Model):
             password.encode(), bcrypt.gensalt(16)
         ).decode()
 
-    def jsonify(self, revision_count=True, groups=False, sessions=False):
+    def jsonify(self, revision_count=False, groups=False, sessions=False):
         response = {}
         if self.username:
             response['username']        = self.username
@@ -403,12 +403,21 @@ class User(db.Model):
             response['active']          = self.active
             response['status']          = self.status
             response['created']         = time.mktime(self.created.timetuple())
-            response['revision_count']  = len(self.revisions)
+            response['public_revisions'] = len([_ for _ in self.revisions \
+                                                  if  _.public])
+            if revision_count:
+                response['revisions']   = len(self.revisions)
             if sessions:
                 response['sessions']    = [s.jsonify() for s in self.sessions]
             if groups:
                 response['user_groups'] = [g.jsonify() for g in self.user_groups]
         return response
+
+    def poll_friends(self, routers):
+        threads = [gevent.spawn(_.get_remote_state, routers) for _ in self.friends \
+                   if _.state in (1, 2)]
+        gevent.joinall(threads)
+        return [t.value[0] for t in threads if t.value[0]]
 
     def can(self, priv_name):
         """
@@ -502,12 +511,12 @@ class Friend(db.Model):
             return self.states[0]
         return self.states.get(self.state, None)
     
-    def get_state(self, routers):
+    def get_remote_state(self, routers):
         """
         Given a controllers.dht.Routers object, return the remote status of
         this friend.
         """
-        if not self.address or not self.user:
+        if not self.address or not self.user or self.state not in (1, 2):
             return
 
         network, node_id, uid = self.address.split("/")
