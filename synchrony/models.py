@@ -3,6 +3,7 @@ import os
 import time
 import magic
 import bcrypt
+import gevent
 import hashlib
 from io import BytesIO
 from sqlalchemy import and_
@@ -351,25 +352,28 @@ class UserGroup(db.Model):
 class User(db.Model):
     """
     A local user account.
+
+    User.status values are:
+        
+        AFK - Away
+        A   - Available
+        O   - Offline
     """
     __tablename__ = "users"
-    id            = db.Column(db.Integer(), primary_key=True)          # User.uid permits encrypted chat messages to be directed to, eg:
-    uid           = db.Column(db.String(), default=uid(short_id=True)) # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
+    id            = db.Column(db.Integer(), primary_key=True)           # User.uid permits encrypted chat messages to be directed to, eg:
+    uid           = db.Column(db.String(),  default=uid(short_id=True)) # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
     username      = db.Column(db.String())
     password      = db.Column(db.String())
     email         = db.Column(db.String())
     avatar        = db.relationship("Revision", uselist=False)
-#    admin         = db.Column(db.Boolean(), default=False)
-    public        = db.Column(db.Boolean(), default=False)
-    active        = db.Column(db.Boolean(), default=True)
-#    can_store     = db.Column(db.Boolean(), default=True)
-    created       = db.Column(db.DateTime(), default=db.func.now())
-    last_login    = db.Column(db.DateTime(), default=db.func.now())
-    friends       = db.relationship("Friend", backref="user")
-    sessions      = db.relationship("Session", backref="user")
+    public        = db.Column(db.Boolean(),     default=False)
+    active        = db.Column(db.Boolean(),     default=True)
+    created       = db.Column(db.DateTime(),    default=db.func.now())
+    last_login    = db.Column(db.DateTime(),    default=db.func.now())
+    friends       = db.relationship("Friend",   backref="user")
+    sessions      = db.relationship("Session",  backref="user")
     revisions     = db.relationship("Revision", backref="user")
     status        = db.Column(db.String(), default="A")
-
 
     def __init__(self, username, password):
         self.username = username
@@ -390,20 +394,30 @@ class User(db.Model):
             password.encode(), bcrypt.gensalt(16)
         ).decode()
 
-    def jsonify(self, revision_count=True, groups=False, sessions=False):
+    def jsonify(self, revision_count=False, groups=False, sessions=False):
         response = {}
         if self.username:
             response['username']        = self.username
             response['uid']             = self.uid
             response['email']           = self.email
             response['active']          = self.active
+            response['status']          = self.status
             response['created']         = time.mktime(self.created.timetuple())
-            response['revision_count']  = len(self.revisions)
+            response['public_revisions'] = len([_ for _ in self.revisions \
+                                                  if  _.public])
+            if revision_count:
+                response['revisions']   = len(self.revisions)
             if sessions:
                 response['sessions']    = [s.jsonify() for s in self.sessions]
             if groups:
                 response['user_groups'] = [g.jsonify() for g in self.user_groups]
         return response
+
+    def poll_friends(self, routers):
+        threads = [gevent.spawn(_.get_remote_state, routers) for _ in self.friends \
+                   if _.state in (1, 2)]
+        gevent.joinall(threads)
+        return [t.value[0] for t in threads if t.value[0]]
 
     def can(self, priv_name):
         """
@@ -497,12 +511,12 @@ class Friend(db.Model):
             return self.states[0]
         return self.states.get(self.state, None)
     
-    def get_state(self, routers):
+    def get_remote_state(self, routers):
         """
         Given a controllers.dht.Routers object, return the remote status of
         this friend.
         """
-        if not self.address or not self.user:
+        if not self.address or not self.user or self.state not in (1, 2):
             return
 
         network, node_id, uid = self.address.split("/")
@@ -525,6 +539,7 @@ class Friend(db.Model):
         response['status']   = self.parse_status()
         response['address']  = self.address
         response['name']     = self.name
+        response['uid']      = self.uid
         response['received'] = self.received
         response['ip']       = self.ip
         response['port']     = self.port

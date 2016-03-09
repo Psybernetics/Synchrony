@@ -6,7 +6,7 @@ body {
 	overflow:hidden
 }
 
-//NotoSans-BoldItalic.ttf  NotoSans-Bold.ttf  NotoSans-hinted.zip  NotoSans-Italic.ttf  NotoSans-Regular.ttf
+/* NotoSans-BoldItalic.ttf  NotoSans-Bold.ttf  NotoSans-hinted.zip  NotoSans-Italic.ttf  NotoSans-Regular.ttf */
 @font-face { font-family: 'Noto'; src: url('/static/font/NotoSans-Regular.ttf'); }
 @font-face { font-family: 'Noto'; src: url('/static/font/NotoSans-hinted.ttf'); }
 @font-face { font-family: 'Roboto'; src: url('/static/font/Roboto-Regular.ttf'); }
@@ -114,15 +114,15 @@ label { display: inline-block; }
   /* Support for IE. */
   font-feature-settings: 'liga';
 }
-// Rules for sizing the icon.
+/* Rules for sizing the icon. */
 .material-icons.md-18 { font-size: 18px; }
 .material-icons.md-24 { font-size: 24px; }
 .material-icons.md-36 { font-size: 36px; }
 .material-icons.md-48 { font-size: 48px; }
-// Rules for using icons as black on a light background.
+/* Rules for using icons as black on a light background. */
 .material-icons.md-dark { color: rgba(0, 0, 0, 0.54); }
 .material-icons.md-dark.md-inactive { color: rgba(0, 0, 0, 0.26); }
-// Rules for using icons as white on a dark background.
+/* Rules for using icons as white on a dark background. */
 .material-icons.md-light { color: rgba(255, 255, 255, 1); }
 .material-icons.md-light.md-inactive { color: rgba(255, 255, 255, 0.3); }
 
@@ -234,7 +234,7 @@ label { display: inline-block; }
 }
 
 .search { 
-    background-color: #F8F8F8;
+    background-color: rgba(248, 248, 248, 0.55);
 	border: none;
 	padding: 5px;
     min-width: 250px;
@@ -246,18 +246,6 @@ label { display: inline-block; }
 #md-doc blockquote {
 	font-size: 14px;
 	font-weight: normal;
-}
-
-#slider {
-	z-index: 10;
-    padding: 70px 0 10px;
-    text-align: center;
-    background-size: cover;
-    color: #fff;
-    background: linear-gradient(
-      rgba(0, 0, 0, 0.3), 
-      rgba(0, 0, 0, 0.3)
-    ), url('/static/img/ferns.jpg') center center fixed;
 }
 
 .bs-callout {
@@ -323,7 +311,7 @@ label { display: inline-block; }
 	display: inline-block;
 }
 
-/* The following hides the table border around revisions  */
+/* The following hides the table border around revisions */
 .wide > tbody > tr > td {
 	border-top: 0px;
     padding: 5px 20px;
@@ -337,6 +325,14 @@ label { display: inline-block; }
 
 .view table {
     width: 100%;
+}
+
+/* Scrollable revisions table */
+.scrollable{
+    word-break: break-all;
+    overflow: auto;
+    display: inline-block;
+    height: 350px;
 }
 
 .rename-input {
@@ -627,13 +623,27 @@ input.switch:empty ~ label:after
 .control_panel {
 	padding-left: 10px;
 /*	color: #A3C246; */
-	color: #F3F6EA;
-	font-family: 'Noto';
+    color: #F3F6EA;
+	background-color: rgba(34, 34, 34, 0.92);
+ /* font-family: 'Noto'; */
+
 	font-size: 16px;
 	line-height: 25px;
-	background-color: rgba(34, 34, 34, 0.92);
 	height: 80%;
 	border-radius: 4px;
+}
+
+.friends_list_mode {
+    color: #41423E;
+    background-color: rgba(241, 243, 240, 0.9);
+}
+
+.friends_list_mode > .synchrony_buttons {
+    margin-top: -35px;
+}
+
+.friends_list > .search {
+    margin-bottom: 5px;
 }
 
 .control_panel a {
@@ -670,7 +680,8 @@ input.switch:empty ~ label:after
 }
 
 #profile_link {
-	color: #D7FF57;
+/*	color: #D7FF57; */
+    color: #CDEC6A;
 	font-style: italic;
 	text-decoration: none;
 }

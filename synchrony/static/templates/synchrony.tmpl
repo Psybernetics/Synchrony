@@ -37,10 +37,12 @@
 	<button class="button big_button" on-click="friends">Back</button><br />
 </span>
 <div class="friends_list">
-    {{#friends}}
+    <input on-keydown="filter_friends" value="{{filter_value}}" class="search" placeholder="Filter . . ." />
+    <br /> 
+    {{#friends.visible_list}}
         {{name}}
         <hr />
-    {{/friends}}
+    {{/friends.visible_list}}
 </div>
 {{/showing_friends}}
 <div class="stream">

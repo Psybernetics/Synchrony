@@ -25,8 +25,7 @@ class GlobalStream(Stream):
         if user:
             log("Received activity stream connection from %s" % user.username)
             self.user = user
-            for friend in user.friends:
-                log(friend.get_state(app.routes))
+            self.emit("friend state", user.poll_friends(app.routes))
             return
         self.user = AnonUser()
 
@@ -75,7 +74,7 @@ class GlobalStream(Stream):
             self.emit_to_room(self.channel, "privmsg", body)
             self.emit("privmsg", body)
         
-
+    @require_auth
     def recv_disconnect(self):
 #        print "received disconnect"
         pass

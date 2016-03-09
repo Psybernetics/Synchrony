@@ -147,8 +147,8 @@ from synchrony.controllers import utils
 from binascii import hexlify, unhexlify
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
-from synchrony.streams.utils import change_channel, broadcast
 from synchrony.models import Revision, User, Friend, Network, Peer
+from synchrony.streams.utils import change_channel, check_availability, broadcast
 
 try:
     import numpy
@@ -591,7 +591,7 @@ class SynchronyProtocol(object):
 
     def rpc_ping(self, addr):
         # "addr" may be an (addr, port) tuple
-        data = transmit(self.router, addr, {"rpc_ping":True})
+        data = transmit(self.router, addr, {"rpc_ping": True})
         # Remove peer
         if not data:
             if isinstance(addr, Node):
@@ -639,63 +639,64 @@ class SynchronyProtocol(object):
             
             AFK - Away
             A   - Available
-            AO  - Appear Offline
+            O   - (Appear) Offline
             GET - Request status of remote friend
 
         """
         if not isinstance(message_body, list):
             message_body = [message_body]
 
+        node    = None
         payload = []
 
         for message in message_body:
             message_type = message.keys()[0]
-            if message_type == "add":
-                addr = message[message_type]["to"]
-    
-                if addr.count("/") != 2:
-                    log("Invalid address %s" % addr)
-                    return False, None
-                network, node_id, remote_uid = addr.split("/")
-                
-                if network != self.router.network:
-                    return False, None
+            addr = message[message_type]["to"]
 
-                node = Node(long(node_id))
-                nearest = self.router.find_neighbours(node)
-                if len(nearest) == 0:
-                    log("There are no neighbours to help us add users on %s as friends." % \
-                        node_id)
-                    return False, None
-                spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
-                nodes   = spider.find()
+            if addr.count("/") != 2:
+                log("Invalid address %s" % addr)
+                return False, None
+            network, node_id, remote_uid = addr.split("/")
+            
+            if network != self.router.network:
+                return False, None
 
+            node = Node(long(node_id))
+            nearest = self.router.find_neighbours(node)
+            if len(nearest) == 0:
+                log("There are no neighbours to help us add users on %s as friends." % \
+                    node_id)
+                return False, None
+            spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
+            nodes   = spider.find()
+
+            if len(nodes) != 1:
+                log("Unable to narrow search down to one particular node: %s" % \
+                    str(nodes))
+                return False, None
+
+            node = nodes[0]
+
+            # Sometimes spidering doesn't get us all the way there.
+            # Check who we already know:
+            if node.long_id != long(node_id):
+                nodes = [n for n in self.router if n.long_id == long(node_id)]
                 if len(nodes) != 1:
-                    log("Unable to narrow search down to one particular node: %s" % \
-                        str(nodes))
+                    log("Peer not found via spidering.")
                     return False, None
-
                 node = nodes[0]
 
-                # Sometimes spidering doesn't get us all the way there.
-                # Check who we already know:
-                if node.long_id != long(node_id):
-                    nodes = [n for n in self.router if n.long_id == long(node_id)]
-                    if len(nodes) != 1:
-                        log("Peer not found via spidering.")
-                        return False, None
-                    node = nodes[0]
+            log(node_id, "debug")
+            log(node.long_id, "debug")
 
-                log(node_id, "debug")
-                log(node.long_id, "debug")
+            log("Found remote instance %s." % node)
 
-                log("Found remote instance %s." % node)
+        if not node:
+            log("No peer node found for RPC_FRIEND %s" % message_type.upper())
+            return False, None
 
-                payload.append(message)
-
-        response = transmit(self.router, node, {"rpc_friend": payload})
-        log(response)
-
+        response = transmit(self.router, node, {"rpc_friend": message_body})
+    
         if not isinstance(response, dict) or not "response" in response:
             return False, None
 
@@ -847,21 +848,33 @@ class SynchronyProtocol(object):
         node = self.read_envelope(data)
         
         for message in data['rpc_friend']:
-            message_type = str(message.keys()[0])
-            payload = message.values()[0]
+            message_type = message.keys()[0]
+            payload      = message.values()[0]
             
             if not "from" in payload or not "to" in payload:
                 continue
            
+            network, node_id, local_uid = payload['to'].split('/', 2)
+            user      = User.query.filter(User.uid == local_uid).first()
+
+            if network != self.router.network:
+                log("Mismatched network: Message for %s on %s." % \
+                   (network, self.router.network), "error")
+                return False
+
+            elif long(node_id) != self.router.node.long_id:
+                log("Message for %s delivered to %s." % \
+                    (network, str(self.router.node.long_id)), "error")
+                return False
+
+            elif not user:
+                log("No user %s." % local_uid, "error")
+                return False
+            
             # Currently only one FRIEND RPC is recognised.
             # TODO(ljb): Remove friend, update status.
             if message_type == "add":
                 
-                local_uid = payload['to'].split('/', 2)[-1]
-                user      = User.query.filter(User.uid == local_uid).first()
-                if not user:
-                    log("No user.", "error")
-                    return None
                 from_addr = "/".join([self.router.network, str(node.long_id), payload['from']])
                 friend    =  Friend.query.filter(
                                     and_(Friend.address == from_addr, Friend.user == user)
@@ -874,7 +887,7 @@ class SynchronyProtocol(object):
 
                 network = Network.query.filter(Network.name == self.router.network).first()
                 
-                if network != None:
+                if network == None:
                     network = Network(name = self.router.network)
 
                 peer = Peer.query.filter(
@@ -906,12 +919,27 @@ class SynchronyProtocol(object):
                 db.session.commit()
                 
                 return envelope(self.router, {"response": friend.jsonify()})
+            
+            if message_type == "status":
+                if not "type" in payload:
+                    return None
+
+                if payload["type"].lower() == "get":
+                    friend = [f for f in user.friends if f.uid == payload['from']]
+                    if not any(friend):
+                        return None
+
+                    return envelope(self.router, {"response": user.jsonify()})
 
     def handle_chat(self, data):
         """
         Move a message from a remote node up to the UI if the recipient
         UID has an active connection to the chat stream.
         """
+        # TODO(ljb): Ensure this conforms to the channel system and rethink
+        #            this in terms of group chats where users are subscribed
+        #            to a shared name with a minimum of 3 delivery retries.
+
         node            = self.read_envelope(data)
         # With the ciphertext being a binary string we also b64encode it
         message_content = base64.b64decode(data['rpc_chat'])
@@ -931,7 +959,7 @@ class SynchronyProtocol(object):
                                     ).first()
         if friend:
 
-            available = utils.check_availability(self.router.httpd, "chat", user)
+            available = check_availability(self.router.httpd, "chat", user)
             if not available:
                 return {"error": "The intended recipient isn't connected to chat."}
 

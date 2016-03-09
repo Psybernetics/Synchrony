@@ -50,7 +50,7 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
         history:  [],
         editor:   undefined,
         title:    " - Synchrony",
-        Contacts: new Contacts(),
+        Friends: new Friends(),
     }
 
     // Ask the server who we are.
@@ -380,17 +380,49 @@ function populate_table(view, table_type, url){
     });
 }
 
-function Friend(){
-    this.username = null;
-    this.address  = null;
-    this.online   = null;
-    this.avatar   = null;
-}
-
-function Contacts(){
+function Friends(){
     this.list          = [];
+    this.visible_list  = [];
     this.chat_stream   = null;
     this.global_stream = null;
+
+    // Connect to /global and join a shared channel
+    this.connect = function(){
+        this.global_stream = io.connect('/global', {resource:"stream"});
+        this.global_stream.emit('join', "global");
+        this.global_stream.on("friend state", function(data){
+            console.log(data);
+        });
+    }
+
+    // GET /v1/users/<username>/friends
+    this.poll = function(){
+        $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
+            this.list.length = 0;
+            this.list.push.apply(this.list, response.data);
+            this.visible_list.length = 0;
+            this.visible_list.push.apply(this.visible_list, response.data);
+        }.bind(this));
+    }
+    this.change_status = function(){}
+
+    // Zero a list in place.
+    this.repopulate_list = function(list, replacement_data){
+        list.length = 0;
+        list.push.apply(list, replacement_data);
+    }
+
+    // Filter a list in place with Underscore.
+    this.filter = function(query){
+        if (query.length < 2) {
+            this.repopulate_list(this.visible_list, this.list);
+        } else {
+            var filtered_data = _.filter(this.visible_list, function(e){
+                return e.name.indexOf(query) > -1;
+            });
+            this.repopulate_list(this.visible_list, filtered_data);    
+        }
+    }
 }
 
 // Start the Backbone URL hash monitor
@@ -1172,35 +1204,37 @@ Ractive.load({
     App.Views['synchrony'] = new components.synchrony({
         el: $('.synchrony'),
         data: {
-            Config: App.Config,
-            edit_button:"Edit",
-            stream: App.stream,
+            Config:      App.Config,
+            stream:      App.stream,
+            friends:     App.Friends,
+            edit_button: "Edit"
         },
         adaptor: ['Backbone'],
     });
 
     App.Views.synchrony.set("showing_friends", false);
 
-    App.Views.synchrony.socket = io.connect('/global', {resource:"stream"});
-    App.Views.synchrony.socket.emit('join', "global");
-    App.Views.synchrony.socket.on("message", function(data){
+    App.Friends.connect();
+
+    App.Friends.global_stream.on("message", function(data){
         App.stream.push(data.message);
         setTimeout(function(){ App.stream.pop(); }, 1000)
     });
 
     App.Views.synchrony.on({
         request: request, // Globally available request function
-
-        edit: toggle_editing,
-        save: function(event){
-           $.ajax({
-               url: "/v1/revisions/" + App.current_hash,
-               type: "PUT",
-               data: {"document": $('.iframe').contents()[0].all[0].innerHTML},
-               success: function(response){
-                   console.log(response);
-               },
-               error:   function(response){}
+        edit:    toggle_editing,
+        save:    function(event){
+            $.ajax({
+                url: "/v1/revisions/" + App.current_hash,
+                type: "PUT",
+                data: {"document": $('.iframe').contents()[0].all[0].innerHTML},
+                success: function(response){
+                    console.log(response);
+                },
+                error: function(response){
+                    console.log(response);
+                }
            });
         },
         settings:  function(event){
@@ -1213,14 +1247,26 @@ Ractive.load({
             window.location.hash = "#chat";
         },
         friends: function(event){
-            var current_value = App.Views.synchrony.get("showing_friends");
-            App.Views.synchrony.set("showing_friends", !current_value);
-            $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
-                console.log(response);
-                App.Views.synchrony.set("friends", response.data);
-            });
+            var showing_friends = App.Views.synchrony.get("showing_friends");
+            App.Views.synchrony.set("showing_friends", !showing_friends);
+            if (!showing_friends) {
+                App.Friends.poll();
+                $(".control_panel").addClass("friends_list_mode");
+            } else {
+                $(".control_panel").removeClass("friends_list_mode");
+            
+            }
         },
-        logout:    function(event){
+        filter_friends: function(event){
+            if (event.original.keyCode == 13){
+                event.original.preventDefault();
+                App.Views.synchrony.set("filter_value", "");
+            }
+            var query = App.Views.synchrony.get("filter_value");
+            App.Friends.filter(query);
+
+        },
+        logout: function(event){
             $.ajax({
                 url:     "/v1/users/" + App.Config.user.username + "/sessions",
                 type:    "DELETE",
