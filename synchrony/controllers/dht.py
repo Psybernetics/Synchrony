@@ -669,20 +669,19 @@ class SynchronyProtocol(object):
                 return False, None
             spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
             nodes   = spider.find()
+            node    = None
 
-            if len(nodes) != 1:
-                log("Unable to narrow search down to one particular node: %s" % \
-                    str(nodes))
-                return False, None
-
-            node = nodes[0]
+            if len(nodes) > 1:
+                for _ in nodes:
+                    if str(_.long_id) == node_id:
+                        node = _
 
             # Sometimes spidering doesn't get us all the way there.
             # Check who we already know:
-            if node.long_id != long(node_id):
-                nodes = [n for n in self.router if n.long_id == long(node_id)]
+            if node == None:
+                nodes = [n for n in self.router if str(n.long_id) == node_id]
                 if len(nodes) != 1:
-                    log("Peer not found via spidering.")
+                    log("Node %s not found via spidering." % node_id, "warning")
                     return False, None
                 node = nodes[0]
 
@@ -864,7 +863,7 @@ class SynchronyProtocol(object):
 
             elif long(node_id) != self.router.node.long_id:
                 log("Message for %s delivered to %s." % \
-                    (network, str(self.router.node.long_id)), "error")
+                    (node_id, str(self.router.node.long_id)), "error")
                 return False
 
             elif not user:

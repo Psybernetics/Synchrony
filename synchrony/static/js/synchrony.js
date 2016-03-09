@@ -1,3 +1,4 @@
+'use strict';
 /* 
    Synchrony 0.0.1
    Copyright Luke Joshua Brooks 2015.
@@ -245,6 +246,15 @@ function toggleMain(){
 }
 
 function request(event){
+    function update_address_bars(url) {
+        location.hash = "request/" + url;
+        if (App.Views.index != undefined) {
+            App.Views.index.set({url: url});
+        }
+        if (App.Views.synchrony != undefined) {
+            App.Views.synchrony.set({url: url});
+        }
+    }
     if (event.original.keyCode == 13){
         event.original.preventDefault();
 
@@ -258,16 +268,6 @@ function request(event){
         }
         if ($('.main').is(':visible')) {
             toggleMain();
-        }
-
-        function update_address_bars(url) {
-            location.hash = "request/" + url;
-            if (App.Views.index != undefined) {
-                App.Views.index.set({url: url});
-            }
-            if (App.Views.synchrony != undefined) {
-                App.Views.synchrony.set({url: url});
-            }
         }
         
         update_address_bars(url);
@@ -327,9 +327,8 @@ function toggle_editing (event){
         $('.edit_button').addClass('active_button');
         $('.toolbar').show();
     }
-    iframe = $('.iframe');
+    var iframe = $('.iframe');
     var attr = iframe.contents().find('body').attr('contenteditable');
-//            console.log(attr);
     if (typeof attr === typeof undefined || attr == false || attr == "false") {
         iframe.contents().find('body').attr('contenteditable','true');
         iframe.contents().find('body').attr('autocorrect','false');
