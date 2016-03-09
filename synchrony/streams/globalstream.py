@@ -25,7 +25,6 @@ class GlobalStream(Stream):
         if user:
             log("Received activity stream connection from %s" % user.username)
             self.user = user
-            self.emit("friend state", user.poll_friends(app.routes))
             return
         self.user = AnonUser()
 
@@ -33,6 +32,10 @@ class GlobalStream(Stream):
         log(data)
         self.emit("test", data)
         self.socket.send_packet({"test":"hello"})
+
+    @require_auth
+    def on_poll_friends(self):
+        self.emit("friend state", self.user.poll_friends(app.routes))
 
     def recv_json(self, data):
         self.emit("test", data)
