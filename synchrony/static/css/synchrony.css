@@ -622,11 +622,8 @@ input.switch:empty ~ label:after
 
 .control_panel {
 	padding-left: 10px;
-/*	color: #A3C246; */
     color: #F3F6EA;
 	background-color: rgba(34, 34, 34, 0.92);
- /* font-family: 'Noto'; */
-
 	font-size: 16px;
 	line-height: 25px;
 	height: 80%;
@@ -640,6 +637,10 @@ input.switch:empty ~ label:after
 
 .friends_list_mode > .synchrony_buttons {
     margin-top: -35px;
+}
+
+.friends_list_mode #profile_link {
+    color: #9CBB3A;
 }
 
 .friends_list > .search {

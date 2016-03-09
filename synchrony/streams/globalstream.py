@@ -1,6 +1,6 @@
 # set of channels, a contacts list, direct messages, message buffers.
 from cgi import escape
-from synchrony import app, log
+from synchrony import app, log, db
 from synchrony.controllers.auth import auth
 from synchrony.streams.utils import Stream, require_auth
 
@@ -13,37 +13,24 @@ class GlobalStream(Stream):
     socket_type = "global_stream"
 
     def initialize(self):
-        self.buffer = []
-        self.inbox = None
-        self.user = None
+        self.buffer  = []
+        self.inbox   = None
+        self.user    = None
 #        Make the channels a set
         self.channel = None
         log("Activity stream init")
 
+    @require_auth
     def recv_connect(self):
-        user = auth(self.request)
-        if user:
-            log("Received activity stream connection from %s" % user.username)
-            self.user = user
-            return
-        self.user = AnonUser()
-
-    def recv_message(self, data):
-        log(data)
-        self.emit("test", data)
-        self.socket.send_packet({"test":"hello"})
+        """
+        Don't adjust self.user.status here as it permits people to return
+        to their appear-offline state.
+        """
+        log("Received activity stream connection from %s" % self.user.username)
 
     @require_auth
     def on_poll_friends(self):
         self.emit("friend state", self.user.poll_friends(app.routes))
-
-    def recv_json(self, data):
-        self.emit("test", data)
-        self.emit_to_room("test", data)
-        if self.user:
-            log("Received JSON from %s: %s" % (self.user.username, str(data)))
-        else:
-            log("Received JSON: %s" % str(data))
 
     @require_auth
     def on_join(self, channel):
@@ -77,7 +64,7 @@ class GlobalStream(Stream):
             self.emit_to_room(self.channel, "privmsg", body)
             self.emit("privmsg", body)
         
-    @require_auth
-    def recv_disconnect(self):
-#        print "received disconnect"
-        pass
+#    @require_auth
+#    def recv_disconnect(self):
+#        pass
+

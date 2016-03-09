@@ -36,9 +36,8 @@
 <span class="synchrony_buttons">
 	<button class="button big_button" on-click="friends">Back</button><br />
 </span>
+<input on-keydown="filter_friends" value="{{filter_value}}" class="search" placeholder="Filter . . ." />
 <div class="friends_list">
-    <input on-keydown="filter_friends" value="{{filter_value}}" class="search" placeholder="Filter . . ." />
-    <br /> 
     {{#friends.visible_list}}
         {{username}}
         <hr />

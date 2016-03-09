@@ -391,23 +391,14 @@ function Friends(){
         this.global_stream = io.connect('/global', {resource:"stream"});
         this.global_stream.emit('join', "global");
         this.global_stream.on("friend state", function(data){
-            console.log(data);
             this.repopulate_list(this.list, data);
             this.repopulate_list(this.visible_list, data);
         }.bind(this));
     }
 
-    // GET /v1/users/<username>/friends
     this.poll = function(){
+        // Ask relevant nodes about relevant user accounts.
         this.global_stream.emit("poll_friends");
-        /*
-        $.get("/v1/users/" + App.Config.user.username + "/friends", function(response){
-            this.list.length = 0;
-            this.list.push.apply(this.list, response.data);
-            this.visible_list.length = 0;
-            this.visible_list.push.apply(this.visible_list, response.data);
-        }.bind(this));
-        */
     }
     this.change_status = function(){}
 
