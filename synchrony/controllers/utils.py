@@ -326,7 +326,7 @@ def update_url(url, params):
     url_parts[4] = urllib.urlencode(query)
     return urlparse.urlunparse(url_parts)
 
-def make_response(url, query, jsonify=True):
+def make_response(url, query, jsonify=True, **kwargs):
     """
     Take a paginated SQLAlchemy query and return
     a response that's more easily reasoned about
@@ -335,7 +335,10 @@ def make_response(url, query, jsonify=True):
     
     response = {}
     if jsonify:
-        response['data'] = [i.jsonify() for i in query.items]   
+        if kwargs:
+            response['data'] = [i.jsonify(**kwargs) for i in query.items] 
+        else:
+            response['data'] = [i.jsonify() for i in query.items]   
     else:
         response['data'] = query.items
 

@@ -149,7 +149,9 @@ if __name__ == "__main__":
         log("No key found at %s" % os.path.abspath(options.key))
         log("Generating new cryptographic keys.")
         random_generator = Random.new().read
-        key = RSA.generate(4096, random_generator)
+        # An implementation in a strongly typed language such as C or Go
+        # should utilise key lengths >= 4096 bits. We use 1024 for speed.
+        key = RSA.generate(1024, random_generator)
         fd = open(options.key, "w")
         fd.write(key.exportKey())
         fd.close()
