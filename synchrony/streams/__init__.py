@@ -1,9 +1,8 @@
 from synchrony import app
 from socketio import socketio_manage
 from flask import session, request, Response
-from synchrony.streams.chat import ChatStream
+from synchrony.streams.events import EventStream
 from synchrony.streams.documents import DocumentStream
-from synchrony.streams.globalstream import GlobalStream
 
 @app.route("/stream/<path:remaining>", methods=['GET', 'POST'])
 def stream(remaining):
@@ -14,8 +13,7 @@ def stream(remaining):
 		socketio_manage(
 			request.environ,
 			{
-				'/chat':      ChatStream,
-				'/global':    GlobalStream,
+				'/main':      EventStream,
 				'/documents': DocumentStream,
 			},
 			dict(session)
