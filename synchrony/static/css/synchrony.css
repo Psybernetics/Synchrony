@@ -233,6 +233,15 @@ label { display: inline-block; }
 	font-weight: bold;
 }
 
+.view .search {
+    float: left;
+}
+
+.upload_revision {
+    color: #3F3F3F;
+    background-color: rgba(248, 248, 248, 0.55);
+}
+
 .search { 
     background-color: rgba(248, 248, 248, 0.55);
 	border: none;
