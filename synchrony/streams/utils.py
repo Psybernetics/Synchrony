@@ -22,10 +22,10 @@ class Stream(BaseNamespace):
     def recv_connect(self):
         self.authenticate()
 
-    def join(self, channel, type="name"):
+    def join(self, channel, channel_type="name"):
         self.session['channels'].add(self.get_channel_name(channel))
         if hasattr(self, "channel"):
-            self.channel = (type, channel)
+            self.channel = (channel_type, channel)
         
     def leave(self, channel):
         self.session['channels'].remove(self.get_channel_name(channel))
