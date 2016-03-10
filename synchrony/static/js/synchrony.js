@@ -1244,7 +1244,6 @@ Ractive.load({
         show_hide: function(event){ toggleMain(); },
         chat:      function(event){ window.location.hash = "#chat"; },
         friends:   function(event){
-            console.log("Yo!");
             var showing_friends = App.Views.synchrony.get("showing_friends");
             App.Views.synchrony.set("showing_friends", !showing_friends);
             if (!showing_friends) {
