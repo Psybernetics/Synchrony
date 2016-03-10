@@ -845,11 +845,20 @@ class SynchronyProtocol(object):
         Match to UID and return a new Friend instance representing our side.
         """
         node = self.read_envelope(data)
-        
+       
+        if len(data['rpc_friend']) > 10:
+            log("Received too many batched RPC_FRIEND messages.", "warning")
+            return
+
         for message in data['rpc_friend']:
+            
             message_type = message.keys()[0]
             payload      = message.values()[0]
             
+            if isinstance(payload, (list, dict)) and len(payload) > 5:
+                log("Abnormal RPC_FRIEND payload: %s" % str(payload), "warning")
+                continue
+
             if not "from" in payload or not "to" in payload:
                 continue
            

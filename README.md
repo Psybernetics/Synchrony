@@ -1,5 +1,5 @@
 ##Synchrony
-#####A collaborative hyperdocument editor.
+#####A peer-to-peer hyperdocument editor.
 
 ![Alt text](doc/img/synchrony1.png?raw=true "Collaborative Editor")
 ![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
@@ -36,7 +36,3 @@ Currently a work-in-progess as RPCs undergo refinement.
 #####How you can support this project
 
 Suggestions can be made on IRC: irc.psybernetics.org #synchrony
-
-Donations are accepted [here](https://paypal.me/LukeB42).
-
-All contributions go towards the development of this software, including porting to Go.
