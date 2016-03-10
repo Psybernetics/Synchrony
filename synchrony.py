@@ -258,13 +258,18 @@ if __name__ == "__main__":
         if options.write:
             write_revision_to_disk(options)
 
-        for router in app.routes.values():
-            if len(router):
-                log("DHT: %s: Telling peers of our public revisions." % router.network)
-                for revision in Revision.query.filter(
-                            and_(Revision.public == True, Revision.parent == None)
-                        ).all():
-                    router[revision] = revision
+
+        def remind():
+            for router in app.routes.values():
+                if len(router):
+                    log("DHT: %s: Telling peers of our public revisions." % \
+                        router.network)
+                    for revision in Revision.query.filter(
+                                and_(Revision.public == True, Revision.parent == None)
+                            ).all():
+                        router[revision] = revision
+
+        gevent.spawn(remind)
 
         log("Binding to %s:%s" % (options.address, options.port))
         httpd.serve_forever()
