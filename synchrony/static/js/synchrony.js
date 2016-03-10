@@ -386,7 +386,7 @@ function Friends(){
     // Connect to /main and join a shared channel
     this.connect = function(){
         this.stream = io.connect('/main', {resource: "stream"});
-        this.stream.emit("join", "main");
+        this.stream.emit("join", "events");
         // With the activity stream, joining a shared channel is taken care of
         // for us automatically.
 //        this.global_stream.emit('join', "global");
@@ -775,6 +775,9 @@ function userView(username, params){
                         }
                     });
                 }
+            },
+            create_revision: function(event){
+                console.log(event);
             },
             update_avatar: function(event){
                 console.log(event);
