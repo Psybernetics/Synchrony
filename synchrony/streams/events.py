@@ -22,8 +22,28 @@ class Channel(object):
 
 class EventStream(Stream):
     """
-    Friends list events, Chat and RTC sessions
+    Friends list events, local events, Chat and RTC sessions.
 
+    Friends list events
+    f_report_status    f.jsonify()
+    f_update_status    u.jsonify()
+
+    Local events
+    l_event            {"u": u.jsonify(), "t": "sign_in"}
+
+    Channel events (/#chat)
+    c_join             {"c": "name", "u": u.jsonify()}
+    c_msg              {"u": u.jsonify(), "m": "message", "c": "channel"}
+    c_cmd              {"c": "cmd", "a": [arg1, arg2, arg3]}
+    c_part             {"c": "name"}
+
+    RTC session events
+    r_init             u.jsonify()
+    r_close            u.jsonify()
+
+    Document editor session events
+    d_init             {"c": "addr", "u": u.jsonify()}
+    d_close            {"c": "addr", "u": u.jsonify()}
     """
     socket_type = "main"
 
@@ -64,11 +84,6 @@ class EventStream(Stream):
         log("Received chat connection before authentication. Requesting client reconnects.")
         self.emit("reconnect", {"m":"Reconnecting.."})
 
-    def recv_message(self, data):
-        log(data)
-        self.emit("test", data)
-        self.socket.send_packet({"test":"hello"})
-
     def recv_json(self, data):
         self.emit("test", data)
         self.broadcast("test", data)
@@ -89,7 +104,6 @@ class EventStream(Stream):
                 log("%s joined %s" % (self.user.username, channel_name))
                 channel = Channel(name=channel_name)
                 channel.clients.add(self)
-                self.channels['_default']   = channel
                 self.channels[channel_name] = channel
                 self.join(channel_name)
 
@@ -119,6 +133,14 @@ class EventStream(Stream):
 
     @require_auth
     def on_update_status(self, status):
+        """
+        Recognised statuses:
+            A   - Available
+            O   - Offline
+            AFK - Away
+        The first side is what goes in the database, the second side
+        is what we receive from the client.
+        """
         log("%s changed status to %s." % (self.user.username, status.title()))
         self.user.status = status
         #db.session.commit()
@@ -150,21 +172,18 @@ class EventStream(Stream):
                 body = {"u":self.user.username,"m":escape(msg)}
             else:
                 body = {"u":self.user.username,"m":escape(msg),"a": True}
-            channel = self.channels['_default']
+            channel = self.channel[1]
             # Send message via RPC_CHAT to a remote host
-            if channel.name.count("/") == 2:
-                network, node_id, uid = channel.name.split("/")
+            if channel.count("/") == 2:
+                network, node_id, uid = channel.split("/")
                 router = self.routes.get(network, None)
-                print 1
                 if router == None: return
-                friend = [f for f in self.user.friends if f.address == channel.name]
+                friend = [f for f in self.user.friends if f.address == channel]
                 if not friend: return
-                print 2
                 friend = friend[0]
                 if not friend.peer: # Return if no known pubkey
                     return
 
-                print 3
                 data         = {}
                 data['to']   = friend.uid
                 data['from'] = [self.user.uid, self.user.username]
@@ -172,12 +191,11 @@ class EventStream(Stream):
                 data['body'] = msg
 
                 resp = router.protocol.rpc_chat((friend.ip, friend.port), data)
-                print 4
                 if resp:
                     self.emit("privmsg", body)
                 return
-            log("Message to %s from %s: %s" % (channel.name, self.user.username, msg))
-            self.broadcast(channel.name, "privmsg", body)
+            log("Message to %s from %s: %s" % (channel, self.user.username, msg))
+            self.broadcast(channel, "privmsg", body)
             self.emit("privmsg", body)
         else:
             self.request_reconnect()

@@ -1295,7 +1295,7 @@ function chatView() {
     Ractive.load({chat: 'chat.tmpl'}).then(function(components){
         App.Views['chat'] = new components.chat({
             el: $('.main'),
-            data: {chat_available:true},
+            data: {chat_available: true},
             adaptor: ['Backbone']
         });
         
@@ -1334,13 +1334,6 @@ function chatView() {
             $('.chat-messages').append('<br />' + data.r);
             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
         });
-
-        // Server disappeared. TODO: Set a reconnect timer here.
-//        App.Views.chat.socket.on("disconnect", function(data){
-//            console.log(data);
-//            App.Views.chat.set("chat_available", false);
-//            App.Views.chat.set("chat_error", data.message);
-//        });
 
         // We've connected to chat before authenticating and the
         // server is telling us to reconnect.
