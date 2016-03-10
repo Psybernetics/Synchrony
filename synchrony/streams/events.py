@@ -30,16 +30,19 @@ class EventStream(Stream):
     def initialize(self):
         self.user     = None
 #        Access to app.routes for
-#        admin users to access via /eval
-        self.routes   = app.routes
+#        admin users to access via the /eval command...
+#        "eval" is a nonexistent privilege that has to be created
+#        and associated in the database manually.
+        self.routes  = app.routes
         self.channels = {}
-        self.modes    = []
+        self.channel = None
+        self.modes   = []
 
         # This lets us cycle through stream connections on
         # the httpd and easily determine the session type.
         self.socket.socket_type       = "main"
         self.socket.appearing_offline = False
-        log("init chat stream")
+        log("Event stream init")
 
     def recv_connect(self):
         user = auth(self.request)
@@ -82,7 +85,7 @@ class EventStream(Stream):
         """
         if self.user and self.user.username:
             if self.user.can("chat"):
-                if channel_name in self.channels: return
+                if self.channel and channel_name == self.channel[1]: return
                 log("%s joined %s" % (self.user.username, channel_name))
                 channel = Channel(name=channel_name)
                 channel.clients.add(self)
@@ -116,8 +119,6 @@ class EventStream(Stream):
 
     @require_auth
     def on_update_status(self, status):
-        if not self.channel:
-            self.join(self.default_channel)
         log("%s changed status to %s." % (self.user.username, status.title()))
         self.user.status = status
         #db.session.commit()

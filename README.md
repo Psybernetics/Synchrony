@@ -1,5 +1,5 @@
 ##Synchrony
-#####A collaborative hyperdocument editor.
+#####A peer-to-peer hyperdocument editor.
 
 ![Alt text](doc/img/synchrony1.png?raw=true "Collaborative Editor")
 ![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
