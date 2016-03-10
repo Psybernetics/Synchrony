@@ -3,7 +3,8 @@ import time
 import flask_restful as restful
 from sqlalchemy import and_, desc
 from flask_restful import reqparse
-from flask import request, session
+from flask import request, session, redirect
+
 from synchrony import app, db, log
 from synchrony.controllers.auth import auth
 from synchrony.controllers.utils import make_response
@@ -184,11 +185,6 @@ class UserResource(restful.Resource):
                 for s in user.sessions:
                     db.session.delete(s)
 
-        log(request.files)
-
-        if "avatar" in request.files:
-            user.avatar = request.files['avatar']
-
         db.session.add(user)
         db.session.commit()
         return user.jsonify()
@@ -311,6 +307,33 @@ class UserRevisionCollection(restful.Resource):
             .order_by(desc(Revision.created)).paginate(args.page, args.per_page)
         return make_response(request.url, query)
 
+    def post(self, username):
+        user   = auth(session, required=True)
+        
+        if not 'revision' in request.files:
+            return {}, 400
+        
+        upload = request.files['revision']
+
+        revision = Revision()
+        revision.add(upload)
+        
+        existing = Revision.query.filter(
+                        Revision.hash == revision.hash
+                   ).first()
+
+        if existing: # We already have this file
+            if not existing in user.revisions:
+                user.revisions.append(existing)
+            db.session.add(existing)
+        else:
+            user.revisions.append(revision)
+            db.session.add(revision)
+
+        db.session.add(user)
+        db.session.commit()
+        
+        return redirect("/")
 class UserRevisionCountResource(restful.Resource):
     def get(self, username):
         user = auth(session, required=True)
@@ -486,9 +509,6 @@ class UserAvatarResource(restful.Resource):
 
     def post(self, username):
         user   = auth(session, required=True)
-        parser = reqparse.RequestParser()
-        parser.add_argument("avatar", type=str)
-        args   = parser.parse_args()
         
         if not 'avatar' in request.files:
             return {}, 400
@@ -498,11 +518,21 @@ class UserAvatarResource(restful.Resource):
         revision = Revision()
         revision.add(upload)
         
-        user.avatar = revision
-        user.revisions.append(revision)
+        existing = Revision.query.filter(
+                        Revision.hash == revision.hash
+                   ).first()
+
+        if existing: # We already have this file
+            user.avatar = existing
+            if not existing in user.revisions:
+                user.revisions.append(existing)
+            db.session.add(existing)
+        else:
+            user.avatar = revision
+            user.revisions.append(revision)
+            db.session.add(revision)
 
         db.session.add(user)
-        db.session.add(revision)
         db.session.commit()
         
-        return True
+        return redirect("/")

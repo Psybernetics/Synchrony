@@ -7,6 +7,11 @@
     <form>
         <input class="search" on-keydown="search_revisions" value="{{search_query}}" size="25" placeholder="Search..." spellcheck="false">
     </form>
+
+    <form class="pull-right upload_revision" on-submit="create_revision" action="/v1/users/{{username}}/revisions" method="post" enctype="multipart/form-data">
+      <input type="file" name="revision" accept="*">
+      <input class="button" type="submit">
+    </form>
     <table class="scrollable">
        <tbody>
             <tr>
