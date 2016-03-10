@@ -6,6 +6,11 @@ from synchrony.streams.utils import Stream, require_auth
 
 # Business logic for the global activity stream
 class GlobalStream(Stream):
+    """
+    Responsible for friends list events generally.
+    
+    Responsible for starting/stopping RPC EDIT sessions.
+    """
     socket_type = "global_stream"
 
     def initialize(self):

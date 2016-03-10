@@ -45,13 +45,13 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
 // App init
 (function(){
     window.App = {
-        Config:   {},
-        Views:    {},
-        stream:   [],
-        history:  [],
-        editor:   undefined,
-        title:    " - Synchrony",
-        Friends: new Friends(),
+        Config:          {},
+        Views:           {},
+        title:           " - Synchrony",
+        editor:          undefined,
+        history:         [],
+        Friends:         new Friends(),
+        stream_messages: []
     }
 
     // Ask the server who we are.
@@ -116,26 +116,26 @@ App.Router = Backbone.Router.extend({
 // Our error handler prints to the stream for ten seconds
 function renderError(statement) {
     console.log('Error: ' + statement);
-    App.stream.push(statement);
-    setTimeout(function(){ App.stream.pop(); }, 10000);
+    App.stream_messages.push(statement);
+    setTimeout(function(){ App.stream_messages.pop(); }, 10000);
 }
 
 // Push a global message to the stream for eight seconds
 function renderGlobal(statement) {
     console.log('Global: ' + statement);
-    App.stream.reverse();
-    App.stream.push( '<span class="global-message">' + statement + '</span>' );
-    App.stream.reverse();
+    App.stream_messages.reverse();
+    App.stream_messages.push( '<span class="global-message">' + statement + '</span>' );
+    App.stream_messages.reverse();
     setTimeout(function(){
-        App.stream.pop();
-        App.stream.reverse();
+        App.stream_messages.pop();
+        App.stream_messages.reverse();
     }, 60000);
 }
 
 // Push $user is typing to the stream for three seconds
 function renderTyping(statement) {
-    App.stream.push( '<span class="global-message">' + statement + '</span>' );
-    setTimeout(function(){ App.stream.pop(); }, 1000);
+    App.stream_messages.push( '<span class="global-message">' + statement + '</span>' );
+    setTimeout(function(){ App.stream_messages.pop(); }, 1000);
 }
 
 function linkUser(username){
@@ -257,8 +257,6 @@ function request(event){
     }
     if (event.original.keyCode == 13){
         event.original.preventDefault();
-
-        // Grab the iframe div
         var iframe = $('.iframe');
 
         // Remove any schema from the url
@@ -266,6 +264,7 @@ function request(event){
         if (url.indexOf("://") > -1){
                 url = url.slice(url.indexOf("://")+3, url.length);
         }
+        
         if ($('.main').is(':visible')) {
             toggleMain();
         }
@@ -382,36 +381,36 @@ function populate_table(view, table_type, url){
 function Friends(){
     this.list          = [];
     this.visible_list  = [];
-    this.chat_stream   = null;
-    this.global_stream = null;
+    this.stream        = null;
 
-    // Connect to /global and join a shared channel
+    // Connect to /main and join a shared channel
     this.connect = function(){
-        this.global_stream = io.connect('/global', {resource: "stream"});
+        this.stream = io.connect('/main', {resource: "stream"});
+        this.stream.emit("join", "main");
         // With the activity stream, joining a shared channel is taken care of
         // for us automatically.
 //        this.global_stream.emit('join', "global");
    
         // Results of polling everyone for friend state
-        this.global_stream.on("friend_state", function(data){
+        this.stream.on("friend_state", function(data){
             this.repopulate_list(this.list, data);
             this.repopulate_list(this.visible_list, data);
         }.bind(this));
 
         // A friend or ourselves performed a status update
-        this.global_stream.on("update_status", function(data){
+        this.stream.on("update_status", function(data){
             console.log(data);
         }.bind(this));
     }
 
     this.poll = function(){
         // Ask relevant nodes about relevant user accounts.
-        this.global_stream.emit("poll_friends");
+        this.stream.emit("poll_friends");
     }
     
     this.update_status = function(status){
-        if (!this.global_stream) { this.connect(); }
-        this.global_stream.emit("update_status", status);
+        if (!this.stream) { this.connect(); }
+        this.stream.emit("update_status", status);
     }
 
     // Zero a list in place.
@@ -1136,8 +1135,6 @@ Ractive.load({
 
 */   App.Views['content'] = new components.content({
         el: $('.content'),
-        data: {events: App.stream},
-        adaptor: ['Backbone'],
     });
     
     App.Views.content.editor = new SynchronyEditor($('.iframe'));
@@ -1149,8 +1146,6 @@ Ractive.load({
 
     App.Views['toolbar'] = new components.toolbar({
         el: $('.toolbar'),
-        data: {events: App.stream},
-        adaptor: ['Backbone'],
     });
 
     $('.toolbar').hide();   
@@ -1213,7 +1208,7 @@ Ractive.load({
         el: $('.synchrony'),
         data: {
             Config:      App.Config,
-            stream:      App.stream,
+            stream:      App.stream_messages,
             friends:     App.Friends,
             edit_button: "Edit"
         },
@@ -1222,9 +1217,9 @@ Ractive.load({
 
     App.Views.synchrony.set("showing_friends", false);
 
-    App.Friends.connect();
+    if (!App.Friends.stream) { App.Friends.connect(); }
 
-    App.Friends.global_stream.on("message", function(data){
+    App.Friends.stream.on("message", function(data){
         App.stream.push(data.message);
         setTimeout(function(){ App.stream.pop(); }, 1000)
     });
@@ -1245,16 +1240,11 @@ Ractive.load({
                 }
            });
         },
-        settings:  function(event){
-            window.location.hash = "#settings";
-        },
-        show_hide: function(event){ // Show/hide the .main panel over content
-            toggleMain();
-        },
-        chat:      function(event){
-            window.location.hash = "#chat";
-        },
-        friends: function(event){
+        settings:  function(event){ window.location.hash = "#settings"; },
+        show_hide: function(event){ toggleMain(); },
+        chat:      function(event){ window.location.hash = "#chat"; },
+        friends:   function(event){
+            console.log("Yo!");
             var showing_friends = App.Views.synchrony.get("showing_friends");
             App.Views.synchrony.set("showing_friends", !showing_friends);
             if (!showing_friends) {
@@ -1262,7 +1252,6 @@ Ractive.load({
                 $(".control_panel").addClass("friends_list_mode");
             } else {
                 $(".control_panel").removeClass("friends_list_mode");
-            
             }
         },
         filter_friends: function(event){
@@ -1272,7 +1261,6 @@ Ractive.load({
             }
             var query = App.Views.synchrony.get("filter_value");
             App.Friends.filter(query);
-
         },
         update_status: function(event){
             var status = App.Views.synchrony.get("status");
@@ -1326,12 +1314,11 @@ function chatView() {
         App.Views.chat.doskeys = [];
         App.Views.chat.current_doskey = 0;
 
-        // Join the public channel and listen for messages
-        App.Views.chat.socket = io.connect('/chat', {resource:"stream"});
-        App.Views.chat.socket.emit('join', '#public');
+        // Join channel "main" and listen for messages
+        if (!App.Friends.stream) { App.Friends.connect(); }
 
         // Recieve chat messages.
-        App.Views.chat.socket.on("privmsg", function(data){
+        App.Friends.stream.on("privmsg", function(data){
             console.log(data);
 //            if (!App.Views.sidebar.visible){ pulseSidebar(); }
 //            The anonymous flag is for if you've permitted unsigned-up users to chat
@@ -1342,7 +1329,7 @@ function chatView() {
         });
 
         // Recieve the responses from commands
-        App.Views.chat.socket.on("response", function(data){
+        App.Friends.stream.on("response", function(data){
             console.log(data);
 //            if (!App.Views.chat.visible){ pulseChat(); }
             $('.chat-messages').append('<br />' + data.r);
@@ -1358,23 +1345,15 @@ function chatView() {
 
         // We've connected to chat before authenticating and the
         // server is telling us to reconnect.
-        App.Views.chat.socket.on("reconnect", function(data){
+        App.Friends.stream.on("reconnect", function(data){
             $('.chat-messages').append('<br />Reconnecting . . .');
             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
-            // Actually recreate the connection to re-auth.
-            // Using chat.socket.disconnect and socket.connect doesn't work.
-            App.Views.chat.socket.disconnect();
-            delete App.Views.chat.socket;
-            App.Views.chat.socket = io.connect('/chat', {resource:"stream"});
+            App.Friends.connect();
             console.log(data.m);
        });
 
-        App.Views.chat.socket.on("appear_offline", function(data){
-            $('[name="appear_offline"]').attr("checked", data);
-        });
-
         // RPC_CHAT event listeners for messages from remote Synchrony instances.
-        App.Views.chat.socket.on("rpc_chat_init", function(data){
+        App.Friends.stream.on("rpc_chat_init", function(data){
             console.log(data);
             if (data.state == "delivered") {
                 var message = "The remote side has been notified and is available to chat.<br />";
@@ -1385,13 +1364,13 @@ function chatView() {
                 // App.Views.chat.socket.emit("join", friend.address);
             }
         });
-        App.Views.chat.socket.on("rpc_chat", function(data){
+        App.Friends.stream.on("rpc_chat", function(data){
             console.log(data);
             var message = "&lt;" + data.from[1] + "&gt; " + data.body + "<br />";
             $('.chat-messages').append(message);
             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
         });
-        App.Views.chat.socket.on("rpc_chat_close", function(data){
+        App.Friends.stream.on("rpc_chat_close", function(data){
             console.log(data);
         });
 
@@ -1415,12 +1394,12 @@ function chatView() {
 
                 if (message){
                     if (message[0] === "/") {
-                        App.Views.chat.socket.emit('cmd', message.substring(1));
+                        App.Friends.stream.emit('cmd', message.substring(1));
                         console.log(this.get("message"));
                         $('#chat-input').val('');
                         App.Views.chat.set("message", '');
                     } else {
-                        response = App.Views.chat.socket.emit('msg', message);
+                        var response = App.Friends.stream.emit('msg', message);
                         if (!response.socket.connected) {
                             $('.chat-messages').append("No connection . . .");
                             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
@@ -1429,20 +1408,6 @@ function chatView() {
                         $('#chat-input').val('');
                         App.Views.chat.set("message", '');
                     }
-                }
-            },
-
-            chat_appear_offline: function(event){
-//                event.original.preventDefault();
-                console.log(event);
-                var appearing_offline = this.get("appearing_offline");
-                console.log(appearing_offline)
-                // We've prevented the default, so transmit the inverse,
-                // as it's the state the user is aiming for
-                if (appearing_offline){
-                    App.Views.chat.socket.emit("appear_offline", 0);
-                } else {
-                    App.Views.chat.socket.emit("appear_offline", 1);
                 }
             },
 
@@ -1459,7 +1424,7 @@ function chatView() {
                         var line = App.Views.chat.doskeys[
                             App.Views.chat.doskeys.length - App.Views.chat.current_doskey
                         ];
-                        App.Views.chat.set({message:line});
+                        App.Views.chat.set({message: line});
                         App.Views.chat.current_doskey += 1;
                     }
 
@@ -1489,8 +1454,8 @@ function chatView() {
 
         });
     });
-    
 }
+
 function loginView() {
     document.title = "Log in or create an account" + App.title;
     Ractive.load({login: 'login.tmpl'}).then(function(components){

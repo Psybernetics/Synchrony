@@ -5,7 +5,7 @@ Should loosely base this on IRC with user modes and channel modes, possibly...
 Consider also WebRTC session initiation.
 """
 from cgi import escape
-from synchrony import app, log
+from synchrony import app, log, db
 from synchrony.controllers.auth import auth
 from synchrony.streams.utils import Stream, require_auth
 
@@ -20,8 +20,12 @@ class Channel(object):
         self.modes = []
         self.clients = set()
 
-class ChatStream(Stream):
-    socket_type = "chat"
+class EventStream(Stream):
+    """
+    Friends list events, Chat and RTC sessions
+
+    """
+    socket_type = "main"
 
     def initialize(self):
         self.user     = None
@@ -33,7 +37,7 @@ class ChatStream(Stream):
 
         # This lets us cycle through stream connections on
         # the httpd and easily determine the session type.
-        self.socket.socket_type       = "chat"
+        self.socket.socket_type       = "main"
         self.socket.appearing_offline = False
         log("init chat stream")
 
@@ -105,19 +109,20 @@ class ChatStream(Stream):
                     resp = router.protocol.rpc_chat((friend.ip, friend.port), data)
                     if resp and "state" in resp and resp['state'] == "delivered":
                         self.emit("rpc_chat_init", resp)
+
+    @require_auth
+    def on_poll_friends(self):
+        self.emit("friend_state", self.user.poll_friends(app.routes))
+
+    @require_auth
+    def on_update_status(self, status):
+        if not self.channel:
+            self.join(self.default_channel)
+        log("%s changed status to %s." % (self.user.username, status.title()))
+        self.user.status = status
+        #db.session.commit()
+        self.broadcast(self.channel[1], "update_status", self.user.jsonify())
  
-    def on_appear_offline(self, state):
-        """
-        Flip the boolean self.socket.appearing_offline
-        so we're omitted from broadcast events on other users.
-        """
-        if state:
-            self.socket.appearing_offline = True
-            self.emit("appear_offline", True)
-        else:
-            self.socket.appearing_offline = False
-            self.emit("appear_offline", False)
-   
     def broadcast(self, channel, event, *args):
         """
         This is sent to all in the channel in this particular namespace.
