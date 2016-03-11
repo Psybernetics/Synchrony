@@ -666,6 +666,13 @@ input.switch:empty ~ label:after
     margin-bottom: 5px;
 }
 
+.friend_actions {
+    color: #455C8D;
+    word-spacing: 15px;
+    padding-left: 100px;
+    font-size: 90%;
+}
+
 .control_panel a {
     color: #F3F6EA;
 }

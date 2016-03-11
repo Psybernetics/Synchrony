@@ -364,7 +364,6 @@ class User(db.Model):
     uid           = db.Column(db.String(),  default=uid(short_id=True)) # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
     username      = db.Column(db.String())
     password      = db.Column(db.String())
-    email         = db.Column(db.String())
     avatar        = db.relationship("Revision", uselist=False)
     public        = db.Column(db.Boolean(),     default=False)
     active        = db.Column(db.Boolean(),     default=True)
@@ -394,7 +393,10 @@ class User(db.Model):
             password.encode(), bcrypt.gensalt(16)
         ).decode()
 
-    def jsonify(self, revisions=False, groups=False, sessions=False):
+    def jsonify(self, revisions=False, groups=False, sessions=False, address=False):
+        """
+        Address here should be an instance of controllers.dht.RoutingTable.
+        """
         response = {}
         if self.username:
             response['username']        = self.username
@@ -411,6 +413,11 @@ class User(db.Model):
                 response['sessions']    = [s.jsonify() for s in self.sessions]
             if groups:
                 response['user_groups'] = [g.jsonify() for g in self.user_groups]
+
+            if address:
+                response['address'] = '/'.join([address.network,
+                                                str(address.node.long_id),
+                                                self.uid])
         return response
 
     def poll_friends(self, routers):

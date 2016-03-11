@@ -7,7 +7,6 @@
     <form>
         <input class="search" on-keydown="search_revisions" value="{{search_query}}" size="25" placeholder="Search..." spellcheck="false">
     </form>
-
     <form class="pull-right upload_revision" on-submit="create_revision" action="/v1/users/{{username}}/revisions" method="post" enctype="multipart/form-data">
       <input type="file" name="revision" accept="*">
       <input class="button" type="submit">
@@ -59,6 +58,7 @@
       <input class="button" type="submit">
     </form>
     {{/showing_avatar}}
+    
     <h2>Friends<button on-click="toggle:{{"friends"}}" class="button big_button pull-right">{{friends_button}}</button></h2>
     {{#showing_friends}}
     <table>

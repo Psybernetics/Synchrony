@@ -1264,6 +1264,23 @@ Ractive.load({
             var query = App.Views.synchrony.get("filter_value");
             App.Friends.filter(query);
         },
+        select: function(event, type, index){
+            if (type == "friend"){
+                var selection = $("#friend_" + index);
+                if (selection.css("display") == "none"){
+//                    selection.css("display", "initial");
+                    selection.show("slow");
+                } else {
+                    selection.hide("slow");
+//                    selection.css("display", "none");
+                }
+            }
+        },
+        edit_with: function(event, friend){
+            console.log(friend);
+        },
+        chat_with: function(event, friend){},
+        block:     function(event, friend){},
         update_status: function(event){
             var status = App.Views.synchrony.get("status");
             App.Friends.update_status(status);
