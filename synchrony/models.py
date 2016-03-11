@@ -401,7 +401,6 @@ class User(db.Model):
         if self.username:
             response['username']        = self.username
             response['uid']             = self.uid
-            response['email']           = self.email
             response['active']          = self.active
             response['status']          = self.status
             response['created']         = time.mktime(self.created.timetuple())
