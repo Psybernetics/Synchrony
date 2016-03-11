@@ -937,7 +937,8 @@ class SynchronyProtocol(object):
                     if not any(friend):
                         return None
 
-                    return envelope(self.router, {"response": user.jsonify()})
+                    response = {"response": user.jsonify(address=self.router)}
+                    return envelope(self.router, response)
 
     def handle_chat(self, data):
         """

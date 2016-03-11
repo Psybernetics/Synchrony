@@ -138,12 +138,30 @@ Table of Contents
 
 2 Routing Topology
 
+2.1 Overlay networks described by Kademlia (2002)
+
+   https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf
+
+        Secure Node ID generation
+        Kademlia via JSON over HTTP/1.1
+        Routing table reinforcement
+        Multiple routing tables
+        Trust-based table selection
 
 3 Collaborative Editing
 
+    RPC_EDIT
+    fragment, document
+    tree reintegration
+    Inter-instance RPC_EDIT
+    Edited revision objects in overlay networks
 
 4 Distributed Trust
 
+4.1 
+   www.cc.gatech.edu/~lingliu/papers/2012/XinxinFan-EigenTrust++.pdf
+
+        Preemptively detecting malicious peers with P and EP.
 
 5 Attribution and Licensing
 
@@ -153,11 +171,11 @@ Table of Contents
    expensive".
    
    A REQUIRED safeguard for protecting the livelihoods of economic
-   producers is the recognition of a "license" attribute when referencing
-   copywritten hypermedia objects.
+   producers is the recognition of a "license" attribute when
+   referencing copywritten hypermedia objects.
    
    E.G.
-    <img src="/portfolio_item.png" license="Copyright Site. Owner 2016" />
+   <img src="/portfolio_item.png" license="Copyright Site. Owner 2016" />
    SHALL cause instances to either omit retrieval or demarcate the object
    as unpublicizable to network peers, whereas
     <img src="/vacation_snap.ipng" license="CC BY" />
