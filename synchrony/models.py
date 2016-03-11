@@ -364,7 +364,6 @@ class User(db.Model):
     uid           = db.Column(db.String(),  default=uid(short_id=True)) # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
     username      = db.Column(db.String())
     password      = db.Column(db.String())
-    email         = db.Column(db.String())
     avatar        = db.relationship("Revision", uselist=False)
     public        = db.Column(db.Boolean(),     default=False)
     active        = db.Column(db.Boolean(),     default=True)
