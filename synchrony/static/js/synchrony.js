@@ -1269,9 +1269,9 @@ Ractive.load({
                 var selection = $("#friend_" + index);
                 if (selection.css("display") == "none"){
 //                    selection.css("display", "initial");
-                    selection.show("slow");
+                    selection.show("fast");
                 } else {
-                    selection.hide("slow");
+                    selection.hide("fast");
 //                    selection.css("display", "none");
                 }
             }
