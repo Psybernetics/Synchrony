@@ -138,12 +138,13 @@ Table of Contents
 
 2 Routing Topology
 
-2.1 Overlay networks described by Kademlia (2002)
+2.1 Overlay networks as described by Kademlia (2002)
 
    https://pdos.csail.mit.edu/~petar/papers/maymounkov-kademlia-lncs.pdf
 
         Secure Node ID generation
         Kademlia via JSON over HTTP/1.1
+        Kademlia via HTTP/2, QUIC or Protocol Buffers
         Routing table reinforcement
         Multiple routing tables
         Trust-based table selection
@@ -154,7 +155,7 @@ Table of Contents
     fragment, document
     tree reintegration
     Inter-instance RPC_EDIT
-    Edited revision objects in overlay networks
+    Edited revisions in overlay networks
 
 4 Distributed Trust
 
@@ -168,7 +169,7 @@ Table of Contents
 5.1 Introducing the license attribute
 
    "Information wants to be free. Information also wants to be
-   expensive".
+   expensive." -- Stewart Brand
    
    A REQUIRED safeguard for protecting the livelihoods of economic
    producers is the recognition of a "license" attribute when
@@ -178,5 +179,5 @@ Table of Contents
    <img src="/portfolio_item.png" license="Copyright Site. Owner 2016" />
    SHALL cause instances to either omit retrieval or demarcate the object
    as unpublicizable to network peers, whereas
-    <img src="/vacation_snap.ipng" license="CC BY" />
+    <img src="/vacation_photo.png" license="CC BY" />
    SHALL NOT.
