@@ -352,12 +352,6 @@ class UserGroup(db.Model):
 class User(db.Model):
     """
     A local user account.
-
-    User.status values are:
-        
-        AFK - Away
-        A   - Available
-        O   - Offline
     """
     __tablename__ = "users"
     id            = db.Column(db.Integer(), primary_key=True)           # User.uid permits encrypted chat messages to be directed to, eg:
@@ -372,7 +366,12 @@ class User(db.Model):
     friends       = db.relationship("Friend",   backref="user")
     sessions      = db.relationship("Session",  backref="user")
     revisions     = db.relationship("Revision", backref="user")
-    status        = db.Column(db.String(), default="A")
+    state         = db.Column(db.Integer(),     default="1")
+    states        = {
+                        0: "Offline",
+                        1: "Available",
+                        2: "Away",
+                    }
 
     def __init__(self, username, password):
         self.username = username
@@ -402,7 +401,7 @@ class User(db.Model):
             response['username']        = self.username
             response['uid']             = self.uid
             response['active']          = self.active
-            response['status']          = self.status
+            response['status']          = self.states.get(self.state, "Unknown")
             response['created']         = time.mktime(self.created.timetuple())
             response['public_revisions'] = len([_ for _ in self.revisions \
                                                   if  _.public])
@@ -412,11 +411,8 @@ class User(db.Model):
                 response['sessions']    = [s.jsonify() for s in self.sessions]
             if groups:
                 response['user_groups'] = [g.jsonify() for g in self.user_groups]
-
             if address:
-                response['address'] = '/'.join([address.network,
-                                                str(address.node.long_id),
-                                                self.uid])
+                response['address'] = self.get_address(address)
         return response
 
     def poll_friends(self, routers):
@@ -424,6 +420,9 @@ class User(db.Model):
                    if _.state in (1, 2)]
         gevent.joinall(threads)
         return [t.value[0] for t in threads if t.value[0]]
+
+    def get_address(self, router):
+        return '/'.join([router.network, str(router.node.long_id), self.uid])
 
     def can(self, priv_name):
         """

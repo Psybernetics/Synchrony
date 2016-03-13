@@ -728,21 +728,31 @@ class SynchronyProtocol(object):
         log(response, "debug")
         return response
 
-    def rpc_edit(self, node, data):
+    def rpc_edit(self, data):
         """
         Inter-instance EDIT.
 
         Message data should be of the form
         { 
-           'channel': 'network/node_id/user_id',
+           'to':      "network/node_id/user_id"
            'from':    ['uid', 'username'],
-           'edit':    '<span>DOM nodes to match and replace</span>'
+           'type':    "edit", or "invite"
+           'body':    '<span>DOM nodes to match and replace</span>'
         }   
         """
+        if not "to" in data: return
+        
+        network, node_id, user_id = data["to"].split("/")
+        node_id = long(node_id)
+
+        node = self.router.get_existing_node(Node(node_id))
+        if node == None:
+            return
+
         data = base64.b64encode(json.dumps(data))
         key  = RSA.importKey(node.pubkey)
         data = key.encrypt(data, 32)
-        transmit(self.router, addr, {'rpc_edit': data})
+        transmit(self.router, node, {'rpc_edit': data})
 
     def rpc_leaving(self, node):
         addr = self.get_address(node)
@@ -998,9 +1008,24 @@ class SynchronyProtocol(object):
         return {"state": "delivered"}
 
     def handle_edit(self, data):
-        self.read_envelope(data)
-        data = app.key.decrypt(data['rpc_edit'])
-        pass
+        """
+        Messages have two types: invite and edit.
+
+        This method is used to send session initiation requests up
+        to the user if they're connected to the stream defined in
+        streams.events, or, given an existing session, to send
+        synchronisation data given an existing session.
+        """
+        log(data, "debug")
+        return
+        if not "type" in data: return
+        if data['type'] == "invite":
+            pass
+            return
+        if data['type'] == "edit":
+            self.read_envelope(data)
+            data = app.key.decrypt(data['rpc_edit'])
+            pass
 
     def handle_leaving(self, data):
         conscientous_objector = self.read_envelope(data)

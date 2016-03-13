@@ -28,6 +28,15 @@ class EventStream(Stream):
     f_report_status    f.jsonify()
     f_update_status    u.jsonify()
 
+    These events are propogated from
+    controllers.dht.SynchronyProtocol.rpc_friend,
+    They essentially let us know when the remote side of a friend request has
+    been accepted.
+    
+    f_send_request     u.jsonify()
+    f_accept_request   u.jsonify()
+    f_block            u.jsonify()
+
     Local events
     l_event            {"u": u.jsonify(), "t": "sign_in"}
 
@@ -134,17 +143,38 @@ class EventStream(Stream):
     @require_auth
     def on_update_status(self, status):
         """
-        Recognised statuses:
-            A   - Available
-            O   - Offline
-            AFK - Away
-        The first side is what goes in the database, the second side
-        is what we receive from the client.
         """
         log("%s changed status to %s." % (self.user.username, status.title()))
         self.user.status = status
         #db.session.commit()
         self.broadcast(self.channel[1], "update_status", self.user.jsonify())
+
+    @require_auth
+    def on_invite_edit(self, invitation):
+        print invitation
+        if not 'to' in invitation or not 'url' in invitation:
+            return
+
+        if invitation['to'].count("/") != 2:
+            self.emit("error", "No or invalid friend address %s" % invitation['to'])
+            return
+
+        network, node_id, remote_uid = invitation['to'].split("/")
+        router = app.routes.get(network)
+        
+        if router == None:
+            self.emit("error", "Unknown network %s" % network)
+            return
+
+        # TODO: A "with" field for existing participants
+        payload = {"to": invitation['to'],
+                   "from": self.user.get_address(router),
+                   "type": "invite",
+                   "url": invitation['url']}
+        print 1
+        response, node = router.protocol.rpc_edit(payload)
+        print 2
+        self.emit(response);
  
     def broadcast(self, channel, event, *args):
         """

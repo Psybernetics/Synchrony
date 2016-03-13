@@ -669,8 +669,9 @@ input.switch:empty ~ label:after
 .friend_actions {
     color: #455C8D;
     word-spacing: 15px;
-    padding-left: 100px;
     font-size: 90%;
+    width: 100%;
+    text-align: center;
 }
 
 .control_panel a {
@@ -832,6 +833,10 @@ a {
 }
 .active_button {
     background-color: #333;
+}
+.medium_button{
+	height: 20px;
+	width: 45px;
 }
 .big_button {
 	height: 30px;

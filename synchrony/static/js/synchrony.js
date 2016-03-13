@@ -379,9 +379,10 @@ function populate_table(view, table_type, url){
 }
 
 function Friends(){
-    this.list          = [];
-    this.visible_list  = [];
-    this.stream        = null;
+    this.list            = [];
+    this.visible_list    = [];
+    this.pending_invites = [];
+    this.stream          = null;
 
     // Connect to /main and join a shared channel
     this.connect = function(){
@@ -427,8 +428,15 @@ function Friends(){
             var filtered_data = _.filter(this.visible_list, function(e){
                 return e.username.indexOf(query) > -1;
             });
-            this.repopulate_list(this.visible_list, filtered_data);    
+            this.repopulate_list(this.visible_list, filtered_data);
         }
+    }
+    this.send_edit_invite = function(friend_addr, url){
+        if (!this.stream){ this.connect(); }
+        // Send the invite through to the remote instance
+        this.stream.emit("invite_edit", {"to": friend_addr, "url": url});
+        this.pending_invites = [];
+        this.pending_invites.push(friend_addr);
     }
 }
 
@@ -1277,10 +1285,37 @@ Ractive.load({
             }
         },
         edit_with: function(event, friend){
+            // Demo implementation for the time being
+            // Assumes the remote side wants to edit
+            if (!App.history.length){
+                renderError("Unable to discern current URL from App.history");
+                return;
+            }
+            var attr = $(".iframe").contents().find("body")
+                                   .attr("contenteditable");
+            if (attr != "true") {
+                renderError("You must enter edit mode on a page first.");
+                return;
+            }
+            var url = App.history[App.history.length - 1];
+            if (!App.editor){
+                renderError("No editor found.");
+            }
+            if (!App.editor.socket){
+                App.editor.connect();
+            }
+
+            // Send the invitation to edit via App.Friends.stream
+            App.Friends.send_edit_invite(friend.address, url);
+    
+            // App.editor.socket.join(friend.address);
+        },
+        chat_with: function(event, friend){
             console.log(friend);
         },
-        chat_with: function(event, friend){},
-        block:     function(event, friend){},
+        block:     function(event, friend){
+            console.log(friend);
+        },
         update_status: function(event){
             var status = App.Views.synchrony.get("status");
             App.Friends.update_status(status);
