@@ -18,8 +18,8 @@
     {{#showing_save_button}}
 	<button class="button big_button edit_button" on-click="save">Save</button><br />
     {{/showing_save_button}}
-	<button class="button big_button" on-click="chat">Chat</button><br />
 	<button class="button big_button" on-click="friends">Friends</button><br />
+	<button class="button big_button" on-click="chat">Chat</button><br />
 	<button class="button big_button" on-click="logout">Log out</button><br />
 </span>
 {{/showing_friends}}
@@ -40,11 +40,10 @@
 <div class="friends_list">
     {{#friends.visible_list:index}}
     <span class="clickable" on-click="select:{{"friend"}},{{index}}">{{username}}</span>
-    <br />
-    <span class="friend_actions" id="friend_{{index}}" style="display: none;">
-        <span class="clickable" on-click="edit_with:{{this}}">Editor</span>
-        <span class="clickable" on-click="chat_with:{{this}}">Chat</span>
-        <span class="clickable" on-click="block:{{this}}">Block</span>
+    <span class="friend_actions" id="friend_{{index}}" style="display:none;">
+        <button class="button medium_button" on-click="edit_with:{{this}}">Editor</button>
+        <button class="button medium_button" on-click="chat_with:{{this}}">Chat</button>
+        <button class="button medium_button" on-click="block:{{this}}">Block</button>
     </span>
     <hr />
     {{/friends.visible_list}}

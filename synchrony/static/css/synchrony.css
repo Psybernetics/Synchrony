@@ -662,15 +662,15 @@ input.switch:empty ~ label:after
     color: #9CBB3A;
 }
 
-.friends_list > .search {
+.friends_list_mode > .search {
     margin-bottom: 5px;
 }
 
 .friend_actions {
     color: #455C8D;
     word-spacing: 15px;
-    padding-left: 100px;
     font-size: 90%;
+    float: right;
 }
 
 .control_panel a {
@@ -832,6 +832,10 @@ a {
 }
 .active_button {
     background-color: #333;
+}
+.medium_button{
+	height: 20px;
+	width: 45px;
 }
 .big_button {
 	height: 30px;

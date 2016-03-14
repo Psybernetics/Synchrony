@@ -50,14 +50,6 @@
     </div>
     {{#revisions_paging_error}}Server unavailable.Try refreshing the page.{{/revisions_paging_error}}
     {{/showing_revisions}}
-    <h2>Avatar<button on-click="toggle:{{"avatar"}}" class="button big_button pull-right">{{avatar_button}}</button></h2>
-    {{#showing_avatar}}
-    <img class="avatar circular" src="/v1/users/{{username}}/avatar" />
-    <form on-submit="update_avatar" action="/v1/users/{{username}}/avatar" method="post" enctype="multipart/form-data">
-      <input class="button" type="file" name="avatar" accept="image/*">
-      <input class="button" type="submit">
-    </form>
-    {{/showing_avatar}}
     
     <h2>Friends<button on-click="toggle:{{"friends"}}" class="button big_button pull-right">{{friends_button}}</button></h2>
     {{#showing_friends}}
@@ -122,6 +114,15 @@
     <input class="main_addressbar" on-keydown="add_friend" value="{{friend_addr}}" spellcheck="false" placeholder="Network / Node ID / User ID">
     {{add_friend_message}}
     {{/showing_friends}}
+
+    <h2>Avatar<button on-click="toggle:{{"avatar"}}" class="button big_button pull-right">{{avatar_button}}</button></h2>
+    {{#showing_avatar}}
+    <img class="avatar circular" src="/v1/users/{{username}}/avatar" />
+    <form on-submit="update_avatar" action="/v1/users/{{username}}/avatar" method="post" enctype="multipart/form-data">
+      <input class="button" type="file" name="avatar" accept="image/*">
+      <input class="button" type="submit">
+    </form>
+    {{/showing_avatar}}
 
     <h2>Sessions<button on-click="toggle:{{"sessions"}}" class="button big_button pull-right">{{sessions_button}}</button></h2>
     {{#showing_sessions}}
