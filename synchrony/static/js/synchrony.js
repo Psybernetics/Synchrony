@@ -182,8 +182,9 @@ function notify(message, options){
     }
     options = options || {};
     options.icon = '/static/img/synchrony.png';
-    console.log(options);
+    
     var notification = new Notification(message, options);
+    
     if ("onclick" in options) {
         notification.onclick = options.onclick;
     }
@@ -393,9 +394,9 @@ function Friends(){
     this.pending_invites = [];
     this.stream          = null;
 
-    // Connect to /main and join a shared channel
+    // Connect to /events and join a shared channel
     this.connect = function(){
-        this.stream = io.connect('/main', {resource: "stream"});
+        this.stream = io.connect('/events', {resource: "stream"});
         this.stream.emit("join", "events");
         // With the activity stream, joining a shared channel is taken care of
         // for us automatically.
@@ -427,27 +428,27 @@ function Friends(){
                 return e.address == data['from'];
             });
 
-            console.log(friend);
-            console.log(friend.length);
-
             if (!friend.length) { return; }
             friend = friend[0];
 
+            // Join the document if this notification is clicked
             var options = {};
             options.onclick = function(){
-                App.editor.connect(App.editor.config.endpoint, friend.address);
+                App.editor.join("addr", friend.address);
                 App.editor.sync();
             };
 
-            notify("Click to join " + friend.username + ", editing " + data.url+".",
+            notify("Click to join " + friend.username + ", editing " + data.url + ".",
                    options);
         
         }.bind(this));
+    
+        this.poll();
     }
 
+    // Ask relevant nodes about relevant user accounts.
     this.poll = function(){
         if (!this.stream) { this.connect(); }
-        // Ask relevant nodes about relevant user accounts.
         this.stream.emit("poll_friends");
     }
     
@@ -1266,7 +1267,9 @@ Ractive.load({
 
     App.Views.synchrony.set("showing_friends", false);
 
-    if (!App.Friends.stream) { App.Friends.connect(); }
+    if (!App.Friends.stream) {
+        App.Friends.connect();
+    }
 
     App.Friends.stream.on("message", function(data){
         App.stream.push(data.message);

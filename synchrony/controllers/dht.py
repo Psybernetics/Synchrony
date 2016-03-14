@@ -1025,10 +1025,7 @@ class SynchronyProtocol(object):
         if not "type" or not "to" in data or not "from" in data:
             return
         
-        if not data['to'].count("/") == 2:
-            return
-
-        if not data['from'].count("/") == 2:
+        if not data['to'].count("/") == 2 or not data['from'].count("/") == 2:
             return
 
         if data['type'] == "invite":
@@ -1043,6 +1040,8 @@ class SynchronyProtocol(object):
             if not any([_ for _ in user.friends if _.address == data['from']]):
                 return
            
+            # NOTE: There's a bug here where old connections can take awhile to
+            #       be garbage collected.
             available = broadcast(self.router.httpd,
                                   "events",
                                   "rpc_edit_invite",

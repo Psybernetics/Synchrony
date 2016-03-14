@@ -662,7 +662,7 @@ input.switch:empty ~ label:after
     color: #9CBB3A;
 }
 
-.friends_list > .search {
+.friends_list_mode > .search {
     margin-bottom: 5px;
 }
 
@@ -670,8 +670,7 @@ input.switch:empty ~ label:after
     color: #455C8D;
     word-spacing: 15px;
     font-size: 90%;
-    width: 100%;
-    text-align: center;
+    float: right;
 }
 
 .control_panel a {

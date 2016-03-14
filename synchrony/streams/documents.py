@@ -47,10 +47,10 @@ class DocumentStream(Stream):
             self.session['channels'] = set()
 
     @require_auth
-    def on_join(self, channel):
+    def on_join(self, channel, channel_type="name"):
         log('%s has subscribed to the document stream for "%s".' % \
             (self.user.username, channel))
-        self.join(channel)
+        self.join(channel, channel_type)
         self.broadcast(self.channel[1], "join", self.user.jsonify())
 
     @require_auth
@@ -82,25 +82,35 @@ class DocumentStream(Stream):
 
     @require_auth
     def on_edit(self, update):
-        if self.channel:
-            log('DocumentStream: %s %s:%i.' % \
-            (self.user.username, self.channel, len(update)))
-            
-            body = {"user":self.user.username,"document":update}
+        if not self.channel:
+            return
+        
+        log('DocumentStream: %s %s:%i.' % \
+        (self.user.username, self.channel, len(update)))
+        
+        body = {"user":self.user.username,"document":update}
+        if self.channel[0] == "name":
             self.broadcast(self.channel[1], "fragment", body)
             
-            record = {"time":     time.time(), 
-                      "channel":  copy.deepcopy(self.channel),
-                      "fragment": update}
+        if self.channel[0] == "addr":
+            network, node_id, remote_uid = self.channel[1].split("/")
+            router = app.routes.get(network)
+            if router:
+                message = {"type": "edit",
+                           "body": update}
+                message['from'] = self.user.get_address(router)
+                message['to']   = self.channel[1]
+                response = router.protocol.rpc_edit(data)
+                print response
 
-            self.emit(self.channel[1], body)
+        record = {"time":     time.time(), 
+                  "channel":  copy.deepcopy(self.channel),
+                  "fragment": update}
 
+        self.emit(self.channel[1], body)
+
+    # Given that we see an inordinate amount of disconnects this just calls pass
     @require_auth
     def recv_disconnect(self):
-        if self.user and self.channel:
-            log('%s has disconnected from channel %s.' % \
-            (self.user.username, str(self.channel)))
-        elif self.user:
-            log('%s has disconnected from an unspecified document stream.' % \
-            self.user.username)
+        pass
 

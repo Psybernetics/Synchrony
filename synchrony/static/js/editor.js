@@ -220,7 +220,15 @@ function SynchronyEditor (el) {
         }
     }
 
-    this.sync             = function() {}
+    this.join             = function(channel_type, channel_name){
+        if (!this.socket) { this.connect(); }
+        this.socket.emit("join", channel_name, channel_type);
+    }
+
+    this.sync             = function() {
+        if (!this.socket) { this.connect(); }
+        this.socket.emit("request_sync");
+    }
 
     // Provide our last revision ID and get the latest copy
     this.save             = function () {}
