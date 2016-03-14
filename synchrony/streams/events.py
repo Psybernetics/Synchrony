@@ -54,7 +54,7 @@ class EventStream(Stream):
     d_init             {"c": "addr", "u": u.jsonify()}
     d_close            {"c": "addr", "u": u.jsonify()}
     """
-    socket_type = "main"
+    socket_type = "events"
 
     def initialize(self):
         self.user     = None
@@ -69,7 +69,7 @@ class EventStream(Stream):
 
         # This lets us cycle through stream connections on
         # the httpd and easily determine the session type.
-        self.socket.socket_type       = "main"
+        self.socket.socket_type       = "events"
         self.socket.appearing_offline = False
         log("Event stream init")
 
@@ -81,7 +81,7 @@ class EventStream(Stream):
             log("Received chat connection from %s" % user.username)
             self.user = user
             if not user.can("chat"):
-                body = {"message":"Your user group doesn't have permission to chat"}
+                body = {"message":"You don't have permission to chat."}
                 self.emit("disconnect", body)
                 self.send("disconnect")
                 log("%s isn't permitted to chat." % user.username)
@@ -151,7 +151,9 @@ class EventStream(Stream):
 
     @require_auth
     def on_invite_edit(self, invitation):
-        print invitation
+        """
+        Use controllers.dht.SynchronyProtocol.rpc_edit to send an invite.
+        """
         if not 'to' in invitation or not 'url' in invitation:
             return
 
@@ -171,10 +173,8 @@ class EventStream(Stream):
                    "from": self.user.get_address(router),
                    "type": "invite",
                    "url": invitation['url']}
-        print 1
-        response, node = router.protocol.rpc_edit(payload)
-        print 2
-        self.emit(response);
+        response = router.protocol.rpc_edit(payload)
+        self.emit("sent_invite", response);
  
     def broadcast(self, channel, event, *args):
         """

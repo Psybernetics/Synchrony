@@ -74,7 +74,7 @@ def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
     """
     Send JSON data to stream users either specifically or by access control.
     """
-
+    sent = 0
     for connection in httpd.sockets.values():
         if connection.connected and connection.socket_type == socket_type:
             for c in connection.active_ns.values():
@@ -87,6 +87,8 @@ def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
                 if user and c.user.uid != user.uid:
                     continue
                 c.emit(message_type, message)
+                sent += 1
+    return sent
 
 def check_availability(httpd, socket_type, user):
     """

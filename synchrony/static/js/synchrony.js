@@ -113,6 +113,10 @@ App.Router = Backbone.Router.extend({
     },
 });
 
+// Start the Backbone URL hash monitor
+new App.Router();
+Backbone.history.start();
+
 // Our error handler prints to the stream for ten seconds
 function renderError(statement) {
     console.log('Error: ' + statement);
@@ -171,13 +175,18 @@ function paginate(list, page, per_page){
     return list.slice(page * per_page - per_page, page * per_page)
 }
 
-function notify(message){
+function notify(message, options){
     if (!"Notification" in window) { return; }
     if (Notification.permission != "granted") {
         Notification.requestPermission();
     }
-    var options = {icon:'/static/img/synchrony.png'};
+    options = options || {};
+    options.icon = '/static/img/synchrony.png';
+    console.log(options);
     var notification = new Notification(message, options);
+    if ("onclick" in options) {
+        notification.onclick = options.onclick;
+    }
 }
 
 function toggle_synchrony(){
@@ -311,7 +320,7 @@ function request(event){
             },
             error: function(data, status){
                 var message = "There was an error loading this resource.";
-                message = message + " Consult the logs for further explanation."
+                message = message + " Consult the logs for further information."
                 iframe.contents().find('body').html(message);
             }
         });
@@ -402,9 +411,42 @@ function Friends(){
         this.stream.on("update_status", function(data){
             console.log(data);
         }.bind(this));
+    
+        // Response from a remote instance when we've invited
+        // a user to an editing session
+        this.stream.on("sent_invite", function(data){
+            console.log(data);
+        }.bind(this));
+
+        this.stream.on("rpc_edit_invite", function(data){
+            console.log(data);
+            
+            if (!this.list.length) { this.poll(); }
+            
+            var friend = _.filter(this.list, function(e){
+                return e.address == data['from'];
+            });
+
+            console.log(friend);
+            console.log(friend.length);
+
+            if (!friend.length) { return; }
+            friend = friend[0];
+
+            var options = {};
+            options.onclick = function(){
+                App.editor.connect(App.editor.config.endpoint, friend.address);
+                App.editor.sync();
+            };
+
+            notify("Click to join " + friend.username + ", editing " + data.url+".",
+                   options);
+        
+        }.bind(this));
     }
 
     this.poll = function(){
+        if (!this.stream) { this.connect(); }
         // Ask relevant nodes about relevant user accounts.
         this.stream.emit("poll_friends");
     }
@@ -439,10 +481,6 @@ function Friends(){
         this.pending_invites.push(friend_addr);
     }
 }
-
-// Start the Backbone URL hash monitor
-new App.Router();
-Backbone.history.start();
 
 function indexView(page){
     document.title = "Welcome" + App.title;

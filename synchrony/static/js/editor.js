@@ -78,7 +78,6 @@ function SynchronyEditor (el) {
             console.log(doc);
             this.last_doc = doc;
 
-
             // for (p in doc){ console.log(p, doc[p]); }
             // doc.children.attributes.childNodes.nodeValue
 
@@ -220,6 +219,8 @@ function SynchronyEditor (el) {
             this.connect(this.config.endpoint, this.config.channel);
         }
     }
+
+    this.sync             = function() {}
 
     // Provide our last revision ID and get the latest copy
     this.save             = function () {}

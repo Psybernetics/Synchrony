@@ -419,7 +419,7 @@ class User(db.Model):
         threads = [gevent.spawn(_.get_remote_state, routers) for _ in self.friends \
                    if _.state in (1, 2)]
         gevent.joinall(threads)
-        return [t.value[0] for t in threads if t.value[0]]
+        return [t.value[0] for t in threads if t.value and t.value[0]]
 
     def get_address(self, router):
         return '/'.join([router.network, str(router.node.long_id), self.uid])
@@ -535,8 +535,17 @@ class Friend(db.Model):
                        "type": "GET"
                        }
                   }
-
-        return router.protocol.rpc_friend(message)
+        
+        response = router.protocol.rpc_friend(message)
+        
+        if not response:
+            return
+        
+        if not response[0] or not 'address' in response[0] \
+        or response[0]['address'] != self.address:
+            return
+        
+        return response
 
     def jsonify(self):
         response = {}

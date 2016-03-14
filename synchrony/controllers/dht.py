@@ -613,20 +613,13 @@ class SynchronyProtocol(object):
 #                self.rpc_ping(node)
         return node
 
-    def rpc_report_trust(self, node_to_rate, node_to_tell):
-        """
-        The equivalent is a GET request to /v1/peers/node_id
-
-        """
-        pass
-
     def rpc_friend(self, message_body):
         """
         {"rpc_friend":
             [
                 {"add": {"from": "uid", "to": "addr"}},
                 {"remove": {"from": "uid", "to": "addr"}},
-                {"status": {"from": "uid", "to": "addr", "type": "AO"}},
+                {"status": {"from": "uid", "to": "addr", "type": 1}},
             ]
          "network": "alpha"
          "peers":   [...]
@@ -635,13 +628,8 @@ class SynchronyProtocol(object):
         addr is of the form "network_name/node_id/remote_user_id".
         RPC_FRIEND messages can be batched together.
         
-        TODO: The type field for status messages should support
-            
-            AFK - Away
-            A   - Available
-            O   - (Appear) Offline
-            GET - Request status of remote friend
-
+        see models.User.states for the meaning of values for the "type" field
+        in status update messages.
         """
         if not isinstance(message_body, list):
             message_body = [message_body]
@@ -749,10 +737,9 @@ class SynchronyProtocol(object):
         if node == None:
             return
 
-        data = base64.b64encode(json.dumps(data))
-        key  = RSA.importKey(node.pubkey)
-        data = key.encrypt(data, 32)
-        transmit(self.router, node, {'rpc_edit': data})
+        # Omitting crypto here probably in favour of TLS
+        # Keep the crypto used in RPC_CHAT though.
+        return transmit(self.router, node, {'rpc_edit': data})
 
     def rpc_leaving(self, node):
         addr = self.get_address(node)
@@ -989,18 +976,18 @@ class SynchronyProtocol(object):
 
                 # change_channel and broadcast are from streams.utils.
                 change_channel(self.router.httpd,
-                               "chat",
+                               "events",
                                user,
                                friend.address)
                 broadcast(self.router.httpd,
-                          "chat",
+                          "events",
                           "rpc_chat_init",
                           data['from'],
                           user=user)
             
             if data['type'] == "message":
                 broadcast(self.router.httpd,
-                          "chat",
+                          "events",
                           "rpc_chat",
                           data,
                           user=user)
@@ -1015,17 +1002,58 @@ class SynchronyProtocol(object):
         to the user if they're connected to the stream defined in
         streams.events, or, given an existing session, to send
         synchronisation data given an existing session.
+
+        Expects messages of the form
+
+        {"from": "net/node/uid",
+         "to":   "net/node/uid",
+         "type": "invite",
+         "body": "message data",
+         "url":  "url"}
+        
+        and
+        
+        {"from": "net/node/uid",
+         "to":   "net/node/uid",
+         "type": "edit",
+         "body":  "<em>Hello, World!</em>"}
+
         """
-        log(data, "debug")
-        return
-        if not "type" in data: return
-        if data['type'] == "invite":
-            pass
+        node = self.read_envelope(data)
+        data = data['rpc_edit']
+        
+        if not "type" or not "to" in data or not "from" in data:
             return
+        
+        if not data['to'].count("/") == 2:
+            return
+
+        if not data['from'].count("/") == 2:
+            return
+
+        if data['type'] == "invite":
+            if not 'url' in data:
+                return
+
+            network, node_id, local_uid = data['to'].split("/")
+            user = User.query.filter(User.uid == local_uid).first()
+            if not user:
+                return
+            
+            if not any([_ for _ in user.friends if _.address == data['from']]):
+                return
+           
+            available = broadcast(self.router.httpd,
+                                  "events",
+                                  "rpc_edit_invite",
+                                  data,
+                                  user=user)
+            if available:
+                return {"invited": user.jsonify(), "url": data['url']}
+            return {"not_connected": user.jsonify()}
+
         if data['type'] == "edit":
-            self.read_envelope(data)
-            data = app.key.decrypt(data['rpc_edit'])
-            pass
+            return
 
     def handle_leaving(self, data):
         conscientous_objector = self.read_envelope(data)
