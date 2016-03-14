@@ -51,8 +51,8 @@ class UserCollection(restful.Resource):
         Create a user
         """
         parser = reqparse.RequestParser()
-        parser.add_argument("username", type=str, help="Username.", required=True)
-        parser.add_argument("password", type=str, help="Password.", required=True)
+        parser.add_argument("username", type=unicode, help="Username.", required=True)
+        parser.add_argument("password", type=unicode, help="Password.", required=True)
         args = parser.parse_args()
 
         if "PERMIT_NEW_ACCOUNTS" in app.config and \
