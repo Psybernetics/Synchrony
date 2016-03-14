@@ -78,7 +78,6 @@ function SynchronyEditor (el) {
             console.log(doc);
             this.last_doc = doc;
 
-
             // for (p in doc){ console.log(p, doc[p]); }
             // doc.children.attributes.childNodes.nodeValue
 
@@ -219,6 +218,16 @@ function SynchronyEditor (el) {
         if (this.config.endpoint && this.config.channel) {
             this.connect(this.config.endpoint, this.config.channel);
         }
+    }
+
+    this.join             = function(url){
+        if (!this.socket) { this.connect(); }
+        this.socket.emit("join", url);
+    }
+
+    this.sync             = function() {
+        if (!this.socket) { this.connect(); }
+        this.socket.emit("request_sync");
     }
 
     // Provide our last revision ID and get the latest copy

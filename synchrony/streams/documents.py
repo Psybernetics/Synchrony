@@ -33,15 +33,13 @@ class DocumentStream(Stream):
         are left with the official history.
         """
         log("Document stream init")
-        self.url         = ""
-        self.user        = None
-        self.socket_type = "document"
-        self.fragments   = []
-        self.documents   = []
-        self.channel     = () # Available types: url, addr, name.
-                              # Eg. ("addr", "alpha/1252322141974278745698082250347869678457931551015/f50068d167fc6")
-                              # This type implies we should synchronise with the local
-                              # or remote user when they navigate.
+        self.url          = ""
+        self.user         = None
+        self.socket_type  = "document"
+        self.fragments    = []
+        self.documents    = []
+        self.participants = []
+        self.channel      = "" # Current URL.
 
         if 'channels' not in self.session:
             self.session['channels'] = set()
@@ -82,25 +80,34 @@ class DocumentStream(Stream):
 
     @require_auth
     def on_edit(self, update):
-        if self.channel:
-            log('DocumentStream: %s %s:%i.' % \
-            (self.user.username, self.channel, len(update)))
+        if not self.channel:
+            return
+        
+        log('DocumentStream: %s %s:%i.' % \
+        (self.user.username, self.channel, len(update)))
+        
+        body = {"user":self.user.username,"document":update}
+        self.broadcast(self.channel, "fragment", body)
             
-            body = {"user":self.user.username,"document":update}
-            self.broadcast(self.channel[1], "fragment", body)
-            
-            record = {"time":     time.time(), 
-                      "channel":  copy.deepcopy(self.channel),
-                      "fragment": update}
+        if self.participants:
+            network, node_id, remote_uid = self.channel[1].split("/")
+            router = app.routes.get(network)
+            if router:
+                message = {"type": "edit",
+                           "body": update}
+                message['from'] = self.user.get_address(router)
+                message['to']   = self.channel[1]
+                response = router.protocol.rpc_edit(data)
+                print response
 
-            self.emit(self.channel[1], body)
+        record = {"time":     time.time(), 
+                  "channel":  copy.deepcopy(self.channel),
+                  "fragment": update}
 
+        self.emit(self.channel, body)
+
+    # Given that we see an inordinate amount of disconnects this just calls pass
     @require_auth
     def recv_disconnect(self):
-        if self.user and self.channel:
-            log('%s has disconnected from channel %s.' % \
-            (self.user.username, str(self.channel)))
-        elif self.user:
-            log('%s has disconnected from an unspecified document stream.' % \
-            self.user.username)
+        pass
 

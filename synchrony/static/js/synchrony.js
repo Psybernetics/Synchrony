@@ -113,6 +113,10 @@ App.Router = Backbone.Router.extend({
     },
 });
 
+// Start the Backbone URL hash monitor
+new App.Router();
+Backbone.history.start();
+
 // Our error handler prints to the stream for ten seconds
 function renderError(statement) {
     console.log('Error: ' + statement);
@@ -171,13 +175,19 @@ function paginate(list, page, per_page){
     return list.slice(page * per_page - per_page, page * per_page)
 }
 
-function notify(message){
+function notify(message, options){
     if (!"Notification" in window) { return; }
     if (Notification.permission != "granted") {
         Notification.requestPermission();
     }
-    var options = {icon:'/static/img/synchrony.png'};
+    options = options || {};
+    options.icon = '/static/img/synchrony.png';
+    
     var notification = new Notification(message, options);
+    
+    if ("onclick" in options) {
+        notification.onclick = options.onclick;
+    }
 }
 
 function toggle_synchrony(){
@@ -311,7 +321,7 @@ function request(event){
             },
             error: function(data, status){
                 var message = "There was an error loading this resource.";
-                message = message + " Consult the logs for further explanation."
+                message = message + " Consult the logs for further information."
                 iframe.contents().find('body').html(message);
             }
         });
@@ -379,13 +389,14 @@ function populate_table(view, table_type, url){
 }
 
 function Friends(){
-    this.list          = [];
-    this.visible_list  = [];
-    this.stream        = null;
+    this.list            = [];
+    this.visible_list    = [];
+    this.pending_invites = [];
+    this.stream          = null;
 
-    // Connect to /main and join a shared channel
+    // Connect to /events and join a shared channel
     this.connect = function(){
-        this.stream = io.connect('/main', {resource: "stream"});
+        this.stream = io.connect('/events', {resource: "stream"});
         this.stream.emit("join", "events");
         // With the activity stream, joining a shared channel is taken care of
         // for us automatically.
@@ -401,10 +412,45 @@ function Friends(){
         this.stream.on("update_status", function(data){
             console.log(data);
         }.bind(this));
+    
+        // Response from a remote instance when we've invited
+        // a user to an editing session
+        this.stream.on("sent_invite", function(data){
+            console.log(data);
+        }.bind(this));
+
+        this.stream.on("rpc_edit_invite", function(data){
+            console.log(data);
+            
+            if (!this.list.length) { this.poll(); }
+            
+            var friend = _.filter(this.list, function(e){
+                return e.address == data['from'];
+            });
+
+            if (!friend.length) { return; }
+            friend = friend[0];
+
+            // Join the document and confirm the invite if this notification
+            // is clicked.
+            var options = {};
+            options.onclick = function(){
+                App.Friends.stream.emit("rpc_invite_edit", data);
+                App.editor.join("addr", friend.address);
+                App.editor.sync();
+            };
+
+            notify("Click to join " + friend.username + ", editing " + data.url + ".",
+                   options);
+        
+        }.bind(this));
+    
+        this.poll();
     }
 
+    // Ask relevant nodes about relevant user accounts.
     this.poll = function(){
-        // Ask relevant nodes about relevant user accounts.
+        if (!this.stream) { this.connect(); }
         this.stream.emit("poll_friends");
     }
     
@@ -427,14 +473,17 @@ function Friends(){
             var filtered_data = _.filter(this.visible_list, function(e){
                 return e.username.indexOf(query) > -1;
             });
-            this.repopulate_list(this.visible_list, filtered_data);    
+            this.repopulate_list(this.visible_list, filtered_data);
         }
     }
+    this.send_edit_invite = function(friend_addr, url){
+        if (!this.stream){ this.connect(); }
+        // Send the invite through to the remote instance
+        this.stream.emit("invite_edit", {"to": friend_addr, "url": url});
+        this.pending_invites = [];
+        this.pending_invites.push(friend_addr);
+    }
 }
-
-// Start the Backbone URL hash monitor
-new App.Router();
-Backbone.history.start();
 
 function indexView(page){
     document.title = "Welcome" + App.title;
@@ -1220,7 +1269,9 @@ Ractive.load({
 
     App.Views.synchrony.set("showing_friends", false);
 
-    if (!App.Friends.stream) { App.Friends.connect(); }
+    if (!App.Friends.stream) {
+        App.Friends.connect();
+    }
 
     App.Friends.stream.on("message", function(data){
         App.stream.push(data.message);
@@ -1277,10 +1328,37 @@ Ractive.load({
             }
         },
         edit_with: function(event, friend){
+            // Demo implementation for the time being
+            // Assumes the remote side wants to edit
+            if (!App.history.length){
+                renderError("Unable to discern current URL from App.history");
+                return;
+            }
+            var attr = $(".iframe").contents().find("body")
+                                   .attr("contenteditable");
+            if (attr != "true") {
+                renderError("You must enter edit mode on a page first.");
+                return;
+            }
+            var url = App.history[App.history.length - 1];
+            if (!App.editor){
+                renderError("No editor found.");
+            }
+            if (!App.editor.socket){
+                App.editor.connect();
+            }
+
+            // Send the invitation to edit via App.Friends.stream
+            App.Friends.send_edit_invite(friend.address, url);
+    
+            // App.editor.socket.join(friend.address);
+        },
+        chat_with: function(event, friend){
             console.log(friend);
         },
-        chat_with: function(event, friend){},
-        block:     function(event, friend){},
+        block:     function(event, friend){
+            console.log(friend);
+        },
         update_status: function(event){
             var status = App.Views.synchrony.get("status");
             App.Friends.update_status(status);

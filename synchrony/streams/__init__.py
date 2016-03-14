@@ -13,7 +13,7 @@ def stream(remaining):
 		socketio_manage(
 			request.environ,
 			{
-				'/main':      EventStream,
+				'/events':    EventStream,
 				'/documents': DocumentStream,
 			},
 			dict(session)
