@@ -220,9 +220,9 @@ function SynchronyEditor (el) {
         }
     }
 
-    this.join             = function(channel_type, channel_name){
+    this.join             = function(url){
         if (!this.socket) { this.connect(); }
-        this.socket.emit("join", channel_name, channel_type);
+        this.socket.emit("join", url);
     }
 
     this.sync             = function() {

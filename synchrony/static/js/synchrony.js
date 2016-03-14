@@ -431,9 +431,11 @@ function Friends(){
             if (!friend.length) { return; }
             friend = friend[0];
 
-            // Join the document if this notification is clicked
+            // Join the document and confirm the invite if this notification
+            // is clicked.
             var options = {};
             options.onclick = function(){
+                App.Friends.stream.emit("rpc_invite_edit", data);
                 App.editor.join("addr", friend.address);
                 App.editor.sync();
             };

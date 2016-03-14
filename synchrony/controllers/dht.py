@@ -1052,6 +1052,7 @@ class SynchronyProtocol(object):
             return {"not_connected": user.jsonify()}
 
         if data['type'] == "edit":
+            log(data, "debug")
             return
 
     def handle_leaving(self, data):
@@ -1094,7 +1095,7 @@ class SynchronyProtocol(object):
         { 'url_hash': {'content_hash': [(timestamp, nodeple)]}}
         """
         node = self.read_envelope(data)
-        if max(node.trust, 0) == 0:
+        if not max(node.trust, 0):
             log("%s with negative trust rating tried to append." % node, "warning")
             return False
         url_hash, content_hash = data['rpc_append'].items()[0]

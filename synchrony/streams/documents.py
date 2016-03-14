@@ -33,24 +33,22 @@ class DocumentStream(Stream):
         are left with the official history.
         """
         log("Document stream init")
-        self.url         = ""
-        self.user        = None
-        self.socket_type = "document"
-        self.fragments   = []
-        self.documents   = []
-        self.channel     = () # Available types: url, addr, name.
-                              # Eg. ("addr", "alpha/1252322141974278745698082250347869678457931551015/f50068d167fc6")
-                              # This type implies we should synchronise with the local
-                              # or remote user when they navigate.
+        self.url          = ""
+        self.user         = None
+        self.socket_type  = "document"
+        self.fragments    = []
+        self.documents    = []
+        self.participants = []
+        self.channel      = "" # Current URL.
 
         if 'channels' not in self.session:
             self.session['channels'] = set()
 
     @require_auth
-    def on_join(self, channel, channel_type="name"):
+    def on_join(self, channel):
         log('%s has subscribed to the document stream for "%s".' % \
             (self.user.username, channel))
-        self.join(channel, channel_type)
+        self.join(channel)
         self.broadcast(self.channel[1], "join", self.user.jsonify())
 
     @require_auth
@@ -89,10 +87,9 @@ class DocumentStream(Stream):
         (self.user.username, self.channel, len(update)))
         
         body = {"user":self.user.username,"document":update}
-        if self.channel[0] == "name":
-            self.broadcast(self.channel[1], "fragment", body)
+        self.broadcast(self.channel, "fragment", body)
             
-        if self.channel[0] == "addr":
+        if self.participants:
             network, node_id, remote_uid = self.channel[1].split("/")
             router = app.routes.get(network)
             if router:
@@ -107,7 +104,7 @@ class DocumentStream(Stream):
                   "channel":  copy.deepcopy(self.channel),
                   "fragment": update}
 
-        self.emit(self.channel[1], body)
+        self.emit(self.channel, body)
 
     # Given that we see an inordinate amount of disconnects this just calls pass
     @require_auth
