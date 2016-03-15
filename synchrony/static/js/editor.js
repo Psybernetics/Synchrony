@@ -24,23 +24,27 @@
 */
 function SynchronyEditor (el) {
 
-    this.el         = el;
+    this.el           = el;
    
     // This assumes el is an <iframe>. 
-    this.document   = el.contents().get(0);
+    this.document     = el.contents().get(0);
 
     // Global hotkeys
     $(this.document).keydown(function(event){
         if (event.keyCode == 27) { toggle_editing(); }
     });
 
-    this.socket     = null;
+    this.socket       = null;
     
-    this.config     = {endpoint: "/documents",
-                       channel: "main"}
+    this.config       = {endpoint: "/documents",
+                         channel: "main"}
 
-    this.events     = [];
-    this.appendEvent = function(event){
+    this.participants = [];
+
+    this.events       = [];
+
+    
+    this.appendEvent  = function(event){
         if (this.events.length >= 10){
             this.events.shift();
         }
@@ -59,7 +63,13 @@ function SynchronyEditor (el) {
 
         this.socket = io.connect(this.config.endpoint, {resource: "stream"});
         this.socket.emit('join', this.config.channel);
-        
+       
+        this.socket.on("added_participant", function(addr){
+            if (this.participants.indexOf(addr) == -1){
+                this.participants.push(addr);
+            }
+        }.bind(this));
+
         this.socket.on("fragment", function(data){
             
             // Someone is sending us some DOM nodes as a string,
@@ -220,9 +230,20 @@ function SynchronyEditor (el) {
         }
     }
 
-    this.join             = function(url){
+    this.join = function(url, addr){
         if (!this.socket) { this.connect(); }
+        
         this.socket.emit("join", url);
+
+        if (addr) {
+            this.add_participant(addr);
+        }
+
+    }
+
+    this.add_participant  = function(addr){
+        if (!this.socket) { this.connect(); }
+        this.socket.emit("add_participant", addr);
     }
 
     this.sync             = function() {
