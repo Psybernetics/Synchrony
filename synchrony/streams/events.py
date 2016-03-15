@@ -54,9 +54,9 @@ class EventStream(Stream):
     d_init             {"c": "addr", "u": u.jsonify()}
     d_close            {"c": "addr", "u": u.jsonify()}
     """
-    socket_type = "events"
 
     def initialize(self):
+        log("Event stream init")
         self.user     = None
 #        Access to app.routes for
 #        admin users to access via the /eval command...
@@ -66,12 +66,11 @@ class EventStream(Stream):
         self.channels = {}
         self.channel = None
         self.modes   = []
-
+        self.socket_type = "events"
         # This lets us cycle through stream connections on
         # the httpd and easily determine the session type.
-        self.socket.socket_type       = "events"
+        #self.socket.socket_type       = "events"
         self.socket.appearing_offline = False
-        log("Event stream init")
 
     def recv_connect(self):
         user = auth(self.request)

@@ -1008,13 +1008,13 @@ class SynchronyProtocol(object):
         {"from": "net/node/uid",
          "to":   "net/node/uid",
          "type": "invite",
-         "body": "message data",
          "url":  "url"}
         
         and
         
         {"from": "net/node/uid",
          "to":   "net/node/uid",
+         "url":  "url",
          "type": "edit",
          "body":  "<em>Hello, World!</em>"}
 
@@ -1022,26 +1022,24 @@ class SynchronyProtocol(object):
         node = self.read_envelope(data)
         data = data['rpc_edit']
         
-        if not "type" or not "to" in data or not "from" in data:
+        if not "type" or not "to" in data or not "from" in data \
+        or not 'url' in data:
             return
         
         if not data['to'].count("/") == 2 or not data['from'].count("/") == 2:
             return
 
-        if data['type'] == "invite":
-            if not 'url' in data:
-                return
-
-            network, node_id, local_uid = data['to'].split("/")
-            user = User.query.filter(User.uid == local_uid).first()
-            if not user:
-                return
+        network, node_id, local_uid = data['to'].split("/")
+        user = User.query.filter(User.uid == local_uid).first()
+        if not user:
+            return
             
+        if data['type'] == "invite":
             if not any([_ for _ in user.friends if _.address == data['from']]):
                 return
            
-            # NOTE: There's a bug here where old connections can take awhile to
-            #       be garbage collected.
+            # NOTE: There's a bug here where stale connections can take awhile
+            #       to be GC'd.
             available = broadcast(self.router.httpd,
                                   "events",
                                   "rpc_edit_invite",
@@ -1052,8 +1050,17 @@ class SynchronyProtocol(object):
             return {"not_connected": user.jsonify()}
 
         if data['type'] == "edit":
-            log(data, "debug")
-            return
+
+            body = {"user": data['from'], "document": data['body']}
+
+            available = broadcast(self.router.httpd,
+                                  "document",
+                                  "fragment",
+                                  body,
+                                  user=user)
+            if available:
+                return {"edit_sent": user.jsonify(), "url": data['url']}
+            return {"not_connected": user.jsonify()}
 
     def handle_leaving(self, data):
         conscientous_objector = self.read_envelope(data)
