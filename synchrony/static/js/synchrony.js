@@ -436,7 +436,7 @@ function Friends(){
             var options = {};
             options.onclick = function(){
                 App.Friends.stream.emit("rpc_invite_edit", data);
-                App.editor.join("addr", friend.address);
+                App.editor.join(data.url, friend.address);
                 App.editor.sync();
             };
 

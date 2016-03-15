@@ -48,7 +48,7 @@ class UserCollection(restful.Resource):
 
     def put(self):
         """
-        Create a user
+        Create a user given a username and password.
         """
         parser = reqparse.RequestParser()
         parser.add_argument("username", type=unicode, help="Username.", required=True)

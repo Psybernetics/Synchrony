@@ -75,7 +75,7 @@ def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
     """
     sent = 0
     for connection in httpd.sockets.values():
-        if connection.connected and connection.socket_type == socket_type:
+        if connection.connected:
             for c in connection.active_ns.values():
                 if not hasattr(c, "socket_type") or c.socket_type != socket_type:
                     continue

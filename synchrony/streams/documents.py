@@ -26,6 +26,7 @@ class DocumentStream(Stream):
     self.join("somesite.net/page") introduces "/documents_somesite.net/page"
     to the set.
     """
+    
     def initialize(self):
         """
         Individual connections have timestamped versions of documents meaning
@@ -33,13 +34,12 @@ class DocumentStream(Stream):
         are left with the official history.
         """
         log("Document stream init")
-        self.url          = ""
-        self.user         = None
-        self.socket_type  = "document"
-        self.fragments    = []
-        self.documents    = []
-        self.participants = []
-        self.channel      = "" # Current URL.
+        self.user               = None
+        self.fragments          = []
+        self.documents          = []
+        self.participants       = []
+        self.channel            = "" # Current URL.
+        self.socket_type        = "document"
 
         if 'channels' not in self.session:
             self.session['channels'] = set()
@@ -49,21 +49,13 @@ class DocumentStream(Stream):
         log('%s has subscribed to the document stream for "%s".' % \
             (self.user.username, channel))
         self.join(channel)
-        self.broadcast(self.channel[1], "join", self.user.jsonify())
+        self.broadcast(self.channel, "join", self.user.jsonify())
 
     @require_auth
     def on_part(self, channel):
         if not self.authenticate(): return
         self.leave(channel)
         self.broadcast(self.channel[1], "part", self.user.jsonify())
-
-    @require_auth
-    def on_change_url(self, url):
-        self.url = url
-        log("DocumentStream: URL change for %s to %s." % (self.user.username, url))
-        if self.channel:
-            body = {"user": self.user.jsonify(), "url": url}
-            self.broadcast(self.channel[1], "url_change", body)
 
     @require_auth
     def on_names(self, channel):
@@ -89,22 +81,33 @@ class DocumentStream(Stream):
         body = {"user":self.user.username,"document":update}
         self.broadcast(self.channel, "fragment", body)
             
-        if self.participants:
-            network, node_id, remote_uid = self.channel[1].split("/")
+        for addr in self.participants:
+            network, node_id, remote_uid = addr.split("/")
             router = app.routes.get(network)
             if router:
                 message = {"type": "edit",
+                           "url":  self.channel,
                            "body": update}
+                
+                message['to']   = addr
                 message['from'] = self.user.get_address(router)
-                message['to']   = self.channel[1]
-                response = router.protocol.rpc_edit(data)
-                print response
+                response = router.protocol.rpc_edit(message)
 
         record = {"time":     time.time(), 
-                  "channel":  copy.deepcopy(self.channel),
+                  "url":      self.channel,
                   "fragment": update}
 
         self.emit(self.channel, body)
+
+    @require_auth
+    def on_add_participant(self, addr):
+        if not addr in self.participants:
+            self.participants.append(addr)
+            self.emit("added_participant", addr)
+
+    @require_auth
+    def on_get_participants(self):
+        return self.participants
 
     # Given that we see an inordinate amount of disconnects this just calls pass
     @require_auth
