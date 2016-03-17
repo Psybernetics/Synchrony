@@ -4,12 +4,10 @@ from BeautifulSoup import BeautifulSoup
 
 def parse(html, url):
     
-    # TODO(ljb): Recognise licensensing attributes to prevent piracy.
-    
     domain = urlparse.urlparse(url).netloc
 
-    #append_text = '<script src="/static/synchrony.js"></script>\n<link rel="stylesheet" type="text/css" href="/static/synchrony.css" />'
-    append_text = ''
+    # Redefine XMLHttpRequest and the fetch function for the iframe:
+    append_text = '<script src="/static/js/iframe.js"></script>\n'
 
     appendage = BeautifulSoup(append_text)
 
@@ -51,9 +49,9 @@ def parse(html, url):
 
     log('Should have cycled through urls by now.')
     try:
-        soup.head.append(appendage)
-#        log('Appended:\n%s' % append_text)
-    except: pass
+        soup.head.insert(0, appendage)
+    except:
+        pass
     
     return unicode(soup)
 
