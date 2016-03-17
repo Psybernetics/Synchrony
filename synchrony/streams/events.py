@@ -167,13 +167,36 @@ class EventStream(Stream):
             self.emit("error", "Unknown network %s" % network)
             return
 
-        # TODO: A "with" field for existing participants
+        # TODO: A "with" field for existing participant addresses
         payload = {"to": invitation['to'],
                    "from": self.user.get_address(router),
                    "type": "invite",
                    "url": invitation['url']}
         response = router.protocol.rpc_edit(payload)
         self.emit("sent_invite", response);
+
+    @require_auth
+    def on_rpl_invite_edit(self, data):
+        """
+        This is used for telling the remote sides of a session that we're
+        about to join.
+        """
+        if not 'to' in data or not 'url' in data:
+            return
+
+        if data['to'].count("/") != 2:
+            self.emit("error", "No or invalid friend address %s" % data['to'])
+            return
+
+        network, node_id, remote_uid = data['to'].split("/")
+        router = app.routes.get(network)
+        
+        if router == None:
+            self.emit("error", "Unknown network %s" % network)
+            return
+
+        response = router.protocol.rpc_edit(data)
+        self.emit("replied_invite", response)
  
     def broadcast(self, channel, event, *args):
         """
