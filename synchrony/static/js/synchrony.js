@@ -452,6 +452,13 @@ function Friends(){
                    options);
         
         }.bind(this));
+
+        // Event handler for a user on a remote instance signifying they've
+        // accepted an invite to edit with us.
+        this.stream.on("rpl_edit_invite", function(data){
+            console.log(data);
+            App.editor.add_participant(data.from);
+        }.bind(this));
     
         this.poll();
     }

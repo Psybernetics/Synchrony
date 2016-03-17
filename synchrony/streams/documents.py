@@ -100,14 +100,6 @@ class DocumentStream(Stream):
         self.emit(self.channel, body)
 
     @require_auth
-    def on_rpl_invite_edit(self, data):
-        """
-        This is used for telling the remote sides of a session that we're
-        about to join.
-        """
-        print data
-
-    @require_auth
     def on_add_participant(self, addr):
         if not addr in self.participants:
             self.participants.append(addr)
