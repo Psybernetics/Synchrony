@@ -666,20 +666,17 @@ class SynchronyProtocol(object):
 
             # Sometimes spidering doesn't get us all the way there.
             # Check who we already know:
-            if node == None:
+            if node == None and long(node_id) != self.router.node.long_id:
                 nodes = [n for n in self.router if str(n.long_id) == node_id]
                 if len(nodes) != 1:
                     log("Node %s not found via spidering." % node_id, "warning")
                     return False, None
                 node = nodes[0]
 
-            log(node_id, "debug")
-            log(node.long_id, "debug")
-
             log("Found remote instance %s." % node)
 
         if not node:
-            log("No peer node found for RPC_FRIEND %s" % message_type.upper())
+            log("No peer node found for RPC_FRIEND:%s." % message_type.upper())
             return False, None
 
         response = transmit(self.router, node, {"rpc_friend": message_body})
@@ -1009,6 +1006,9 @@ class SynchronyProtocol(object):
          "to":   "net/node/uid",
          "type": "invite",
          "url":  "url"}
+
+        with an optional field
+        {"accepted": True/False}
         
         and
         
@@ -1037,19 +1037,34 @@ class SynchronyProtocol(object):
         if data['type'] == "invite":
             if not any([_ for _ in user.friends if _.address == data['from']]):
                 return
-           
-            # NOTE: There's a bug here where stale connections can take awhile
-            #       to be GC'd.
-            available = broadcast(self.router.httpd,
-                                  "events",
-                                  "rpc_edit_invite",
-                                  data,
-                                  user=user)
-            if available:
-                return {"invited": user.jsonify(), "url": data['url']}
-            return {"not_connected": user.jsonify()}
+          
+            # A local user is receiving the invite from a remote instance
+            if not "accepted" in data.keys():
+                # NOTE: There's a bug here where stale connections can take awhile
+                #       to be GC'd.
+                available = broadcast(self.router.httpd,
+                                      "events",
+                                      "rpc_edit_invite",
+                                      data,
+                                      user=user)
+                if available:
+                    return {"connected": user.jsonify(), "url": data['url']}
+                return {"not_connected": user.jsonify()}
+            
+            # A local user is receiving the response to an invite
+            else:
+                available = broadcast(self.router.httpd,
+                                      "events",
+                                      "rpl_edit_invite",
+                                      data,
+                                      user=user)
+                if available:
+                    return {"connected": user.jsonify(), "url": data['url']}
+                return {"not_connected": user.jsonify()}
 
         if data['type'] == "edit":
+            # NOTE: the recipient addr may be local, in which case it's best to
+            #       use streams.utils.broadcast.
 
             body = {"user": data['from'], "document": data['body']}
 
