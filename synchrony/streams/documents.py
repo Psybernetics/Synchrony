@@ -72,6 +72,10 @@ class DocumentStream(Stream):
 
     @require_auth
     def on_edit(self, update):
+        """
+        Send edit data to channel subscribers (remember that the channel is a
+        URL), and any known participants.
+        """
         if not self.channel:
             return
         
@@ -92,12 +96,16 @@ class DocumentStream(Stream):
                 message['to']   = addr
                 message['from'] = self.user.get_address(router)
                 response = router.protocol.rpc_edit(message)
-
-        record = {"time":     time.time(), 
-                  "url":      self.channel,
-                  "fragment": update}
-
+        
         self.emit(self.channel, body)
+
+    @require_auth
+    def on_rpl_invite_edit(self, data):
+        """
+        This is used for telling the remote sides of a session that we're
+        about to join.
+        """
+        print data
 
     @require_auth
     def on_add_participant(self, addr):

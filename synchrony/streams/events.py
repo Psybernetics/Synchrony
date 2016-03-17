@@ -174,6 +174,14 @@ class EventStream(Stream):
                    "url": invitation['url']}
         response = router.protocol.rpc_edit(payload)
         self.emit("sent_invite", response);
+
+    @require_auth
+    def on_rpl_invite_edit(self, data):
+        """
+        This is used for telling the remote sides of a session that we're
+        about to join.
+        """
+        print data
  
     def broadcast(self, channel, event, *args):
         """

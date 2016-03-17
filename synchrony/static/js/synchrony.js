@@ -3,8 +3,9 @@
    Synchrony 0.0.1
    Copyright Luke Joshua Brooks 2015.
    A collaborative hyperdocument editor.
-   There's about seven major religions. The beginning of the point.
-   May Allah guide us to the straight path.
+   
+   Dedicated to God.
+   There's multiple major religions. The beginning of the point.
 
    MIT License.
 
@@ -435,7 +436,14 @@ function Friends(){
             // is clicked.
             var options = {};
             options.onclick = function(){
-                App.Friends.stream.emit("rpc_invite_edit", data);
+                // swap the addresses.
+                var _ = data["from"];
+                data["from"] = data["to"];
+                data["to"] = _;
+                // Let the remote instance know the invitation was accepted.
+                data["accepted"] = true;
+                App.Friends.stream.emit("rpl_invite_edit", data);
+
                 App.editor.join(data.url, friend.address);
                 App.editor.sync();
             };
