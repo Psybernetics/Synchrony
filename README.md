@@ -7,7 +7,7 @@
 
 Installation:
 <pre>
-sudo python setup.py install
+sudo python2 setup.py install
 synchrony --help
 synchrony --debug --address 127.0.0.1
 </pre>

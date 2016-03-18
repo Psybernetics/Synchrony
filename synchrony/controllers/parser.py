@@ -4,12 +4,14 @@ from BeautifulSoup import BeautifulSoup
 
 def parse(html, url):
     
+    # TODO(ljb): Recognise licensensing attributes to prevent piracy.
+    
     domain = urlparse.urlparse(url).netloc
 
-    # Redefine XMLHttpRequest and the fetch function for the iframe:
-    append_text = '<script src="/static/js/iframe.js"></script>\n'
+    #append_text = '<script src="/static/js/iframe.js"></script>\n'
+    #append_text = ''
 
-    appendage = BeautifulSoup(append_text)
+    #appendage = BeautifulSoup(append_text)
 
     soup = BeautifulSoup(html)
 
