@@ -269,6 +269,8 @@ function request(event){
     if (event.original.keyCode == 13){
         event.original.preventDefault();
         var iframe = $('.iframe');
+        // Remove references to any prior stylesheets and scripts
+        iframe.contents().find('head').html("");
 
         // Remove any schema from the url
         var url = this.get("url");
@@ -303,7 +305,19 @@ function request(event){
                     }
                 }
                 App.current_hash = header_map["Content-Hash"];
+
+                // Parse the received document
+                var parser = new DOMParser();
+                var doc    = parser.parseFromString(data, "text/html");
+                // Clean out any errors
+                var element = doc.getElementsByTagName("parsererror");
+                for (var i = element.length - 1; i >= 0; i--) {
+                    element[i].parentNode.removeChild(element[i]);
+                }
+
+                // Ensure that the <head> of the <iframe> is set properly.
                 iframe.contents().find('body').html(data);
+                iframe.contents().find('head').html($(doc).find('head').html());
 
                 // Bind a callback to anchor tags so their href attribute
                 // is appended to App.history when clicked.
@@ -314,13 +328,11 @@ function request(event){
                     update_address_bars(url);
                 });
                 
-                // Also caching the unedited document in the event it's ever
-                // sent directly over webrtc.
-                App.document = data;
-
                 update_synchrony();
             },
             error: function(data, status){
+                console.log(data);
+                console.log(status);
                 var message = "There was an error loading this resource.";
                 message = message + " Consult the logs for further information."
                 iframe.contents().find('body').html(message);
@@ -456,7 +468,6 @@ function Friends(){
         // Event handler for a user on a remote instance signifying they've
         // accepted an invite to edit with us.
         this.stream.on("rpl_edit_invite", function(data){
-            console.log(data);
             App.editor.add_participant(data.from);
         }.bind(this));
     

@@ -48,11 +48,10 @@ def parse(html, url):
     [correct(soup, element) for element in ["a", "link", "img", "script", "audio", "video"]]
 
     log('Should have cycled through urls by now.')
-    try:
-        soup.head.insert(0, appendage)
-    except:
-        pass
-    
+    # try:
+    #     soup.head.insert(0, appendage)
+    # except:
+    #     pass
     return unicode(soup)
 
 

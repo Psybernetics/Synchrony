@@ -76,7 +76,7 @@ class DocumentStream(Stream):
         Send edit data to channel subscribers (remember that the channel is a
         URL), and any known participants.
         """
-        if not self.channel:
+        if not self.channel or not update:
             return
         
         log('DocumentStream: %s %s:%i.' % \
