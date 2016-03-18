@@ -8,10 +8,10 @@ def parse(html, url):
     
     domain = urlparse.urlparse(url).netloc
 
-    #append_text = '<script src="/static/synchrony.js"></script>\n<link rel="stylesheet" type="text/css" href="/static/synchrony.css" />'
-    append_text = ''
+    #append_text = '<script src="/static/js/iframe.js"></script>\n'
+    #append_text = ''
 
-    appendage = BeautifulSoup(append_text)
+    #appendage = BeautifulSoup(append_text)
 
     soup = BeautifulSoup(html)
 
@@ -50,11 +50,10 @@ def parse(html, url):
     [correct(soup, element) for element in ["a", "link", "img", "script", "audio", "video"]]
 
     log('Should have cycled through urls by now.')
-    try:
-        soup.head.append(appendage)
-#        log('Appended:\n%s' % append_text)
-    except: pass
-    
+    # try:
+    #     soup.head.insert(0, appendage)
+    # except:
+    #     pass
     return unicode(soup)
 
 
