@@ -43,7 +43,6 @@ function SynchronyEditor (el) {
 
     this.events       = [];
 
-    
     this.appendEvent  = function(event){
         if (this.events.length >= 10){
             this.events.shift();
