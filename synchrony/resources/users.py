@@ -334,6 +334,7 @@ class UserRevisionCollection(restful.Resource):
         db.session.commit()
         
         return redirect("/")
+
 class UserRevisionCountResource(restful.Resource):
     def get(self, username):
         user = auth(session, required=True)
@@ -493,8 +494,15 @@ class UserFriendsCollection(restful.Resource):
         parser = reqparse.RequestParser()
         parser.add_argument("address", type=str, required=True)
         args = parser.parse_args()
+       
+        # Will do for now
+        for friend in user.friends:
+            if friend.address == args.address:
+                db.session.delete(friend)
+                db.session.commit()
+                return {}, 204
 
-        return {}, 204
+        return {}, 404
 
 class UserAvatarResource(restful.Resource):
     def get(self, username):

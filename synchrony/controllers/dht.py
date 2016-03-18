@@ -727,6 +727,9 @@ class SynchronyProtocol(object):
         """
         if not "to" in data: return
         
+        # We don't verify the sending user exists,
+        # we verify the incoming addr is a known friend.
+
         network, node_id, user_id = data["to"].split("/")
         node_id = long(node_id)
 
@@ -1030,6 +1033,14 @@ class SynchronyProtocol(object):
             return
 
         network, node_id, local_uid = data['to'].split("/")
+        
+        # Verify the node ID in the "from" field.
+        _node_id = str(node.long_id)
+        if _node_id != node_id:
+            log("%s with node ID %s is claming to have node ID %s." % \
+                (node, _node_id, node_id), "warning")
+            return
+
         user = User.query.filter(User.uid == local_uid).first()
         if not user:
             return

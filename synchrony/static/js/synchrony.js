@@ -849,6 +849,18 @@ function userView(username, params){
                             $('#' + type + '-' + index).remove();
                         }
                     });
+                } else if (type === "friend") {
+                    var friend = this.get('friends')[index];
+                    console.log(friend);
+                    $.ajax({
+                        url:  '/v1/users/' + App.Config.user.username + '/friends',
+                        type: "DELETE",
+                        data: {address: friend.address},
+                        success: function(response){
+                            // Remove the row on success.
+                            $('#' + type + '-' + index).remove();
+                        }
+                    });
                 }
             },
             create_revision: function(event){
