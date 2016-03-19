@@ -410,7 +410,6 @@ class UserFriendsCollection(restful.Resource):
 
         if not response:
             return {}, 404
-        log(response)
 
         if Friend.query.filter(and_(Friend.address == args.address,
             Friend.user == user)).first():

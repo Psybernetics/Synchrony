@@ -638,23 +638,41 @@ class SynchronyProtocol(object):
         payload = []
 
         for message in message_body:
+            if not isinstance(message, dict):
+                continue
+
             message_type = message.keys()[0]
+            
+            if not "to" or not "from" in message[message_type]:
+                continue
+           
             addr = message[message_type]["to"]
 
             if addr.count("/") != 2:
                 log("Invalid address %s" % addr)
                 return False, None
+            
             network, node_id, remote_uid = addr.split("/")
             
             if network != self.router.network:
                 return False, None
 
             node = Node(long(node_id))
+            
+            # Use the local handler if the address in the "to" field indicates
+            # our own node ID. Eg. Adding a friend on the local instance.
+            if node.long_id == self.router.node.long_id:
+                payload = envelope(self.router, {"rpc_friend":
+                    [{message_type: message[message_type]}]})
+                response = self.handle_friend(payload)
+                continue
+
             nearest = self.router.find_neighbours(node)
             if len(nearest) == 0:
                 log("There are no neighbours to help us add users on %s as friends." % \
                     node_id)
                 return False, None
+
             spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
             nodes   = spider.find()
             node    = None
@@ -678,9 +696,14 @@ class SynchronyProtocol(object):
         if not node:
             log("No peer node found for RPC_FRIEND:%s." % message_type.upper())
             return False, None
+        
+        # Don't send network calls to ourselves: Avoids waiting for the httpd
+        # to yeild.
+        if node.long_id == self.router.node.long_id:
+            return False, None
 
         response = transmit(self.router, node, {"rpc_friend": message_body})
-    
+
         if not isinstance(response, dict) or not "response" in response:
             return False, None
 
@@ -843,12 +866,11 @@ class SynchronyProtocol(object):
         """
         node = self.read_envelope(data)
        
-        if len(data['rpc_friend']) > 10:
+        if len(data['rpc_friend']) > 50:
             log("Received too many batched RPC_FRIEND messages.", "warning")
             return
 
         for message in data['rpc_friend']:
-            
             message_type = message.keys()[0]
             payload      = message.values()[0]
             
@@ -922,7 +944,14 @@ class SynchronyProtocol(object):
                 db.session.add(friend)
                 db.session.add(network)
                 db.session.commit()
-                
+            
+                # Tell the local user
+                broadcast(self.router.httpd,
+                          "events",
+                          "recv_friend_request",
+                          friend.jsonify(),
+                          user=user)
+    
                 return envelope(self.router, {"response": friend.jsonify()})
             
             if message_type == "status":
