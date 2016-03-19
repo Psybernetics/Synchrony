@@ -421,6 +421,17 @@ function Friends(){
             this.repopulate_list(this.visible_list, data);
         }.bind(this));
 
+        // Update App.Views.userpage with the new friend request
+        // if it's been loaded.
+        this.stream.on("recv_friend_request", function(friend){
+            console.log("Received friend request", friend);
+            if (App.Views.userpage){
+                var friends = App.Views.userpage.get("friends");
+                friends.push(friend);
+                App.Views.userpage.set("friends", friends);
+            }
+        }.bind(this));
+
         // A friend or ourselves performed a status update
         this.stream.on("update_status", function(data){
             console.log(data);
@@ -667,7 +678,6 @@ function accountObjects(params){
                 }
             },
         });
-
     });
 }
 
