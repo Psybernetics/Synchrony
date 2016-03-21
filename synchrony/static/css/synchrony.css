@@ -755,6 +755,7 @@ hr {
 
 .view {
     margin-left: 350px;
+    margin-top: -50px;
 }
 
 .view td {
@@ -763,6 +764,10 @@ hr {
 
 .view h1 {
     text-align: center;
+    font-size: 2.4em;
+    letter-spacing: 1px;
+    font-weight: 600;
+    font-family: Verdana;
 }
 
 .dark_text {

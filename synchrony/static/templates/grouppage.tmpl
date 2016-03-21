@@ -1,5 +1,5 @@
 <div class="view">
-    <h1>Group Settings</h1>
+    <h1>{{group.name}} Group Settings</h1>
     <hr />
     {{#no_such_group}}
     Unknown group.<br />
@@ -8,16 +8,28 @@
     {{#server_unavailable}}
     Server unavailable.<br />
     {{/server_unavailable}}
-    <div on-mouseover="select:{{"heading"}}" on-mouseout="select:{{"heading"}}">
-    <h2>{{group.name}}
     {{#can_modify_usergroup}}
+    <div on-mouseover="select:{{"heading"}}" on-mouseout="select:{{"heading"}}">
+    <h2>Users
+        <button class="button big_button pull-right" on-click="toggle:{{"users"}}">{{users_button}}</button>
     <button id="delete-button" style="display:none;" class="button pull-right" on-click="delete:{{"group"}}">Delete</button>
-    </h2>
     </div>
-    {{#group.users}}
-        {{this}}<br />
-    {{/group.users}}
-    <table>
+    </h2>
+    {{#showing_users}}
+    <table class="scrollable">
+        <tbody>
+        {{#group.users}}
+            <tr><td>{{this}}</td></tr>
+        {{/group.users}}
+        </tbody>
+    </table>
+    {{/showing_users}}
+
+    <h2>Privileges
+        <button class="button big_button pull-right" on-click="toggle:{{"privileges"}}">{{privileges_button}}</button>
+    </h2>
+    {{#showing_privileges}}
+    <table class="scrollable">
         <tbody>
         {{#group.privileges}}
         <tr on-mouseover="select:{{"priv"}},{{@index}}" on-mouseout="select:{{"priv"}},{{@index}}" id="group-{{@index}}">
@@ -32,5 +44,6 @@
         {{/group.privileges}}
         </tbody>
     </table>
+    {{/showing_privileges}}
     {{/can_modify_usergroup}}
 </div>

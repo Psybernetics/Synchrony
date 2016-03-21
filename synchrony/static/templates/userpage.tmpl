@@ -164,4 +164,47 @@
     <div class="message">{{password_message}}</div>
     {{/showing_password}}
     {{/show_settings}}
+    {{#show_profile}}
+    {{^profile_error}}
+        <h1>{{user.username}}</h1>
+        <hr />
+        <h2>Summary</h2>
+        <table>
+            <tr><td>Active</td><td>{{#if user.active}}Yes{{else}}No{{/if}}</td></tr>
+            <tr><td>Status</td><td>{{user.status}}</td></tr>
+            <tr><td>Joined</td><td>{{user.created}}</td></tr>
+            <tr><td>Address</td><td>{{user.address}}</td></tr>
+        </table>
+
+        {{#user.user_groups.length}}
+        <h2>User Groups</h2>
+        <table>
+            <tbody>
+                {{#user.user_groups}}
+                <tr>
+                    <td>{{this.name}}</td>
+                </tr>
+                {{/user.user_groups}}
+            </tbody>
+        </table>
+        {{/user.user_groups.length}}
+
+        {{#user.sessions.length}}
+        <h2>Sessions</h2>
+        <table>
+            <tbody>
+                {{#user.sessions}}
+                <tr>
+                    <td>{{this.ip}}</td>
+                    <td>{{this.user_agent}}</td>
+                    <td>{{this.created}}</td>
+                </tr>
+                {{/user.sessions}}
+            </tbody>
+        </table>
+        {{/user.sessions.length}}
+    {{/profile_error}}
+    {{#profile_error}}
+    {{/profile_error}}
+    {{/show_profile}}
 </div>

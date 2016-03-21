@@ -411,8 +411,8 @@ class User(db.Model):
                 response['sessions']    = [s.jsonify() for s in self.sessions]
             if groups:
                 response['user_groups'] = [g.jsonify() for g in self.user_groups]
-            if address:
-                response['address'] = self.get_address(address)
+            if address != False:
+                response['address']     = self.get_address(address)
         return response
 
     def poll_friends(self, routers):

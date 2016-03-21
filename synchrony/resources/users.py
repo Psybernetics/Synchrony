@@ -113,16 +113,13 @@ class UserResource(restful.Resource):
     """
     def get(self, username):
         """
-        View user, or, if you're an admin, other users.
+        View user. Those with see_all may access more attributes.
         """
         user = auth(session, required=True)
 
         parser = reqparse.RequestParser()
         parser.add_argument("can", type=str)
         args = parser.parse_args()
-
-        if user.username != username and not user.can("see_all"):
-            return {}, 403
 
         user = User.query.filter(User.username == username).first()
 
@@ -132,7 +129,14 @@ class UserResource(restful.Resource):
         if args.can:
             return user.can(args.can)
 
-        return user.jsonify(groups=True, sessions=True)
+        if user.username == username or user.can("see_all"):
+            return user.jsonify(revisions=True,
+                                groups=True,
+                                sessions=True,
+                                address=app.routes._default)
+
+        return user.jsonify(address=app.routes._default)
+
 
     def post(self, username):
         """
