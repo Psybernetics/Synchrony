@@ -121,23 +121,22 @@ class UserResource(restful.Resource):
         parser.add_argument("can", type=str)
         args = parser.parse_args()
 
-        user = User.query.filter(User.username == username).first()
+        target = User.query.filter(User.username == username).first()
 
-        if not user:
+        if not target:
             return {}, 404
 
+        if not user.can("see_all") and username != user.username:
+            return target.jsonify(address=app.routes._default)
+        
         if args.can:
-            return user.can(args.can)
-
-        if user.username == username or user.can("see_all"):
-            return user.jsonify(revisions=True,
-                                groups=True,
-                                sessions=True,
-                                address=app.routes._default)
-
-        return user.jsonify(address=app.routes._default)
-
-
+            return target.can(args.can)
+    
+        return target.jsonify(revisions=True,
+                            groups=True,
+                            sessions=True,
+                            address=app.routes._default)
+        
     def post(self, username):
         """
         Account modification

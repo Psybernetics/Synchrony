@@ -45,5 +45,13 @@
         </tbody>
     </table>
     {{/showing_privileges}}
+    <div class="privileges">
+    {{#privileges}}
+        <div id="privilege-{{@index}}" class="privilege {{#if @index % 2}}pull-right{{/if}}">
+            {{this.name}}
+        </div>
+    <br />
+    {{/privileges}}
+    </div>
     {{/can_modify_usergroup}}
 </div>

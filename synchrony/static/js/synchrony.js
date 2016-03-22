@@ -725,7 +725,9 @@ function userView(username, params){
                 url: "/v1/users/" + username,
                 success: function(data){
                     console.log(data);
-                    upDate(data.sessions, "created");
+                    if (data.sessions){
+                        upDate(data.sessions, "created");
+                    }
                     data.created = timeStamp(data.created);
                     App.Views.userpage.set("user", data);
                 },
@@ -733,7 +735,17 @@ function userView(username, params){
                     App.Views.userpage.set("profile_error", true);
                 }
             });
+            // Display the reset password form if viewing another user?
+            $.get("/v1/users/" + App.Config.user.username + "?can=reset_user_pw",
+                function(response){
+                    App.Views.userpage.set("can_reset_user_pw", response);
+                }
+            );
+
 //            populate_table(this, "revisions", "/v1//user/" + username + "/revisions");
+            App.Views.userpage.set("can_reset_user_pw", undefined);
+            App.Views.userpage.set("sessions_button",   "Show");
+            App.Views.userpage.set("password_button",   "Show");
         } else {
             // Ugliest section in the file, but this stuff has to be somewhere
             App.Views.userpage.set("show_settings",     true);
@@ -1171,6 +1183,32 @@ function groupView(name, params){
                 }
             }
         });
+        
+        // Get all the privs from the server
+        var privileges = [];
+        var next = "/v1/privs"
+        while (true){
+            var r = undefined;
+            $.ajax({
+                url: next,
+                type: "get",
+                async: false,
+                success: function(response){
+                    r = response;
+                }
+            });
+            if (!r || typeof r == "string") {
+                break;
+            } 
+            console.log(r);
+            privileges = privileges.concat(r.data);
+            if (!"next" in r.links) {
+                break;
+            }
+            next = r.links.next;
+            console.log(privileges);
+        }
+        App.Views.grouppage.set("privileges", privileges);
 
         App.Views.grouppage.on({
             select:  function(event, type, index){
