@@ -18,3 +18,6 @@ PERMIT_NEW_ACCOUNTS = True
 
 # Zero peer trust ratings instead of decrementing them
 NO_PRISONERS = False
+
+# Remove <script> nodes at the parser.
+DISABLE_JAVASCRIPT = True

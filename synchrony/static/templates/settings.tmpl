@@ -16,18 +16,18 @@
                 <td>Name</td>
                 <td>Revisions</td>
                 <td>Public Revisions</td>
-                <td>Active</td>
                 <td>Status</td>
                 <td>Created</td>
+                <td>Active</td>
             </tr>
         {{#accounts}}
             <tr on-mouseover="select:{{"user"}},{{@index}}" on-mouseout="select:{{"user"}},{{@index}}" id="user-{{@index}}">
                 <td><a href="/#user/{{username}}">{{username}}</a></td>
                 <td>{{revisions}}</td>
                 <td>{{public_revisions}}</td>
-                <td>{{#if active}}Yes{{else}}No{{/if}}</td>
                 <td>{{status}}</td>
                 <td>{{created}}</td>
+                <td>{{#if active}}Yes{{else}}No{{/if}}</td>
             </tr>
         {{/accounts}}
         </tbody>
