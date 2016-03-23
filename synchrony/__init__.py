@@ -106,6 +106,7 @@ def init():
     from synchrony.resources import domains
     from synchrony.resources import networks
     from synchrony.resources import revisions
+    from synchrony.resources import config
 
     api.add_resource(networks.NetworkCollection,            "/networks")
     api.add_resource(networks.NetworkResource,              "/networks/<string:network>")
@@ -145,6 +146,8 @@ def init():
 
     api.add_resource(peers.PeerTestSet,                     "/peers/test")
     api.add_resource(peers.PeerTestGet,                     "/peers/test/<path:url>")
+
+    api.add_resource(config.ConfigCollection,               "/config")
 
 # /users/username/revisions
 # /domains/domain/resources
