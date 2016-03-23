@@ -719,7 +719,33 @@ function userView(username, params){
 
         // Determine whether this is a profile or settings page.
         if (App.Config.user.username != username) {
+            App.Views.userpage.set("show_profile", true);
+            $.ajax({
+                type: "GET",
+                url: "/v1/users/" + username,
+                success: function(data){
+                    console.log(data);
+                    if (data.sessions){
+                        upDate(data.sessions, "created");
+                    }
+                    data.created = timeStamp(data.created);
+                    App.Views.userpage.set("user", data);
+                },
+                error: function(data){
+                    App.Views.userpage.set("profile_error", true);
+                }
+            });
+            // Display the reset password form if viewing another user?
+            $.get("/v1/users/" + App.Config.user.username + "?can=reset_user_pw",
+                function(response){
+                    App.Views.userpage.set("can_reset_user_pw", response);
+                }
+            );
+
 //            populate_table(this, "revisions", "/v1//user/" + username + "/revisions");
+            App.Views.userpage.set("can_reset_user_pw", undefined);
+            App.Views.userpage.set("sessions_button",   "Show");
+            App.Views.userpage.set("password_button",   "Show");
         } else {
             // Ugliest section in the file, but this stuff has to be somewhere
             App.Views.userpage.set("show_settings",     true);
@@ -1116,7 +1142,9 @@ function groupView(name, params){
         if (!$('.main').is(':visible')) {
             toggleMain();
         }
-        
+       
+        App.Views.grouppage.set({users_button:"Show",privileges_button:"Show"});
+
         function filterResponse(response){
         // Sticks the key attrs on a response 
             for (var i = 0; i < response.privileges.length; i++) {
@@ -1155,6 +1183,32 @@ function groupView(name, params){
                 }
             }
         });
+        
+        // Get all the privs from the server
+        var privileges = [];
+        var next = "/v1/privs"
+        while (true){
+            var r = undefined;
+            $.ajax({
+                url: next,
+                type: "get",
+                async: false,
+                success: function(response){
+                    r = response;
+                }
+            });
+            if (!r || typeof r == "string") {
+                break;
+            } 
+            console.log(r);
+            privileges = privileges.concat(r.data);
+            if (!"next" in r.links) {
+                break;
+            }
+            next = r.links.next;
+            console.log(privileges);
+        }
+        App.Views.grouppage.set("privileges", privileges);
 
         App.Views.grouppage.on({
             select:  function(event, type, index){
@@ -1169,11 +1223,24 @@ function groupView(name, params){
                 if (type === "priv") {
                     if ($('#' + type + '-button-' + index).css('visibility') === "hidden") {
                         $('#' + type + '-button-' + index).css('visibility', '');
+                        $('#remove-' + type + '-button-' + index).css('visibility', '');
                         $('#' + type + '-text-'   + index).css('display',    'none');
                     } else {
                         $('#' + type + '-button-' + index).css('visibility', 'hidden');
+                        $('#remove-' + type + '-button-' + index).css('visibility', 'hidden');
                         $('#' + type + '-text-'   + index).css('display',    'initial');
                     }
+                }
+            },
+            toggle: function(event, section){
+                var button = section + "_button";
+                var showing = App.Views.grouppage.get("showing_" + section);
+                if (showing === undefined) {
+                    App.Views.grouppage.set(button, "Hide");
+                    App.Views.grouppage.set("showing_" + section, true);
+                } else {
+                    App.Views.grouppage.set(button, "Show");
+                    App.Views.grouppage.set("showing_" + section, undefined);
                 }
             },
             delete: function(event){
