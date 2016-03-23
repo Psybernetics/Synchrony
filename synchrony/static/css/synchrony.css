@@ -846,6 +846,10 @@ a {
 	height: 30px;
 	width: 55px;
 }
+.bigger_button {
+    height: 30px;
+    width: 70px;
+}
 .synchrony_buttons {
 	float: right;
 	margin-top: 4px;
@@ -881,10 +885,15 @@ a {
 .privilege {
     padding: 10px;
     margin: -10px;
-    border: solid 1px #000;
+    border: solid 1px #535353;
     border-radius: 4px;
     width: inherit;
     text-align: center;
+}
+
+.privilege:hover {
+    border: solid 1px #0084ff;
+    border-bottom: solid 3px #3C7FC7;
 }
 
 .index_overview > .table {

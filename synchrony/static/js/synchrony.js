@@ -1223,9 +1223,11 @@ function groupView(name, params){
                 if (type === "priv") {
                     if ($('#' + type + '-button-' + index).css('visibility') === "hidden") {
                         $('#' + type + '-button-' + index).css('visibility', '');
+                        $('#remove-' + type + '-button-' + index).css('visibility', '');
                         $('#' + type + '-text-'   + index).css('display',    'none');
                     } else {
                         $('#' + type + '-button-' + index).css('visibility', 'hidden');
+                        $('#remove-' + type + '-button-' + index).css('visibility', 'hidden');
                         $('#' + type + '-text-'   + index).css('display',    'initial');
                     }
                 }

@@ -40,18 +40,24 @@
                         {{#if this.value}}Deny{{else}}Allow{{/if}}
                     </button>
                 </td>
+                <td>
+                    <button on-click="remove:{{@index}}" style="visibility:hidden" class="button bigger_button" id="remove-priv-button-{{@index}}">
+                    Remove
+                    </button>
+                </td>
          </tr>
         {{/group.privileges}}
         </tbody>
     </table>
-    {{/showing_privileges}}
+    
     <div class="privileges">
-    {{#privileges}}
-        <div id="privilege-{{@index}}" class="privilege {{#if @index % 2}}pull-right{{/if}}">
-            {{this.name}}
-        </div>
-    <br />
-    {{/privileges}}
+        {{#privileges}}
+            <div id="privilege-{{@index}}" class="privilege {{#if @index % 2}}pull-right{{/if}}">
+                {{this.name}}
+            </div>
+        <br />
+        {{/privileges}}
     </div>
+    {{/showing_privileges}}
     {{/can_modify_usergroup}}
 </div>

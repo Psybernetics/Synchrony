@@ -1,5 +1,5 @@
 import urlparse
-from synchrony import log
+from synchrony import app, log
 from BeautifulSoup import BeautifulSoup
 
 def parse(html, url):
@@ -21,11 +21,11 @@ def parse(html, url):
     # Also far slower than the previous implementation (it's simply doing more).
     def correct(soup, element):
         for _ in soup.findAll(element):
-            
+    
             if _.has_key("href"):
                 if _.has_key("license") and _['license'].lower() != "cc by":
                     log("Ignoring licensed object %s" % _['href'])
-                    _['href'] = ""
+                    del _['href']
                     continue
                 log("%s -> %s%s%s" % (str(_['href']), request_endpoint, domain, str(_['href'])), "debug")
                 if    _['href'].startswith('https'):  _['href'] = _['href'].replace("https://", request_endpoint)
@@ -36,7 +36,7 @@ def parse(html, url):
             elif _.has_key("src"):
                 if _.has_key("license") and _['license'].lower() != "cc by":
                     log("Ignoring licensed object %s" % _['src'])
-                    _['src'] = ""
+                    del _['src']
                     continue
                 log("%s -> %s%s%s" % (str(_['src']), request_endpoint, domain, str(_['src'])), "debug")
                 if    _['src'].startswith('https'):  _['src'] = _['src'].replace("https://", request_endpoint)
@@ -44,8 +44,10 @@ def parse(html, url):
                 elif  _['src'].startswith('/'):      _['src'] = '%s%s%s' % (request_endpoint, domain, _['src'])
                 else: _['src'] = '%s%s/%s' % (request_endpoint, domain, _['src'])
   
-
     [correct(soup, element) for element in ["a", "link", "img", "script", "audio", "video"]]
+
+    if "DISABLE_JAVASCRIPT" in app.config and app.config["DISABLE_JAVASCRIPT"]:
+        [_.extract() for _ in soup.findAll("script")]
 
     log('Should have cycled through urls by now.')
     # try:

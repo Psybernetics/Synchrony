@@ -409,7 +409,7 @@ class User(db.Model):
                 response['revisions']   = len(self.revisions)
             if sessions:
                 response['sessions']    = [s.jsonify() for s in self.sessions]
-            if groups != False:
+            if groups:
                 response['user_groups'] = [g.jsonify() for g in self.user_groups]
             if address != False:
                 response['address']     = self.get_address(address)
