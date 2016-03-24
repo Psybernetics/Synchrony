@@ -10,6 +10,7 @@ from synchrony.controllers.auth import auth
 def config_as_response():
     response = dict(app.config)
     del response["SECRET_KEY"]
+    del response["SQLALCHEMY_DATABASE_URI"]
     for key in response.copy():
         if not isinstance(response[key],
         (float, int, unicode, str, dict, list)):

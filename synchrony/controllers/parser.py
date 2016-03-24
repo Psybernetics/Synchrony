@@ -8,16 +8,23 @@ def parse(html, url):
     
     domain = urlparse.urlparse(url).netloc
 
-    #append_text = '<script src="/static/js/iframe.js"></script>\n'
-    #append_text = ''
+    # Redefining XMLHttpRequest in the following file is not limited to the
+    # iframes' scope.
+    append_text = '<script src="/static/js/iframe.js"></script>\n'
 
     #appendage = BeautifulSoup(append_text)
 
     soup = BeautifulSoup(html)
 
-#    log('Requested %s (%s)' % (url, domain))
-
     request_endpoint = "/request/"
+    
+    elements = ["a", "link", "img", "audio", "video"]
+
+    # Determine whether to remove all <script> tags or process their src attrs
+    if "DISABLE_JAVASCRIPT" in app.config and app.config["DISABLE_JAVASCRIPT"]:
+        [_.extract() for _ in soup.findAll("script")]
+    else:
+        elements.append("script")
 
     # Known to omit some images such as the main one on uk.reuters.com
     # Also far slower than the previous implementation (it's simply doing more).
@@ -46,10 +53,7 @@ def parse(html, url):
                 elif  _['src'].startswith('/'):      _['src'] = '%s%s%s' % (request_endpoint, domain, _['src'])
                 else: _['src'] = '%s%s/%s' % (request_endpoint, domain, _['src'])
   
-    [correct(soup, element) for element in ["a", "link", "img", "script", "audio", "video"]]
-
-    if "DISABLE_JAVASCRIPT" in app.config and app.config["DISABLE_JAVASCRIPT"]:
-        [_.extract() for _ in soup.findAll("script")]
+    [correct(soup, element) for element in elements]
 
     log('Should have cycled through urls by now.')
     # try:
