@@ -755,6 +755,7 @@ hr {
 
 .view {
     margin-left: 350px;
+    margin-top: -50px;
 }
 
 .view td {
@@ -763,6 +764,10 @@ hr {
 
 .view h1 {
     text-align: center;
+    font-size: 2.4em;
+    letter-spacing: 1px;
+    font-weight: 600;
+    font-family: Verdana;
 }
 
 .dark_text {
@@ -841,6 +846,10 @@ a {
 	height: 30px;
 	width: 55px;
 }
+.bigger_button {
+    height: 30px;
+    width: 70px;
+}
 .synchrony_buttons {
 	float: right;
 	margin-top: 4px;
@@ -867,6 +876,24 @@ a {
 
 #dark-text {
     color: #222;
+}
+
+.privileges {
+    width: 50%;
+}
+
+.privilege {
+    padding: 10px;
+    margin: -10px;
+    border: solid 1px #535353;
+    border-radius: 4px;
+    width: inherit;
+    text-align: center;
+}
+
+.privilege:hover {
+    border: solid 1px #0084ff;
+    border-bottom: solid 3px #3C7FC7;
 }
 
 .index_overview > .table {
@@ -976,3 +1003,6 @@ a {
     cursor: pointer;
 }
 
+#number {
+    width: 55px;
+}

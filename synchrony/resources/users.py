@@ -84,36 +84,13 @@ class UserCollection(restful.Resource):
         session['session'] = s.session_id
         return s.jsonify()
 
-    def post(self):
-        """
-        Modify system behavior in relation to user accounts.
-
-        This method is responsible for toggling the PERMIT_NEW_USER_ACCOUNTS
-        option during runtime.
-
-        This method may also be responsible for toggling OPEN_PROXY during
-        runtime...
-        """
-        user = auth(session, required=True)
-        
-        parser = reqparse.RequestParser()
-        parser.add_argument("signups",    type=bool, default=None)
-        parser.add_argument("open_proxy", type=bool, default=None)
-        args = parser.parse_args()
-
-        if args.signups != None:
-            if not user.can("toggle_signups"):
-                return {}, 403
-            app.config["PERMIT_NEW_ACCOUNTS"] = args.signups
-            return app.config["PERMIT_NEW_ACCOUNTS"]
-
 class UserResource(restful.Resource):
     """
     Implements /v1/user/:username
     """
     def get(self, username):
         """
-        View user, or, if you're an admin, other users.
+        View user. Those with see_all may access more attributes.
         """
         user = auth(session, required=True)
 
@@ -121,19 +98,22 @@ class UserResource(restful.Resource):
         parser.add_argument("can", type=str)
         args = parser.parse_args()
 
-        if user.username != username and not user.can("see_all"):
-            return {}, 403
+        target = User.query.filter(User.username == username).first()
 
-        user = User.query.filter(User.username == username).first()
-
-        if not user:
+        if not target:
             return {}, 404
 
+        if not user.can("see_all") and username != user.username:
+            return target.jsonify(address=app.routes._default)
+        
         if args.can:
-            return user.can(args.can)
-
-        return user.jsonify(groups=True, sessions=True)
-
+            return target.can(args.can)
+    
+        return target.jsonify(revisions=True,
+                            groups=True,
+                            sessions=True,
+                            address=app.routes._default)
+        
     def post(self, username):
         """
         Account modification
@@ -334,6 +314,7 @@ class UserRevisionCollection(restful.Resource):
         db.session.commit()
         
         return redirect("/")
+
 class UserRevisionCountResource(restful.Resource):
     def get(self, username):
         user = auth(session, required=True)
@@ -409,7 +390,6 @@ class UserFriendsCollection(restful.Resource):
 
         if not response:
             return {}, 404
-        log(response)
 
         if Friend.query.filter(and_(Friend.address == args.address,
             Friend.user == user)).first():
@@ -493,8 +473,15 @@ class UserFriendsCollection(restful.Resource):
         parser = reqparse.RequestParser()
         parser.add_argument("address", type=str, required=True)
         args = parser.parse_args()
+       
+        # Will do for now
+        for friend in user.friends:
+            if friend.address == args.address:
+                db.session.delete(friend)
+                db.session.commit()
+                return {}, 204
 
-        return {}, 204
+        return {}, 404
 
 class UserAvatarResource(restful.Resource):
     def get(self, username):

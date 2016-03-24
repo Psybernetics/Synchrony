@@ -187,7 +187,6 @@ function SynchronyEditor (el) {
         $(this.document).on('DOMCharacterDataModified', function(event){
 
             if (!this.socket) { this.reconnect(); }
-
             // Traverse up to ... parent nodes and transmit the outerHTML.
 
             var subtree = event.target;

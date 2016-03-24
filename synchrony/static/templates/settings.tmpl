@@ -5,9 +5,9 @@
     {{#showing_accounts}}
         {{#toggle_signups_permitted}}
         <form>
-            <h4>Permit new signups</h4>
-            <label><input on-click="toggle_signups:{{true}}"  type="radio" checked="{{signups_allow}}">Allow</label>
-            <label><input on-click="toggle_signups:{{false}}" type="radio" checked="{{signups_deny}}">Deny</label>
+            <h3>Permit new signups</h3>
+            <label><input on-click="toggle_signups:{{true}}"  type="radio" checked="{{#if allow_signups}}true{{else}}false{{/if}}"><strong>Allow</strong></label>
+            <label><input on-click="toggle_signups:{{false}}" type="radio" checked="{{#if allow_signups}}false{{else}}true{{/if}}"><strong>Deny</strong></label>
         </form><br />
         {{/toggle_signups_permitted}}
     <table>
@@ -16,18 +16,18 @@
                 <td>Name</td>
                 <td>Revisions</td>
                 <td>Public Revisions</td>
-                <td>Active</td>
                 <td>Status</td>
                 <td>Created</td>
+                <td>Active</td>
             </tr>
         {{#accounts}}
             <tr on-mouseover="select:{{"user"}},{{@index}}" on-mouseout="select:{{"user"}},{{@index}}" id="user-{{@index}}">
                 <td><a href="/#user/{{username}}">{{username}}</a></td>
                 <td>{{revisions}}</td>
                 <td>{{public_revisions}}</td>
-                <td>{{#if active}}Yes{{else}}No{{/if}}</td>
                 <td>{{status}}</td>
                 <td>{{created}}</td>
+                <td>{{#if active}}Yes{{else}}No{{/if}}</td>
             </tr>
         {{/accounts}}
         </tbody>
@@ -157,13 +157,36 @@
     {{/downloads}}
     {{/showing_downloads}}
     {{/downloads_permitted}}
-    <h2>Open Proxy <button on-click="toggle:{{"open"}}" class="button big_button pull-right">{{open_button}}</button></h2>
-    {{#showing_open}}
-    This setting determines whether an account is needed in order to use the /request/&lt;path:url&gt; endpoint
+
+    <h2>Miscellaneous Settings <button on-click="toggle:{{"misc"}}" class="button big_button pull-right">{{misc_button}}</button></h2>
+    {{#showing_misc}}
+    <h3>Open Proxy</h3>
+    This setting determines whether an account is needed in order to use the <em>/request/&lt;path:url&gt;</em> endpoint
     on this server.
     <form>
-        <label><input type="radio" name="{{signups}}" value="Allow" checked>Open</label>
-        <label><input type="radio" name="{{signups}}" value="Deny">Closed</label>
+        <label><input on-click="toggle_open_proxy:{{true}}"  type="radio" checked="{{#if open_proxy}}true{{else}}false{{/if}}"><strong>Open</strong></label>
+        <label><input on-click="toggle_open_proxy:{{false}}" type="radio" checked="{{#if open_proxy}}false{{else}}true{{/if}}"><strong>Closed</strong></label>
     </form>
-   {{/showing_open}}
+ 
+    <h3>HTTP Timeout</h3>
+    This setting determines how long to wait for other servers to serve resources.
+    <form>
+        <input id="number" on-keyup="set_http_timeout" on-click="set_http_timeout" value="{{http_timeout}}" size="4" type="number"/>
+    </form>
+
+    <h3>No Prisoners</h3>
+    This setting determines whether, when marking a resource as malicious, to set remote peers&#39; trust rating to 0.00 instead of decrementing
+    by the value defined as epsilon internally. This can limit the amount peers available to download from.
+    <form>
+        <label><input on-click="toggle_no_prisoners:{{true}}"  type="radio" checked="{{#if no_prisoners}}true{{else}}false{{/if}}"><strong>No Prisoners</strong></label>
+        <label><input on-click="toggle_no_prisoners:{{false}}" type="radio" checked="{{#if no_prisoners}}false{{else}}true{{/if}}"><strong>Tolerant</strong></label>
+    </form>
+    
+    <h3>Disable JavaScript</h3>
+    This setting determines whether external pages will have their &lt;script&gt; tags removed before being served.
+    <form>
+        <label><input on-click="toggle_javascript:{{true}}"  type="radio" checked="{{#if disable_javascript}}false{{else}}true{{/if}}"><strong>Enabled</strong></label>
+        <label><input on-click="toggle_javascript:{{false}}" type="radio" checked="{{#if disable_javascript}}true{{else}}false{{/if}}"><strong>Disabled</strong></label>
+    </form>
+   {{/showing_misc}}
  </div>

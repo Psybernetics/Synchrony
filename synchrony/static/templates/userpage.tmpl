@@ -164,4 +164,76 @@
     <div class="message">{{password_message}}</div>
     {{/showing_password}}
     {{/show_settings}}
+    {{#show_profile}}
+    {{^profile_error}}
+        <h1>{{user.username}}</h1>
+        <hr />
+        <h2>Summary</h2>
+        <table>
+            <tr><td>Active</td><td>{{#if user.active}}Yes{{else}}No{{/if}}</td></tr>
+            <tr><td>Status</td><td>{{user.status}}</td></tr>
+            <tr><td>Joined</td><td>{{user.created}}</td></tr>
+            <tr><td>Address</td><td>{{user.address}}</td></tr>
+        </table>
+
+        {{#user.user_groups.length}}
+        <h2>User Groups</h2>
+        <table>
+            <tbody>
+                {{#user.user_groups}}
+                <tr>
+                    <td>{{this.name}}</td>
+                </tr>
+                {{/user.user_groups}}
+            </tbody>
+        </table>
+        {{/user.user_groups.length}}
+
+        {{#user.sessions.length}}
+        <h2>Sessions<button on-click="toggle:{{"sessions"}}" class="button big_button pull-right">{{sessions_button}}</button></h2>
+        {{#showing_sessions}}
+        <table>
+            <tbody>
+                {{#user.sessions}}
+                <tr on-mouseover="select:{{"session"}},{{@index}}" on-mouseout="select:{{"session"}},{{@index}}" id="session-{{@index}}">
+                    <td>{{this.ip}}</td>
+                    <td>{{this.user_agent}}</td>
+                    <td>{{this.created}}</td>
+                    <td id="delete-session-{{@index}}" style="visibility:hidden"><button class="button big_button" on-click="delete:{{"session"}},{{@index}}">Delete</button></td>
+                </tr>
+                {{/sessions}}
+                {{^user.sessions}}No sessions..{{/user.sessions}}
+            </tbody>
+        </table>
+        <div class="center">
+            {{#sessions_back_available}}
+            <a on-click="back:{{"sessions"}}">Back</a>
+                {{#sessions_forward_available}}
+                /
+                {{/sessions_forward_available}}
+            {{/sessions_back_available}}
+            {{#sessions_forward_available}}
+            <a on-click="forward:{{"sessions"}}">Forward</a>
+            {{/sessions_forward_available}}
+        </div>
+        {{#sessions_paging_error}}Server unavailable. Try refreshing the page.{{/sessions_paging_error}}
+        {{/showing_sessions}}
+        {{/user.sessions.length}}
+
+        {{#can_reset_user_pw}}
+        <h2>Password<button on-click="toggle:{{"password"}}" class="button big_button pull-right">{{password_button}}</button></h2>
+        {{#showing_password}}
+        <form class="form-horizontal" name="create">
+              <input type="password" size="10" class="form-control" id="inputPassword" name="pass1" placeholder="Current Password" value="{{pass0}}">
+              <input type="password" class="form-control" id="inputPassword" name="pass1" placeholder="New Password" value="{{pass1}}">
+              <input type="password" class="form-control" id="inputPassword3" name="pass2" placeholder="Confirm" value="{{pass2}}">
+              <button type="submit" class="button" on-click="change_password">Change</button>
+        </form>
+        <div class="message">{{password_message}}</div>
+        {{/showing_password}}
+        {{/can_reset_user_pw}}
+    {{/profile_error}}
+    {{#profile_error}}
+    {{/profile_error}}
+    {{/show_profile}}
 </div>

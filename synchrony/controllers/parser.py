@@ -1,5 +1,5 @@
 import urlparse
-from synchrony import log
+from synchrony import app, log
 from BeautifulSoup import BeautifulSoup
 
 def parse(html, url):
@@ -8,26 +8,33 @@ def parse(html, url):
     
     domain = urlparse.urlparse(url).netloc
 
-    #append_text = '<script src="/static/js/iframe.js"></script>\n'
-    #append_text = ''
+    # Redefining XMLHttpRequest in the following file is not limited to the
+    # iframes' scope.
+    append_text = '<script src="/static/js/iframe.js"></script>\n'
 
     #appendage = BeautifulSoup(append_text)
 
     soup = BeautifulSoup(html)
 
-#    log('Requested %s (%s)' % (url, domain))
-
     request_endpoint = "/request/"
+    
+    elements = ["a", "link", "img", "audio", "video"]
+
+    # Determine whether to remove all <script> tags or process their src attrs
+    if "DISABLE_JAVASCRIPT" in app.config and app.config["DISABLE_JAVASCRIPT"]:
+        [_.extract() for _ in soup.findAll("script")]
+    else:
+        elements.append("script")
 
     # Known to omit some images such as the main one on uk.reuters.com
     # Also far slower than the previous implementation (it's simply doing more).
     def correct(soup, element):
         for _ in soup.findAll(element):
-            
+    
             if _.has_key("href"):
                 if _.has_key("license") and _['license'].lower() != "cc by":
                     log("Ignoring licensed object %s" % _['href'])
-                    _['href'] = ""
+                    del _['href']
                     continue
                 log("%s -> %s%s%s" % (str(_['href']), request_endpoint, domain, str(_['href'])), "debug")
                 if    _['href'].startswith('https'):  _['href'] = _['href'].replace("https://", request_endpoint)
@@ -38,7 +45,7 @@ def parse(html, url):
             elif _.has_key("src"):
                 if _.has_key("license") and _['license'].lower() != "cc by":
                     log("Ignoring licensed object %s" % _['src'])
-                    _['src'] = ""
+                    del _['src']
                     continue
                 log("%s -> %s%s%s" % (str(_['src']), request_endpoint, domain, str(_['src'])), "debug")
                 if    _['src'].startswith('https'):  _['src'] = _['src'].replace("https://", request_endpoint)
@@ -46,8 +53,7 @@ def parse(html, url):
                 elif  _['src'].startswith('/'):      _['src'] = '%s%s%s' % (request_endpoint, domain, _['src'])
                 else: _['src'] = '%s%s/%s' % (request_endpoint, domain, _['src'])
   
-
-    [correct(soup, element) for element in ["a", "link", "img", "script", "audio", "video"]]
+    [correct(soup, element) for element in elements]
 
     log('Should have cycled through urls by now.')
     # try:
