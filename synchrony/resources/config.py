@@ -19,7 +19,7 @@ def config_as_response():
 
 class ConfigCollection(restful.Resource):
     """
-    Implements /v1/config
+    Implements /v1/config - The requesting user must be able to "see_all".
     """
     def get(self):
         user = auth(session, required=True)
@@ -30,6 +30,12 @@ class ConfigCollection(restful.Resource):
         return config_as_response()
 
     def post(self):
+        """
+        Permits modification of app.config at runtime.
+        We use the "toggle_signups" privilege as a proxy for general permission.
+        It may be desirable to make the requirements more fine-grained in order
+        to really implement dynamic user groups.
+        """
         user = auth(session, required=True)
         if not user.can("toggle_signups"):
             return {}, 403
