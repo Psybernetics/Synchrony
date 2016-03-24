@@ -732,6 +732,7 @@ hr {
     background: url('/static/img/diagmonds.png');
     background-repeat: repeat;
     color: #222;
+    box-shadow: 0px 1px 4px #000;
 }
 .main {
     margin-right: auto;
@@ -863,11 +864,12 @@ a {
     position: absolute;
     margin: 48px 0px;
     width: 50%;
-    padding: 15px 0px;
+    padding: 15px 10px;
     background-color: rgba(255,255,255, 0.9);
     margin-left: 24%;
     border-bottom-left-radius: 10px;
     border-bottom-right-radius: 10px;
+    box-shadow: 0px 1px 0px #A1A1A1;
 }
 
 .index_overview a {
@@ -893,7 +895,7 @@ a {
 
 .privilege:hover {
     border: solid 1px #0084ff;
-    border-bottom: solid 3px #3C7FC7;
+    box-shadow: 0px 1px 1px #3C7FC7;
 }
 
 .index_overview > .table {
@@ -1005,4 +1007,58 @@ a {
 
 #number {
     width: 55px;
+}
+
+.modal {
+    padding: 10px;
+    background-color: rgba(240, 240, 240, 0.8);
+    font-family: Roboto;
+    width: 50%;
+    border-radius: 8px;
+    left: 50%;
+    top: 50%;
+    box-shadow: 0px 2px 4px #000;
+}
+
+.modal h2 {
+    margin: -2px;
+    padding: 0px;
+    font-family: Verdana;
+    font-weight: 100;
+    font-size: 1.3em;
+    color: #373737;
+    letter-spacing: 2px;
+    text-align: center;
+}
+
+.modal > .message-container {
+    height: 300px;
+    overflow: auto;
+    border-radius: 5px;
+    padding: 10px 0px 0px 5px;
+    margin: 2px -10px -10px -10px;
+    color: #BDD541;
+    font-family: Terminus;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+#message a {
+    color: #285777;
+}
+
+.modal #message {
+    font-family: Roboto;
+    padding: 5px;
+    margin: 0px 0px 0px -5px;
+    line-height: 30px;
+    border-radius: 2px;
+    color: #fff;
+    font-size: 0.9em;
+    background-color: #b1b1b1;
+}
+
+.close-button {
+    position: absolute;
+    top: -1px;
+    right: 10px;
 }

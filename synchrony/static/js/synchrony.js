@@ -522,6 +522,56 @@ function Friends(){
     }
 }
 
+function modal(messages){
+
+    // Place <div class="modal"></div> in the DOM if necessary
+    var modal = document.getElementsByClassName("modal");
+    if (!modal.length){
+        $("body").append('<div class="modal"></div>');
+    }
+
+    if (!$.isArray(messages)) {
+        messages = Array(messages);
+    }
+
+    // Combine with any existing messages
+    if (App.Views.modal) {
+        var existing = App.Views.modal.get("messages");
+        existing = existing.reverse();
+        messages = existing.concat(messages);
+    }
+    
+    messages = messages.reverse();
+
+    messages = {"messages": messages};
+
+    Ractive.load({
+        modal: 'modal.tmpl'
+    }).then(function(components){
+        App.Views['modal'] = new components.modal({
+            el: $('.modal'),
+            data: messages
+        });
+    
+        $('.modal').draggable();
+   
+        App.Views.modal.on({
+            close: function(event, thing){
+                event.original.preventDefault();
+                console.log(thing);
+                if (thing == "modal"){
+                    $(".modal").remove();
+                } else if (typeof thing == "number"){
+                    var messages = App.Views.modal.get("messages");
+                    console.log(messages);
+                    messages.splice(thing, 1);
+                    App.Views.modal.set({"messages": messages});
+                }
+            }
+        });
+    });
+}
+
 function indexView(page){
     document.title = "Welcome" + App.title;
     Ractive.load({
@@ -588,7 +638,7 @@ function indexView(page){
             forward: function(event){
                 populate_revision_table(this.revisions.links.next);
             },
-            back:    function(event){
+            back: function(event){
                 var url = this.revisions.links.self.split('page=');
                 var page = url[1] - 1;
                 populate_revision_table(url[0] + 'page=' + page);
