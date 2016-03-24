@@ -1003,3 +1003,6 @@ a {
     cursor: pointer;
 }
 
+#number {
+    width: 55px;
+}

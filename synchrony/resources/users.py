@@ -84,29 +84,6 @@ class UserCollection(restful.Resource):
         session['session'] = s.session_id
         return s.jsonify()
 
-    def post(self):
-        """
-        Modify system behavior in relation to user accounts.
-
-        This method is responsible for toggling the PERMIT_NEW_USER_ACCOUNTS
-        option during runtime.
-
-        This method may also be responsible for toggling OPEN_PROXY during
-        runtime...
-        """
-        user = auth(session, required=True)
-        
-        parser = reqparse.RequestParser()
-        parser.add_argument("signups",    type=bool, default=None)
-        parser.add_argument("open_proxy", type=bool, default=None)
-        args = parser.parse_args()
-
-        if args.signups != None:
-            if not user.can("toggle_signups"):
-                return {}, 403
-            app.config["PERMIT_NEW_ACCOUNTS"] = args.signups
-            return app.config["PERMIT_NEW_ACCOUNTS"]
-
 class UserResource(restful.Resource):
     """
     Implements /v1/user/:username

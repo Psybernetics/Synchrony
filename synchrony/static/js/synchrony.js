@@ -1769,13 +1769,6 @@ function settingsView() {
         // to determine which sections to display and whether to just navigate
         // away from the view.
         $.when(
-            $.get("/v1/users?signups=1", function(response){
-                if (response == true) {
-                    App.Views.settings.set({signups_allow: true});
-                } else {
-                    App.Views.settings.set({signups_deny: true});
-                }
-            }),
             $.get('/v1/users/' + App.Config.user.username + '?can=toggle_signups',
             function(response){
                 App.Views.settings.set("toggle_signups_permitted", response);
@@ -1791,6 +1784,23 @@ function settingsView() {
             $.get('/v1/users/' + App.Config.user.username + '?can=review_downloads',
             function(response){
                 App.Views.settings.set("downloads_permitted", response);
+            }),
+            $.get('/v1/config', function(response){
+                if ("PERMIT_NEW_ACCOUNTS" in response) {
+                    App.Views.settings.set({allow_signups: response.PERMIT_NEW_ACCOUNTS});
+                }
+                if ("OPEN_PROXY" in response) {
+                    App.Views.settings.set({open_proxy: response.OPEN_PROXY});
+                }
+                if ("HTTP_TIMEOUT" in response) {
+                    App.Views.settings.set({http_timeout: response.HTTP_TIMEOUT});
+                }
+                if ("NO_PRISONERS" in response) {
+                    App.Views.settings.set({no_prisoners: response.NO_PRISONERS});
+                }
+                if ("DISABLE_JAVASCRIPT" in response) {
+                    App.Views.settings.set({disable_javascript: response.DISABLE_JAVASCRIPT});
+                }
             })
         ).done(function(){
             // Navigate away from the view if neither section is permitted
@@ -1804,14 +1814,14 @@ function settingsView() {
         App.Views.settings.set("accounts_button", "Show");
         App.Views.settings.set("groups_button",   "Show");
         App.Views.settings.set("networks_button", "Show");
-        App.Views.settings.set("open_button",     "Show");
+        App.Views.settings.set("misc_button",     "Show");
 
         // Closes the sections if we left some open previously
         App.Views.settings.set("showing_accounts",  undefined);
         App.Views.settings.set("showing_groups",    undefined);
         App.Views.settings.set("showing_networks",  undefined);
         App.Views.settings.set("showing_downloads", undefined);
-        App.Views.settings.set("showing_open",      undefined);
+        App.Views.settings.set("showing_misc",      undefined);
 
         populate_table(App.Views.settings, "accounts",  "/v1/users");
         populate_table(App.Views.settings, "groups"  ,  "/v1/groups");
@@ -1881,31 +1891,19 @@ function settingsView() {
             toggle_signups: function(event, permit){
                 if (permit) {
                     $.ajax({
-                        url: "/v1/users",
+                        url: "/v1/config",
                         type: "POST",
-                        data: {signups: true},
-                        success: function(response){
-                            App.Views.settings.set({signups_allow: true});
-                            App.Views.settings.set({signups_deny: null});
-                         },
-                        error:   function(response){
-                            App.Views.settings.set({signups_allow: true});
-                            App.Views.settings.set({signups_deny: null});
-                         }
+                        data: {"PERMIT_NEW_ACCOUNTS": true},
+                        success: function(response){ App.Views.settings.set({allow_signups: true}); },
+                        error: function(response){ App.Views.settings.set({allow_signups: false}); }
                     });
                } else {
                     $.ajax({
-                        url: "/v1/users",
+                        url: "/v1/config",
                         type: "POST",
-                        data: {signups: null},
-                        success: function(response){
-                            App.Views.settings.set({signups_allow: null});
-                            App.Views.settings.set({signups_deny: true});
-                         },
-                        error:   function(response){
-                            App.Views.settings.set({signups_allow: true});
-                            App.Views.settings.set({signups_deny: null});
-                         }
+                        data: {"PERMIT_NEW_ACCOUNTS": null},
+                        success: function(response){ App.Views.settings.set({allow_signups: null}); },
+                        error: function(response){ App.Views.settings.set({allow_signups: true}); }
                     });
                  }
             },
@@ -1970,6 +1968,80 @@ function settingsView() {
                         App.Views.settings.set("decrement_error", m);
                     },
                 });
+            },
+            toggle_open_proxy: function(event, open){
+                if (open) {
+                    $.ajax({
+                        url: "/v1/config",
+                        type: "POST",
+                        data: {"OPEN_PROXY": true},
+                        success: function(response){ App.Views.settings.set({open_proxy: true}); },
+                        error: function(response){ App.Views.settings.set({open_proxy: null}); }
+                    });
+               } else {
+                    $.ajax({
+                        url: "/v1/config",
+                        type: "POST",
+                        data: {"OPEN_PROXY": null},
+                        success: function(response){ App.Views.settings.set({open_proxy: null}); },
+                        error: function(response){   App.Views.settings.set({open_proy: true}); }
+                    });
+                 }
+            },
+            set_http_timeout: function(event){
+                event.original.preventDefault();
+                var timeout = App.Views.settings.get("http_timeout");
+                $.ajax({
+                    url: "/v1/config",
+                    type: "POST",
+                    data: {"HTTP_TIMEOUT": timeout},
+                    success: function(response){ 
+                        if ("HTTP_TIMEOUT" in response){
+                            App.Views.settings.set({http_timeout: response.HTTP_TIMEOUT});
+                        }
+                    },
+                    error: function(response){
+                        console.log(response);
+                    }
+                });
+            },
+            toggle_no_prisoners: function(event, prisoners){
+                if (prisoners) {
+                    $.ajax({
+                        url: "/v1/config",
+                        type: "POST",
+                        data: {"NO_PRISONERS": true},
+                        success: function(response){ App.Views.settings.set({no_prisoners: true}); },
+                        error: function(response){ App.Views.settings.set({no_prisoners: null}); }
+                    });
+               } else {
+                    $.ajax({
+                        url: "/v1/config",
+                        type: "POST",
+                        data: {"NO_PRISONERS": null},
+                        success: function(response){ App.Views.settings.set({no_prisoners: null}); },
+                        error: function(response){   App.Views.settings.set({no_prisoners: true}); }
+                    });
+                 }
+            },
+            toggle_javascript: function(event, enabled){
+                if (enabled) { // Note the logical inversion with this one.
+                    $.ajax({
+                        url: "/v1/config",
+                        type: "POST",
+                        data: {"DISABLE_JAVASCRIPT": null},
+                        success: function(response){ App.Views.settings.set({disable_javascript: null}); },
+                        error: function(response){ App.Views.settings.set({disable_javascript: true}); }
+                    });
+               } else {
+                    $.ajax({
+                        url: "/v1/config",
+                        type: "POST",
+                        data: {"DISABLE_JAVASCRIPT": true},
+                        success: function(response){ App.Views.settings.set({disable_javascript: true}); },
+                        error: function(response){   App.Views.settings.set({disable_javascript: null}); }
+                    });
+                 }
             },
        });
     });
