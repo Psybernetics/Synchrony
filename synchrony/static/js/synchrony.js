@@ -532,7 +532,6 @@ function modal(messages){
 
     if (!$.isArray(messages)) {
         messages = Array(messages);
-        console.log(messages);
     }
 
     // Combine with any existing messages

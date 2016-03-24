@@ -3,7 +3,7 @@
 <div class="message-container">
     {{#messages}}
     <span id="message">
-        {{this}}
+        {{&this}}
         <button class="clickable button big_button" on-click="close:{{@index}}">&times;</button>
     </span>
     <br />
