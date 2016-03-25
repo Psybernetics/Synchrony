@@ -107,6 +107,12 @@ App.Router = Backbone.Router.extend({
         }
     },
     after: function() {
+        if ($('.iframe').contents().find("body").html() != ""){
+            $('.main').addClass("drop_shadow");
+        } else {
+            $('.main').removeClass("drop_shadow");
+        }
+        
         if (location.hash != '') {
             $('.main').removeClass("main_background");
         }
@@ -1429,7 +1435,6 @@ Ractive.load({
             friends:     App.Friends,
             edit_button: "Edit"
         },
-        adaptor: ['Backbone'],
     });
 
     App.Views.synchrony.set("showing_friends", false);
@@ -1459,9 +1464,19 @@ Ractive.load({
                 }
            });
         },
-        settings:  function(event){ window.location.hash = "#settings"; },
+        settings: function(event){
+            if (!$('.main').is(':visible')) {
+                toggleMain();
+            }
+            window.location.hash = "#settings";
+        },
         show_hide: function(event){ toggleMain(); },
-        chat:      function(event){ window.location.hash = "#chat"; },
+        chat: function(event){
+            if (!$('.main').is(':visible')) {
+                toggleMain();
+            }
+            window.location.hash = "#chat";
+        },
         friends:   function(event){
             var showing_friends = App.Views.synchrony.get("showing_friends");
             App.Views.synchrony.set("showing_friends", !showing_friends);

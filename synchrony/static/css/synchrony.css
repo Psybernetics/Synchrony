@@ -767,6 +767,11 @@ hr {
 	font-family: 'Roboto';
 	font-size: 14px
 }
+
+.drop_shadow {
+    box-shadow: 0px 1px 2px #797979;
+}
+
 .main_inner {
     color: #D7D8D5;
     margin: 0 auto;
@@ -978,6 +983,7 @@ a {
 
 .network_heading_container {
     margin: 0 0 20px 0;
+    padding-top: 20px;
 }
 
 .network_heading {
@@ -1077,6 +1083,7 @@ a {
     font-size: 0.9em;
     background-color: #b1b1b1;
 }
+
 
 .close-button {
     position: absolute;
