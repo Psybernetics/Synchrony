@@ -1070,7 +1070,8 @@ a {
 }
 
 #message a {
-    color: #285777;
+/*    color: #285777; */
+    color: #0A2B42;
 }
 
 .modal #message {

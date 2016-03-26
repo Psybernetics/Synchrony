@@ -34,11 +34,11 @@ def parse(html, url):
                     log("Ignoring licensed object %s" % _['href'])
                     del _['href']
                     continue
-                log("%s -> %s%s%s" % (str(_['href']), request_endpoint, domain, str(_['href'])), "debug")
+                log("%s -> %s%s%s" % (unicode(_['href']), request_endpoint, domain, unicode(_['href'])), "debug")
                 if    _['href'].startswith('https'):  _['href'] = _['href'].replace("https://", request_endpoint)
                 elif  _['href'].startswith('http'):   _['href'] = _['href'].replace("http://",  request_endpoint)
                 elif  _['href'].startswith('/'):      _['href'] = '%s%s%s' % (request_endpoint, domain, _['href'])
-                else: _['href'] = '%s%s/%s' % (request_endpoint, domain, _['href'])
+                else: _['href'] = '%s%s/%s' % (request_endpoint, domain, _['href'].encode("utf-8", "ignore"))
 
             elif _.has_key("src"):
                 if _.has_key("license") and _['license'].lower() != "cc by":
