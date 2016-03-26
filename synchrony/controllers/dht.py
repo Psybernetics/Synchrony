@@ -668,11 +668,6 @@ class SynchronyProtocol(object):
                 continue
 
             nearest = self.router.find_neighbours(node)
-            if len(nearest) == 0:
-                log("There are no neighbours to help us add users on %s as friends." % \
-                    node_id)
-                return False, None
-
             spider  = NodeSpider(self, node, nearest, self.ksize, self.router.alpha)
             nodes   = spider.find()
             node    = None
@@ -682,14 +677,18 @@ class SynchronyProtocol(object):
                     if str(_.long_id) == node_id:
                         node = _
 
-            # Sometimes spidering doesn't get us all the way there.
             # Check who we already know:
             if node == None and long(node_id) != self.router.node.long_id:
                 nodes = [n for n in self.router if str(n.long_id) == node_id]
-                if len(nodes) != 1:
+                if not len(nodes) >= 1:
                     log("Node %s not found via spidering." % node_id, "warning")
-                    return False, None
-                node = nodes[0]
+                else:
+                    node = nodes[0]
+
+            if node == None and len(nearest) == 0:
+                log("There are no neighbours to help us add users on %s as friends." % \
+                    node_id)
+                return False, None
 
             log("Found remote instance %s." % node)
 
@@ -1061,14 +1060,16 @@ class SynchronyProtocol(object):
         if not data['to'].count("/") == 2 or not data['from'].count("/") == 2:
             return
 
-        network, node_id, local_uid = data['to'].split("/")
+        _, remote_node_id, __ = data['from'].split("/")
         
         # Verify the node ID in the "from" field.
         _node_id = str(node.long_id)
-        if _node_id != node_id:
-            log("%s with node ID %s is claming to have node ID %s." % \
+        if _node_id != remote_node_id:
+            log("%s with node ID %s is claiming to have node ID %s." % \
                 (node, _node_id, node_id), "warning")
             return
+
+        network, node_id, local_uid = data['to'].split("/")
 
         user = User.query.filter(User.uid == local_uid).first()
         if not user:
@@ -2022,11 +2023,11 @@ class NodeHeap(object):
                 heapq.heappush(nheap, (distance, node))
         self.heap = nheap
 
-    def get_node_by_id(self, id):
+    def get_node_by_id(self, id, default=Node):
         for _, node in self.heap:
             if node.id == id:
                 return node
-        return Node
+        return default
 
     def all_been_contacted(self):
 #        return [n.id for n in self]
@@ -2430,14 +2431,15 @@ class Spider(object):
     Crawl the network and look for given 160-bit keys.
     """
     def __init__(self, protocol, node, peers, ksize, alpha):
-        self.protocol = protocol
-        self.ksize    = ksize
-        self.alpha    = alpha
-        self.node     = node
-        self.nearest  = NodeHeap(self.node, self.ksize)
+        self.protocol   = protocol
+        self.ksize      = ksize
+        self.alpha      = alpha
+        self.node       = node
+        self.nearest    = NodeHeap(self.node, self.ksize)
         self.last_crawled = [] # IDs
 #        log("Creating spider with peers: %s" % peers)
         self.nearest.push(peers)
+        self.iter_count = 0
 
     def _find(self, rpcmethod):
         """
@@ -2452,7 +2454,16 @@ class Spider(object):
              yet queried.
           4. Repeat, unless nearest list has all been queried, then you're done.
         """
+        self.iter_count += 1
+        if self.iter_count >= 50:
+            return []
+
         self.nearest.purify()
+        if self.iter_count > 2 and not len(self.nearest):
+            return []
+        node = self.nearest.get_node_by_id(self.node.id, None)
+        if node != None:
+            return node
         log("Crawling with nearest: %s" % self.nearest)
         count = self.alpha
         if self.nearest.get_ids() == self.last_crawled:
