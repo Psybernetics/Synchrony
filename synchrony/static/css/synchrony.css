@@ -610,13 +610,34 @@ input.switch:empty ~ label:after
 	border-radius: 4px;
 	padding: 17px;
 	outline: none;
-//	background-color: #3C3C3C;
+/*	background-color: #3C3C3C; */
 	background-color: rgba(60, 60, 60, 0.91);
 /*	color: #FFEEC3; */
 	color: #F5F3ED;
 	position: absolute;
 	top: 15px;
 	left: 100px;
+}
+
+.control_panel > .invite {
+/*    padding-top: 35px; */
+    position: absolute;
+    bottom: -1px;
+    left: 0px;
+}
+
+.friends_list_mode > .invite {
+    left: 15px;
+}
+
+.control_panel > .invite input {
+    border: none;
+    outline: none;
+/*    background-color: rgba(255, 255, 255, 0.85); */
+    background-color: rgba(192, 192, 192, 0);
+    padding: 3px;
+    border-radius: 2px;
+    width: 335px;
 }
 
 .expanded {
@@ -746,6 +767,11 @@ hr {
 	font-family: 'Roboto';
 	font-size: 14px
 }
+
+.drop_shadow {
+    box-shadow: 0px 1px 2px #797979;
+}
+
 .main_inner {
     color: #D7D8D5;
     margin: 0 auto;
@@ -957,6 +983,7 @@ a {
 
 .network_heading_container {
     margin: 0 0 20px 0;
+    padding-top: 20px;
 }
 
 .network_heading {
@@ -1043,7 +1070,8 @@ a {
 }
 
 #message a {
-    color: #285777;
+/*    color: #285777; */
+    color: #0A2B42;
 }
 
 .modal #message {
@@ -1056,6 +1084,7 @@ a {
     font-size: 0.9em;
     background-color: #b1b1b1;
 }
+
 
 .close-button {
     position: absolute;

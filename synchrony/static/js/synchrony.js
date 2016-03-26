@@ -107,6 +107,12 @@ App.Router = Backbone.Router.extend({
         }
     },
     after: function() {
+        if ($('.iframe').contents().find("body").html() != ""){
+            $('.main').addClass("drop_shadow");
+        } else {
+            $('.main').removeClass("drop_shadow");
+        }
+        
         if (location.hash != '') {
             $('.main').removeClass("main_background");
         }
@@ -233,9 +239,11 @@ function update_synchrony(){
     if ($('.iframe').contents().find("body").html() != "") {
         App.Views.synchrony.set("showing_edit_button", true);
         App.Views.synchrony.set("showing_hide_button", true);
+        App.Views.synchrony.set("showing_invite_form", true);
     } else {
         App.Views.synchrony.set("showing_edit_button", false);
         App.Views.synchrony.set("showing_hide_button", false);
+        App.Views.synchrony.set("showing_invite_form", false);
     }
     
     if (location.hash.split('/')[0] != '#' && location.hash.split('/')[0] != '') {
@@ -1429,7 +1437,6 @@ Ractive.load({
             friends:     App.Friends,
             edit_button: "Edit"
         },
-        adaptor: ['Backbone'],
     });
 
     App.Views.synchrony.set("showing_friends", false);
@@ -1445,8 +1452,8 @@ Ractive.load({
 
     App.Views.synchrony.on({
         request: request, // Globally available request function
-        edit:    toggle_editing,
-        save:    function(event){
+        edit: toggle_editing,
+        save: function(event){
             $.ajax({
                 url: "/v1/revisions/" + App.current_hash,
                 type: "PUT",
@@ -1459,10 +1466,54 @@ Ractive.load({
                 }
            });
         },
-        settings:  function(event){ window.location.hash = "#settings"; },
+        settings: function(event){
+            if (!$('.main').is(':visible')) {
+                toggleMain();
+            }
+            window.location.hash = "#settings";
+        },
         show_hide: function(event){ toggleMain(); },
-        chat:      function(event){ window.location.hash = "#chat"; },
-        friends:   function(event){
+        chat: function(event){
+            if (!$('.main').is(':visible')) {
+                toggleMain();
+            }
+            window.location.hash = "#chat";
+        },
+        invite: function(event){
+            if (event.original.keyCode != 13){
+                return;
+            }
+            event.original.preventDefault();
+            var addr = App.Views.synchrony.get("invite_addr");
+            var count  = (addr.match(/\//g) || []).length;
+            if (count != 2) {
+                // TODO: Consider i18n:
+                modal("That field's for inviting remote addresses to edit with you.");
+                App.Views.synchrony.set("invite_addr", "");
+                return;
+            }
+            // An async friends request first
+            $.ajax({
+                url: "/v1/users/" + App.Config.user.username + "/friends" ,
+                type: "PUT",
+                data: {address: addr},
+                success: function(response){ console.log(response); },
+                error:   function(response){ console.log(response); }
+            });
+            
+            var url = App.history[App.history.length - 1];
+            if (!App.editor){
+                renderError("No editor found.");
+            }
+            if (!App.editor.socket){
+                App.editor.connect();
+            }
+
+            // Send the invitation to edit via App.Friends.stream
+            App.Friends.send_edit_invite(addr, url);
+            App.Views.synchrony.set("invite_addr", "");
+        },
+        friends: function(event){
             var showing_friends = App.Views.synchrony.get("showing_friends");
             App.Views.synchrony.set("showing_friends", !showing_friends);
             if (!showing_friends) {
