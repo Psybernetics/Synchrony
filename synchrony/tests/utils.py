@@ -453,17 +453,14 @@ class TestProtocol(dht.SynchronyProtocol):
 
         if peer == None:
             peer = Peer()
-            peer.ip      = node.ip
-            peer.port    = node.port
-            peer.pubkey  = node.pubkey
+            peer.load_node(node)
             peer.network = network
 
         friend          = Friend(address=from_addr)
         friend.state    = 1
         friend.received = True
-        friend.ip       = node.ip
-        friend.port     = node.port
-        
+        # TODO: Make this correspond to the existing rpc_friend method.
+
         user.friends.append(friend)
         peer.friends.append(friend)
 

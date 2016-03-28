@@ -14,7 +14,7 @@
  original paper you may want to take a couple of days to really grok it,
  hopefully it won't take that long because you have this software.
 
- These modules make it as easy as possible to participate in multiple networks.
+ These classes make it as easy as possible to participate in multiple networks.
  Telling peers you have data and obtaining data from peers looks like this:
 
     routes[url] = revision
@@ -25,6 +25,9 @@
     app.routes._default[url] = revision
     revision = app.routes._default[url]
 
+ This file is also responsible for distributed trust computation, signalling
+ which nodes are liable to serve illegal and/or malicious material without
+ having to interact with them.
 
 TODO/NOTES:
  Make revision selection strategies plug-and-play.
@@ -48,7 +51,6 @@ TODO/NOTES:
 
 
  Tit-for-tat: Forget peers who don't want to share well.
- A list of trusted peers (s/kademlia / trust managers for individual peers)
 
  React to a None return value in protocol.fetch_revision?
 
@@ -66,10 +68,9 @@ TODO/NOTES:
  /v1/peers/revisions/<string:hash> (direct download of public resources incl. binaries)
  use Content-Disposition: inline; filename="" to give a file its known name.
 
- Permit retrieval of files to start at an offset given (fsize / online_sufferers)
+ Permit retrieval of files to start at an offset given (fsize / len(serving_peers))
  > user visits example.com/picture.png and transmits the hash_1 made of the
    content
- > divides the pieces, hashes those and stores them as an association to hash-1
  > user transmits they have hash-1 based on example.com/picture.png
  > user may omit the domain from the url field, where peers with knowledge of 
    users' pubkey can pick up the broadcast, enabling user to multicast her own
@@ -78,9 +79,9 @@ TODO/NOTES:
  Getting online video with a little help from our peers:
  > perform FIND for the content hash of a hypermedia object such as video or
    geometry.
- > initiate a request to the highest ranking peer of the resulting set R to
-   obtain the size of the object.
- > divide file size between the cardinality of R.
+ > initiate a request to the highest ranking peer of resulting set R to
+   obtain the size of the object, dividing file size between the cardinality
+   of R.
  > initiate requests to the remaining members of R indicating you would like
    the specified number of bytes beginning at the specified byte.
 
@@ -147,7 +148,7 @@ from synchrony.controllers import utils
 from binascii import hexlify, unhexlify
 from itertools import takewhile, imap, izip
 from collections import OrderedDict, Counter
-from synchrony.models import Revision, User, Friend, Network, Peer
+from synchrony.models import Revision, User, Network, Pubkey, Peer, Friend
 from synchrony.streams.utils import change_channel, check_availability, broadcast
 
 try:
@@ -331,6 +332,8 @@ class RoutingTable(object):
                     ).first()
             if not peer:
                 peer = Peer()
+            # load_node will create a row for this nodes' public key if one
+            # doesn't already exist.
             peer.load_node(node)
             network.peers.append(peer)
             db.session.add(peer)
@@ -924,22 +927,19 @@ class SynchronyProtocol(object):
 
                 if peer == None:
                     peer = Peer()
-                    peer.ip      = node.ip
-                    peer.port    = node.port
-                    peer.pubkey  = node.pubkey
+                    peer.load_node(node)
                     peer.network = network
 
                 friend          = Friend(address=from_addr)
                 friend.state    = 1
                 friend.received = True
-                friend.ip       = node.ip
-                friend.port     = node.port
                 
                 user.friends.append(friend)
-                peer.friends.append(friend)
+                peer.pubkey.friends.append(friend)
 
                 db.session.add(user)
                 db.session.add(peer)
+                db.session.add(peer.pubkey)
                 db.session.add(friend)
                 db.session.add(network)
                 db.session.commit()
@@ -1365,7 +1365,7 @@ class SynchronyProtocol(object):
         node          = Node(*data['node'], pubkey=data['pubkey'], router=self.router)
         existing_node = self.router.get_existing_node(node)
         if existing_node:
-            existing_node.last_seen = time.time()
+            existing_node.update_seen()
             return existing_node
         elif node != self.source_node:
             self.router.add_contact(node)
@@ -1953,6 +1953,31 @@ class Node(object):
         self.long_id   = long(id.encode('hex'), 16) 
         self.name      = str(self.long_id)
 
+    def update_seen(self):
+        """
+        Through persisting this to the database we can infer which node
+        to visit when a Friends' pubkey is associated with multiple peers.
+        """
+        self.last_seen = time.time()
+        if not self.router: return
+        
+        network = Network.query.filter(
+                    Network.name == self.router.network
+                  ).first()
+
+        if network:
+            peer = Peer.query.filter(
+                            and_(Peer.network == network,
+                                 Peer.ip      == self.ip,
+                                 Peer.port    == self.port)
+                        ).first()
+            if peer:
+                peer.load_node(self)
+            else:
+                peer = Peer().load_node(self)
+                db.session.add(peer)
+            db.session.commit()
+
     def same_home(self, node):
         return self.ip == node.ip and self.port == node.port
 
@@ -2459,7 +2484,7 @@ class Spider(object):
             return []
 
         self.nearest.purify()
-        if self.iter_count > 2 and not len(self.nearest):
+        if self.iter_count > 1 and not len(self.nearest):
             return []
         node = self.nearest.get_node_by_id(self.node.id, None)
         if node != None:
@@ -2495,6 +2520,7 @@ class NodeSpider(Spider):
         Handle an iteration of _find.
         """
         to_remove = []
+        # Use RPCFindResponse to validate signatures and filter available peers
         for peer_id, response, in responses.items():
             response = RPCFindResponse(self, response)
             if not response.happened:

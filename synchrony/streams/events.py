@@ -131,7 +131,12 @@ class EventStream(Stream):
                     data['type'] = "init"
                     data['body'] = ""
 
-                    resp = router.protocol.rpc_chat((friend.ip, friend.port), data)
+                    peer_node = friend.most_recent_peer_node
+                    if not peer_node:
+                        log("No peer node associated with %s." % friend, "error")
+                        return
+
+                    resp = router.protocol.rpc_chat((peer_node.ip, peer_node.port), data)
                     if resp and "state" in resp and resp['state'] == "delivered":
                         self.emit("rpc_chat_init", resp)
 
@@ -242,7 +247,12 @@ class EventStream(Stream):
                 data['type'] = "message"
                 data['body'] = msg
 
-                resp = router.protocol.rpc_chat((friend.ip, friend.port), data)
+                peer_node = friend.most_recent_peer_node
+                if not peer_node:
+                    log("No peer node associated with %s." % friend, "error")
+                    return
+
+                resp = router.protocol.rpc_chat((peer_node.ip, peer_node.port), data)
                 if resp:
                     self.emit("privmsg", body)
                 return
