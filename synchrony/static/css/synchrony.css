@@ -342,6 +342,7 @@ label { display: inline-block; }
     overflow: auto;
     display: inline-block;
     height: 350px;
+    width: 100%;
 }
 
 .rename-input {
@@ -794,6 +795,7 @@ hr {
     font-size: 2.4em;
     letter-spacing: 1px;
     font-weight: 600;
+    /*font-family: Roboto; */
     font-family: Verdana;
 }
 
@@ -906,8 +908,14 @@ a {
     color: #222;
 }
 
-.privileges {
+.current-privileges {
+    background-color: #c5c5c5;
+}
+
+.available-privileges {
     width: 50%;
+    padding-top: 50px;
+    padding-left: 20px;
 }
 
 .privilege {

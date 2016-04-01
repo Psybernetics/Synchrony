@@ -85,7 +85,7 @@ class Resource(db.Model):
 class Revision(db.Model):
     """
     A revision maps to a path on a domain at some point in time, or is an edit.
-    Edits may come from local users or select peers.
+    Edits may come from local users or remote friends.
     """
     __tablename__ = "revisions"
     id            = db.Column(db.Integer(), primary_key=True)
@@ -622,12 +622,10 @@ class Network(db.Model):
 
 class Pubkey(db.Model):
     """
-    Represents a public key used by peer nodes.
-
-    This is so a users friends list may be maintained across roaming peers.
-    We can ask mobile peers if they can sign simple data using the public key
-    associated with them, implying that friends we've already associated with
-    the public key may also reside as user accounts on new remote peers.
+    We track public keys instead of specific remote nodes so people can move
+    their private keys from device to device or network to network like with
+    the cellular internet system and still be generally contactable as part of
+    our friends list.
     """
     __tablename__ = "pubkeys"
     id        = db.Column(db.Integer(), primary_key=True)

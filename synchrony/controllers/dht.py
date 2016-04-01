@@ -554,7 +554,7 @@ class SynchronyProtocol(object):
         eavesdropping party intercepts the introduction of two peers to one
         another and replaces their keys with a new pair of public keys,
         deciphering communications in-transit and re-encrypting with the peers'
-         real public keys on rebroadcast.
+        real public keys on rebroadcast.
 
         This is best evaded by sharing your public key separately ahead of time.
         
@@ -1973,10 +1973,7 @@ class Node(object):
                         ).first()
             if peer:
                 peer.load_node(self)
-            else:
-                peer = Peer().load_node(self)
-                db.session.add(peer)
-            db.session.commit()
+                db.session.commit()
 
     def same_home(self, node):
         return self.ip == node.ip and self.port == node.port
