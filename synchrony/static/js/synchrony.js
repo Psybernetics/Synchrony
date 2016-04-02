@@ -1266,7 +1266,139 @@ function groupView(name, params){
             next = r.links.next;
             console.log(privileges);
         }
+        
         App.Views.grouppage.set("privileges", privileges);
+        
+        // Make privs draggable
+        function dragMoveListener (event) {
+            var target = event.target,
+                // keep the dragged position in the data-x/data-y attributes
+                x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx,
+                y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+            // translate the element
+            target.style.webkitTransform =
+            target.style.transform =
+              'translate(' + x + 'px, ' + y + 'px)';
+
+            target.setAttribute('data-x', x);
+            target.setAttribute('data-y', y);
+        }
+        
+        interact('.draggable').draggable({
+            inertia: false,
+            restrict: {
+                restriction: ".privileges-container",
+                endOnly: true,
+                elementRect: { top: 0, left: 0, bottom: 1, right: 1 }
+            },
+            autoScroll: true,
+
+            // call this function on every dragmove event
+            onmove: dragMoveListener,
+            // call this function on every dragend event
+            onend: function (event) {
+                var textEl = event.target.querySelector('p');
+
+                textEl && (textEl.textContent =
+                'moved a distance of '
+                + (Math.sqrt(event.dx * event.dx +
+                             event.dy * event.dy)|0) + 'px');
+            }
+        });
+
+        interact('.available-privileges').dropzone({
+            // only accept elements matching this CSS selector
+            accept: '.draggable',
+            // Require a 75% element overlap for a drop to be possible
+            overlap: 0.75,
+
+            ondropactivate: function(event) {},
+            ondragenter: function(event) {},
+            ondragleave: function(event) {
+                // remove the drop feedback style
+                console.log("leave", event);
+                if (event.target.className.indexOf("current-privileges") != -1) {
+                    console.log("1Removing ",event.relatedTarget.outerText,"from",name);
+                }
+            },
+            ondrop: function(event) {},
+            ondropdeactivate: function (event) {
+                if (event.relatedTarget.offsetParent.className == "available-privileges") {
+                    return;
+                }
+                if (event.target.className == "current-privileges" &&
+                    event.relatedTarget.parentElement.className == "available-privileges") {
+                    return;
+                }
+
+                console.log(event);
+                if (event.target.className.indexOf("available-privileges") -1) {
+                    console.log("Removing",event.relatedTarget.innerText,"from",name);
+                    var priv = event.relatedTarget.innerText;
+                    var privileges = App.Views.grouppage.get("group.privileges");
+                    $.ajax({
+                        url: "/v1/groups/" + name,
+                        type: "POST",
+                        data: {detach: priv},
+                        success: function(response){
+                            console.log(response);
+                            for (var i = 0; i <= privileges.length; i++) {
+                                if (privileges[i].key == priv) {
+                                    privileges.splice(i, 1);
+                                }
+                            }
+                            App.Views.grouppage.set("group.privileges", privileges); 
+                            console.table(privileges);
+                        }
+                    });
+                }
+            }
+        });
+
+        interact('.current-privileges').dropzone({
+            // only accept elements matching this CSS selector
+            accept: '.draggable',
+            // Require a 75% element overlap for a drop to be possible
+            overlap: 0.75,
+            ondropactivate: function(event) {},
+            ondragenter: function(event) {},
+            ondragleave: function(event) {
+                console.log("leave", event);
+                if (event.target.className.indexOf("available-privileges") != -1) {
+                    console.log("Removing",event.relatedTarget.outerText,"from",name);
+                }
+            },
+            ondrop: function(event) {},
+            ondropdeactivate: function (event) {
+                if (event.relatedTarget.offsetParent.className == "current-privileges") {
+                    return;
+                }
+                console.log(event);
+                if (event.target.className.indexOf("current-privileges") -1) {
+                    console.log("Moving",event.relatedTarget.innerText,"to",name);
+                    var priv = {key: event.relatedTarget.innerText, value: null}
+                    var privileges = App.Views.grouppage.get("group.privileges");
+                    var j = _.filter(privileges, function(p){
+                        if (p.key == priv.key) {return true;}
+                    });
+                    // return if the privilege is already attached to the group
+                    if (j.length) { return; }
+                    $.ajax({
+                        url: "/v1/groups/" + name,
+                        type: "POST",
+                        data: {attach: priv.key},
+                        success: function(response){
+                            console.log(response);
+                            // Otherwise append it to current-privileges
+                            privileges.push(priv);
+                            App.Views.grouppage.set("group.privileges", privileges); 
+                            console.table(privileges);
+                        }
+                    });
+                }
+            }
+        });
 
         App.Views.grouppage.on({
             select:  function(event, type, index){
@@ -2017,6 +2149,7 @@ function settingsView() {
                         type: "PUT",
                         data: {"name": name},
                         success: function(response){
+                            response.created = timeStamp(response.created);
                             var groups = App.Views.settings.get("groups");
                             groups.push(response)
                             var groups = upDate(groups);

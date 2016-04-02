@@ -5,6 +5,7 @@ import magic
 import bcrypt
 import gevent
 import hashlib
+import datetime
 from io import BytesIO
 from sqlalchemy import and_
 from synchrony import log, db
@@ -84,7 +85,7 @@ class Resource(db.Model):
 class Revision(db.Model):
     """
     A revision maps to a path on a domain at some point in time, or is an edit.
-    Edits may come from local users or select peers.
+    Edits may come from local users or remote friends.
     """
     __tablename__ = "revisions"
     id            = db.Column(db.Integer(), primary_key=True)
@@ -358,7 +359,7 @@ class User(db.Model):
     uid           = db.Column(db.String(),  default=uid(short_id=True)) # jk2NTk2NTQzNA @ 1126832256713749902797130149365664841530600157134
     username      = db.Column(db.String())
     password      = db.Column(db.String())
-    avatar        = db.relationship("Revision", uselist=False)
+    avatar        = db.relationship("Revision", uselist=False, lazy='joined')
     public        = db.Column(db.Boolean(),     default=False)
     active        = db.Column(db.Boolean(),     default=True)
     created       = db.Column(db.DateTime(),    default=db.func.now())
@@ -486,16 +487,14 @@ class Friend(db.Model):
     id            = db.Column(db.Integer(), primary_key=True)
     user_id       = db.Column(db.Integer(), db.ForeignKey('users.id'))
     peer_id       = db.Column(db.Integer(), db.ForeignKey('peers.id'))
+    pubkey_id     = db.Column(db.Integer(), db.ForeignKey('pubkeys.id'))
     avatar        = db.relationship("Revision", uselist=False)
     name          = db.Column(db.String())
     received      = db.Column(db.Boolean(), default=None) # Can we set state to "Added"?
     state         = db.Column(db.Integer(), default=0)
-    address       = db.Column(db.String())  # network/node_id/uid
+    address       = db.Column(db.String())  # TODO: Can remove with in-instance friendships?
     network       = db.Column(db.String())
-    node_id       = db.Column(db.String())  # Remote node id
     uid           = db.Column(db.String())  # Remote user id
-    ip            = db.Column(db.String())  # Find once, contact any time.
-    port          = db.Column(db.Integer())
     created       = db.Column(db.DateTime, default=db.func.now())
     states        = {
                         0: "Uninitialised",
@@ -510,6 +509,26 @@ class Friend(db.Model):
         self.address = address
         self.network, self.node_id, self.uid = address.split("/")
         self.name = self.uid
+
+    @property
+    def most_recent_address(self):
+        node = self.most_recent_peer_node
+        if not node:
+            return ""
+
+        return '/'.join([self.network, node.node_id, self.uid])
+
+    @property
+    def most_recent_peer_node(self):
+        """
+        Return the Peer instance associated with this Friend that was seen the
+        most recently.
+        """
+        if not self.pubkey or not self.pubkey.peers:
+            return
+
+        return sorted([_ for _ in self.pubkey.peers],
+                      key=lambda _: _.last_seen)[-1]
 
     def parse_status(self):
         if not self.state:
@@ -555,8 +574,8 @@ class Friend(db.Model):
         response['name']     = self.name
         response['uid']      = self.uid
         response['received'] = self.received
-        response['ip']       = self.ip
-        response['port']     = self.port
+        if self.pubkey:
+            response['pubkey']   = self.pubkey.string
         if self.created:
             response['created']  = time.mktime(self.created.timetuple())
         if self.user:
@@ -601,6 +620,30 @@ class Network(db.Model):
             response['peers']  = [p.jsonify() for p in self.peers]
         return response
 
+class Pubkey(db.Model):
+    """
+    We track public keys instead of specific remote nodes so people can move
+    their private keys from device to device or network to network like with
+    the cellular internet system and still be generally contactable as part of
+    our friends list.
+    """
+    __tablename__ = "pubkeys"
+    id        = db.Column(db.Integer(), primary_key=True)
+    string    = db.Column(db.String())
+    friends   = db.relationship("Friend", backref="pubkey")
+    peers     = db.relationship("Peer", backref="pubkey")
+    created   = db.Column(db.DateTime(), default=db.func.now())
+
+    def jsonify(self, peers=False, friends=False):
+        response = {}
+        response['string'] = self.string
+        response['created'] = time.mktime(self.created.timetuple())
+        if peers:
+            response['peers'] = [_.jsonify() for _ in self.peers]
+        if friends:
+            response['friends'] = [_.jsonify() for _ in self.friends]
+        return response
+
 class Peer(db.Model):
     """
     Represents a cached peer node, including their unique ID,
@@ -614,26 +657,32 @@ class Peer(db.Model):
     __tablename__ = "peers"
     id            = db.Column(db.Integer(), primary_key=True)
     network_id    = db.Column(db.Integer(), db.ForeignKey("networks.id")) 
+    pubkey_id     = db.Column(db.Integer(), db.ForeignKey("pubkeys.id"))
     node_id       = db.Column(db.String())
     ip            = db.Column(db.String())
     port          = db.Column(db.Integer())
-    pubkey        = db.Column(db.String())
     name          = db.Column(db.String())
     trust         = db.Column(db.Float(),    default=0.00)
-    friends       = db.relationship("Friend", backref="peer")
+    last_seen     = db.Column(db.DateTime(), default=db.func.now())
     created       = db.Column(db.DateTime(), default=db.func.now())
 
     def load_node(self, node):
-        self.ip       = node.ip
-        self.port     = node.port
-        self.trust    = node.trust
-        self.pubkey   = node.pubkey
-        self.long_id  = node.long_id  # Stored as a string
+        self.ip        = node.ip
+        self.port      = node.port
+        self.trust     = node.trust
+        self.long_id   = str(node.long_id)
+        self.last_seen = datetime.datetime.now()
+        pubkey = Pubkey.query.filter(Pubkey.string == node.pubkey).first()
+        if pubkey:
+            self.pubkey = pubkey
+        else:
+            pubkey = Pubkey(string=node.pubkey)
+            self.pubkey = pubkey
 
     def jsonify(self):
         response = {}
         response['node']        = [self.long_id, self.ip, self.port]
-        response['pubkey']      = self.pubkey
+        response['pubkey']      = self.pubkey.string
         response['trust']       = self.trust
         if self.network:
             response['network'] = self.network.name

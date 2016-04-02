@@ -410,18 +410,14 @@ class UserFriendsCollection(restful.Resource):
 
         if peer == None:
             peer = Peer()
-            peer.ip      = node.ip
-            peer.port    = node.port
-            peer.network = network
+            peer.load_node(node)
 
         friend       = Friend(address=args.address)
         friend.name  = args.name
         friend.state = 1
-        friend.ip    = node.ip
-        friend.port  = node.port
 
         user.friends.append(friend)
-        peer.friends.append(friend)
+        peer.pubkey.friends.append(friend)
         
         db.session.add(peer)
         db.session.add(network)

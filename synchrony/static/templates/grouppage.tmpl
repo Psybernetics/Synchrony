@@ -29,34 +29,36 @@
         <button class="button big_button pull-right" on-click="toggle:{{"privileges"}}">{{privileges_button}}</button>
     </h2>
     {{#showing_privileges}}
-    <table class="scrollable">
-        <tbody>
-        {{#group.privileges}}
-        <tr on-mouseover="select:{{"priv"}},{{@index}}" on-mouseout="select:{{"priv"}},{{@index}}" id="group-{{@index}}">
-                <td>{{this.key}}</td>
-                <td class="priv-{{@index}}">
-                    <span id="priv-text-{{@index}}">{{#if this.value}}Allowed{{else}}Denied{{/if}}</span>
-                    <button on-click="toggle_allowed:{{@index}}" style="visibility:hidden" class="button big_button" id="priv-button-{{@index}}">
-                        {{#if this.value}}Deny{{else}}Allow{{/if}}
-                    </button>
-                </td>
-                <td>
-                    <button on-click="remove:{{@index}}" style="visibility:hidden" class="button bigger_button" id="remove-priv-button-{{@index}}">
-                    Remove
-                    </button>
-                </td>
-         </tr>
-        {{/group.privileges}}
-        </tbody>
-    </table>
+    <div class="scrollable privileges-container">
+        <table class="current-privileges">
+            <tbody>
+            {{#group.privileges}}
+            <tr on-mouseover="select:{{"priv"}},{{@index}}" on-mouseout="select:{{"priv"}},{{@index}}" id="group-{{@index}}">
+                <td class="draggable">{{this.key}}</td>
+                    <td class="priv-{{@index}}">
+                        <span id="priv-text-{{@index}}">{{#if this.value}}Allowed{{else}}Denied{{/if}}</span>
+                        <button on-click="toggle_allowed:{{@index}}" style="visibility:hidden" class="button big_button" id="priv-button-{{@index}}">
+                            {{#if this.value}}Deny{{else}}Allow{{/if}}
+                        </button>
+                    </td>
+                    <td>
+                        <button on-click="remove:{{@index}}" style="visibility:hidden" class="button bigger_button" id="remove-priv-button-{{@index}}">
+                        Remove
+                        </button>
+                    </td>
+             </tr>
+            {{/group.privileges}}
+            </tbody>
+        </table>
     
-    <div class="privileges">
-        {{#privileges}}
-            <div id="privilege-{{@index}}" class="privilege {{#if @index % 2}}pull-right{{/if}}">
-                {{this.name}}
-            </div>
-        <br />
-        {{/privileges}}
+        <div class="available-privileges">
+            {{#privileges}}
+                <div id="privilege-{{@index}}" class="draggable privilege {{#if @index % 2}}pull-right{{/if}}">
+                    {{this.name}}
+                </div>
+            <br />
+            {{/privileges}}
+        </div>
     </div>
     {{/showing_privileges}}
     {{/can_modify_usergroup}}

@@ -21,7 +21,8 @@ class UserGroupCollection(restful.Resource):
         if not user.can("see_all"):
             return {}, 403
 
-        query = UserGroup.query.order_by(desc(UserGroup.created)).paginate(args.page, args.per_page)
+        query = UserGroup.query.order_by(desc(UserGroup.created))\
+            .paginate(args.page, args.per_page)
         
         return make_response(request.url, query)
 
@@ -77,6 +78,8 @@ class UserGroupResource(restful.Resource):
         parser = restful.reqparse.RequestParser()
         parser.add_argument("allow",  type=str, default=None)
         parser.add_argument("deny",   type=str, default=None)
+        parser.add_argument("attach", type=str, default=None)
+        parser.add_argument("detach", type=str, default=None)
         parser.add_argument("add",    type=str, default=None)
         parser.add_argument("remove", type=str, default=None)
         args = parser.parse_args()
@@ -89,7 +92,37 @@ class UserGroupResource(restful.Resource):
         group = UserGroup.query.filter(UserGroup.name == name).first()
         if not group:
             return {}, 404
+        
+        # Attach a privilege to the Group
+        if args.attach:
+            if ',' in args.attach:
+                privs = args.attach.split(',')
+            else:
+                privs = [args.attach]
+            for priv_name in privs:
+                priv = Priv.query.filter(Priv.name == priv_name).first()
+                if not priv: continue
+                acl = Acl.query.filter(and_(Acl.priv == priv, Acl.group == group)).first()
+                if acl:
+                    continue
+                acl = Acl(group=group, priv=priv)
+                db.session.add(acl)
 
+        # Detach a privilege from the Group
+        if args.detach:
+            if ',' in args.detach:
+                privs = args.detach.split(',')
+            else:
+                privs = [args.detach]
+            for priv_name in privs:
+                priv = Priv.query.filter(Priv.name == priv_name).first()
+                if not priv: continue
+                acl = Acl.query.filter(and_(Acl.priv == priv, Acl.group == group)).first()
+                if not acl:
+                    continue
+                db.session.delete(acl)
+
+        # Set an ACL to True
         if args.allow:
             if ',' in args.allow:
                 privs = args.allow.split(',')
@@ -109,6 +142,7 @@ class UserGroupResource(restful.Resource):
                 acl.allowed = True
                 db.session.add(acl)
 
+        # Set an ACL to False
         if args.deny:
             if ',' in args.deny:
                 privs = args.deny.split(',')
@@ -128,27 +162,29 @@ class UserGroupResource(restful.Resource):
                 acl.allowed = False
                 db.session.add(acl)
 
-            if args.add:
-                if ',' in args.add:
-                    users = args.add.split(',')
-                else:
-                    users = [args.add]
-                for username in users:
-                    user = User.query.filter(User.username == username).first()
-                    if not user: continue
-                    if user in group.users: continue
-                    group.users.append(user)
+        # Add a User to the Group
+        if args.add:
+            if ',' in args.add:
+                users = args.add.split(',')
+            else:
+                users = [args.add]
+            for username in users:
+                user = User.query.filter(User.username == username).first()
+                if not user: continue
+                if user in group.users: continue
+                group.users.append(user)
 
-            if args.remove:
-                if ',' in args.remove:
-                    users = args.remove.split(',')
-                else:
-                    users = [args.remove]
-                for username in users:
-                    user = User.query.filter(User.username == username).first()
-                    if not user: continue
-                    if user not in group.users: continue
-                    group.users.remove(user)
+        # Remove a User from the Group
+        if args.remove:
+            if ',' in args.remove:
+                users = args.remove.split(',')
+            else:
+                users = [args.remove]
+            for username in users:
+                user = User.query.filter(User.username == username).first()
+                if not user: continue
+                if user not in group.users: continue
+                group.users.remove(user)
 
 
         db.session.add(group)

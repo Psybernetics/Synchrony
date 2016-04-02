@@ -342,6 +342,7 @@ label { display: inline-block; }
     overflow: auto;
     display: inline-block;
     height: 350px;
+    width: 100%;
 }
 
 .rename-input {
@@ -794,6 +795,7 @@ hr {
     font-size: 2.4em;
     letter-spacing: 1px;
     font-weight: 600;
+    /*font-family: Roboto; */
     font-family: Verdana;
 }
 
@@ -906,8 +908,13 @@ a {
     color: #222;
 }
 
-.privileges {
+.current-privileges {
+    background-color: #f0f0f0;
+}
+
+.available-privileges {
     width: 50%;
+    padding: 50px 20px;
 }
 
 .privilege {
@@ -920,8 +927,11 @@ a {
 }
 
 .privilege:hover {
-    border: solid 1px #0084ff;
+    border: solid 1px #097EEB;
     box-shadow: 0px 1px 1px #3C7FC7;
+}
+.privilege:focus {
+    border: solid 1px #0084ff;
 }
 
 .index_overview > .table {
