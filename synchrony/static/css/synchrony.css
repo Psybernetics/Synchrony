@@ -909,13 +909,12 @@ a {
 }
 
 .current-privileges {
-    background-color: #c5c5c5;
+    background-color: #f0f0f0;
 }
 
 .available-privileges {
     width: 50%;
-    padding-top: 50px;
-    padding-left: 20px;
+    padding: 50px 20px;
 }
 
 .privilege {
@@ -928,8 +927,11 @@ a {
 }
 
 .privilege:hover {
-    border: solid 1px #0084ff;
+    border: solid 1px #097EEB;
     box-shadow: 0px 1px 1px #3C7FC7;
+}
+.privilege:focus {
+    border: solid 1px #0084ff;
 }
 
 .index_overview > .table {
