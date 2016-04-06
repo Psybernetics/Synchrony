@@ -1332,7 +1332,15 @@ function groupView(name, params){
                     return;
                 }
 
-                console.log(event);
+                // Check that the dragged element didn't land in the container
+                // it started in
+                // for (var i = 0; i <= 3; i++) {
+                //     if (i == 0) { var target = event.relatedTarget; }
+                //     target = target['parentElement'];
+                //     console.log(target);
+                //     if (target.className == "current-privileges") { return; }
+                // }
+
                 if (event.target.className.indexOf("available-privileges") -1) {
                     console.log("Removing",event.relatedTarget.innerText,"from",name);
                     var priv = event.relatedTarget.innerText;
@@ -2110,6 +2118,16 @@ function settingsView() {
                     console.log(type);
                     console.log(index);
 //                    var row = $('#' + type + '-' + index);
+                } else if (type == "user") {
+                    // If the button's hidden, show the button and hide the text in the
+                    // column reporting whether the user account at this index is active
+                    if ($('#user-button-' + index).css("display") == "none") {
+                        $('#user-button-'  + index).css("display", "inherit");
+                        $('#user-text-'  + index).css("display", "none");
+                    } else {
+                        $('#user-button-'  + index).css("display", "none");
+                        $('#user-text-'  + index).css("display", "inherit");
+                    }
                 }
             },
             forward: function(event, table_type){
@@ -2139,6 +2157,34 @@ function settingsView() {
                         error: function(response){ App.Views.settings.set({allow_signups: true}); }
                     });
                  }
+            },
+            toggle_active: function(event, index){
+                var accounts = App.Views.settings.get("accounts");
+                if (index >= accounts.length) { return; }
+                var account  = accounts[index];
+                if (account.active) {
+                    $.ajax({
+                        url: "/v1/users/" + account.username,
+                        type: "POST",
+                        data: {active: null},
+                        success: function(response){
+                            accounts[index] = response;
+                            App.Views.settings.set("accounts", accounts);
+                        },
+                        error: function(response){}
+                    });
+                } else {
+                    $.ajax({
+                        url: "/v1/users/" + account.username,
+                        type: "POST",
+                        data: {active: true},
+                        success: function(response){
+                            accounts[index] = response;
+                            App.Views.settings.set("accounts", accounts);
+                        },
+                        error: function(response){}
+                    });
+                }
             },
             add_group: function(event){
                 if (event.original.keyCode == 13){
