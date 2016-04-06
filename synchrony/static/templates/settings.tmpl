@@ -27,7 +27,12 @@
                 <td>{{public_revisions}}</td>
                 <td>{{status}}</td>
                 <td>{{created}}</td>
-                <td>{{#if active}}Yes{{else}}No{{/if}}</td>
+                <td class="active-{{@index}}">
+                    <span id="user-text-{{@index}}">{{#if active}}Yes{{else}}No{{/if}}</span>
+                    <button on-click="toggle_active:{{@index}}" style="display:none;" class="button big_button" id="user-button-{{@index}}">
+                    {{#if active}}No{{else}}Yes{{/if}}
+                    </button>
+                </td>
             </tr>
         {{/accounts}}
         </tbody>
@@ -44,6 +49,7 @@
         {{/accounts_forward_available}}
     </div>
     {{#accounts_paging_error}}Server unavailable.Try refreshing the page.{{/revisions_paging_error}}
+    {{#accounts_error}}<em>{{accounts_error}}</em>{{/accounts_error}}
 
     {{/showing_accounts}}
     <h2>Groups <button on-click="toggle:{{"groups"}}" class="button big_button pull-right">{{groups_button}}</button></h2>
