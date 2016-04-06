@@ -1481,6 +1481,23 @@ function groupView(name, params){
                     });
                 }
             },
+            remove: function(event, type, index) {
+                if (type == "priv") {
+                    var privileges = App.Views.grouppage.get("group.privileges");
+                    var priv = privileges[index];
+                    console.log(priv);
+                    $.ajax({
+                        url: "/v1/groups/" + name,
+                        type: "POST",
+                        data: {detach: priv.key},
+                        success: function(response){
+                            console.log(response);
+                            privileges.splice(index, 1);
+                            App.Views.grouppage.set("group.privileges", privileges); 
+                        }
+                    });
+                }
+            },
         });
     });
 }
