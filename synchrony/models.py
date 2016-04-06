@@ -360,7 +360,7 @@ class User(db.Model):
     username      = db.Column(db.String())
     password      = db.Column(db.String())
     avatar        = db.relationship("Revision", uselist=False, lazy='joined')
-    public        = db.Column(db.Boolean(),     default=False)
+    public        = db.Column(db.Boolean(),     default=False) # Automatically public revisions.
     active        = db.Column(db.Boolean(),     default=True)
     created       = db.Column(db.DateTime(),    default=db.func.now())
     last_login    = db.Column(db.DateTime(),    default=db.func.now())
