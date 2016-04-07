@@ -288,7 +288,7 @@ class UserRevisionCollection(restful.Resource):
         return make_response(request.url, query)
 
     def post(self, username):
-        user   = auth(session, required=True)
+        user = auth(session, required=True)
         
         if not 'revision' in request.files:
             return {}, 400
