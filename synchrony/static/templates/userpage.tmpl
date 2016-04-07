@@ -54,6 +54,11 @@
             {{/revisions_forward_available}}
         </div>
         {{#revisions_paging_error}}Server unavailable.Try refreshing the page.{{/revisions_paging_error}}
+        <form>
+            <h4>Public by default</h4>
+            <label><input on-click="toggle_auto_public:{{true}}"  type="radio" checked="{{#if public_revisions}}true{{else}}false{{/if}}"><strong>Yes</strong></label>
+            <label><input on-click="toggle_auto_public:{{false}}" type="radio" checked="{{#if public_revisions}}false{{else}}true{{/if}}"><strong>No</strong></label>
+        </form><br />
         {{/showing_revisions}}
     </div>
 

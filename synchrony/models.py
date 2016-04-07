@@ -209,13 +209,19 @@ class Revision(db.Model):
         if not self.content and not self.bcontent:
             return
 
+        if user.public == True:
+            self.public = True
+
+        print user.public
+        print self.public
+
         if not path:
             path = '/'
 
         # Make sure an entry for the domain exists
         domain = Domain.query.filter_by(name=domain_name).first()
         if not domain:
-            domain = Domain(name=domain_name)
+            domain   = Domain(name=domain_name)
             resource = Resource(path=path)
         else:
             resource = Resource.query.filter(
@@ -243,6 +249,7 @@ class Revision(db.Model):
         db.session.add(resource)
         db.session.add(self)
         db.session.commit()
+        print self.public
 
 class Acl(db.Model):
     """
@@ -402,6 +409,7 @@ class User(db.Model):
             response['username']        = self.username
             response['uid']             = self.uid
             response['active']          = self.active
+            response['public']          = self.public
             response['status']          = self.states.get(self.state, "Unknown")
             response['created']         = time.mktime(self.created.timetuple())
             response['public_revisions'] = len([_ for _ in self.revisions \
