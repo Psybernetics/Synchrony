@@ -775,6 +775,8 @@ function userView(username, params){
             }
         });
 
+        App.Views.userpage.set("public_revisions", App.Config.user.public);
+
         // Determine whether this is a profile or settings page.
         if (App.Config.user.username != username) {
             App.Views.userpage.set("show_profile", true);
@@ -960,6 +962,25 @@ function userView(username, params){
                             console.log(response);
                         }
                      });
+                 }
+            },
+            toggle_auto_public: function(event, default_public) {
+                if (default_public) {
+                    $.ajax({
+                        url: "/v1/users/" + App.Config.user.username,
+                        type: "POST",
+                        data: {"public": true},
+                        success: function(response){ App.Views.userpage.set({"public_revisions": true});  },
+                        error:   function(response){ App.Views.userpage.set({"public_revisions": false}); }
+                    });
+               } else {
+                    $.ajax({
+                        url: "/v1/users/" + App.Config.user.username,
+                        type: "POST",
+                        data: {"public_revisions": null},
+                        success: function(response){ App.Views.userpage.set({"public_revisions": null}); },
+                        error:   function(response){ App.Views.userpage.set({"public_revisions": true}); }
+                    });
                  }
             }, 
             delete: function(event, type, index){
