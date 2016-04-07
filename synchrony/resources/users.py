@@ -1,5 +1,6 @@
 # This file defines the API endpoints for users and sessions
 import time
+import gevent
 import flask_restful as restful
 from sqlalchemy import and_, desc
 from flask_restful import reqparse
@@ -298,6 +299,9 @@ class UserRevisionCollection(restful.Resource):
         revision = Revision()
         revision.add(upload)
         
+        if user.public:
+            revision.public = True
+
         existing = Revision.query.filter(
                         Revision.hash == revision.hash
                    ).first()
@@ -312,7 +316,13 @@ class UserRevisionCollection(restful.Resource):
 
         db.session.add(user)
         db.session.commit()
-        
+       
+        if revision.public:
+            threads = []
+            for router in app.routes.values():
+                threads.append(gevent.spawn(router.__setitem__, revision, revision))
+            gevent.joinall(threads)
+
         return redirect("/")
 
 class UserRevisionCountResource(restful.Resource):
