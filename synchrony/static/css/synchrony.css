@@ -833,6 +833,11 @@ a {
     max-width: 50px; 
     padding-top: 5px;
 }
+
+.small-text {
+    font-size: 80%;
+}
+
 #addressbar {
 	position: absolute;
 }
@@ -1096,9 +1101,13 @@ a {
     background-color: #b1b1b1;
 }
 
-
 .close-button {
     position: absolute;
     top: -1px;
     right: 10px;
+}
+
+.drop-hover {
+    background-color: rgba(229, 240, 196, 0.8);
+    border-radius: 5px;
 }

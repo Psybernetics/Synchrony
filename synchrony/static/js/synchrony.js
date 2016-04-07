@@ -826,6 +826,48 @@ function userView(username, params){
             App.Views.userpage.set("username", App.Config.user.username);
         }
 
+        // Attach file drag/drop callbacks to .filedrop.
+        $('.filedrop').on({
+            dragover: function(event){
+                event.preventDefault();
+            },
+            dragenter: function(event) {
+                $(this).addClass("drop-hover");
+            },
+            dragleave: function(event) {
+                $(this).removeClass("drop-hover");
+            },
+            drop: function(event) {
+                event.preventDefault();
+                $(this).removeClass("drop-hover");
+                
+                console.log(event.originalEvent.dataTransfer.files);
+                var form     = $(".upload_revision");
+                var fileData = new FormData(form);
+                var files     = event.originalEvent.dataTransfer.files;
+                for (var i = 0; i < event.originalEvent.dataTransfer.files.length; i++) {
+                    fileData.append("revision", files[i], files[i].name);
+                }
+
+                // Perform the upload.
+                var req = new XMLHttpRequest();
+                req.open("POST", "/v1/users/" + App.Config.user.username + "/revisions", true);
+                req.onload = function(ev){
+                    if (req.status == 200) {
+                        var msg = "Revision uploaded.";
+                        populate_table(App.Views.userpage, "revisions", "/v1/users/" + username + "/revisions");
+                    } else {
+                        var msg = "Error " + req.status + " occurred loading your file : - (";
+                    }
+                    App.Views.userpage.set("revision_upload_message", msg);
+                    setTimeout(function(){ 
+                        App.Views.userpage.set("revision_upload_message", "");
+                    }, 5000);
+                }
+                req.send(fileData);
+            }
+        });
+        
         App.Views.userpage.on({
             toggle:  function(event, section){
                 var button = section + "_button"
