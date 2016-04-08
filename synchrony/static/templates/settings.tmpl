@@ -85,10 +85,10 @@
                 <td><a href="/#settings/{{name}}">{{name}}</a></td>
                 <td>{{node_id}}</td>
                 <td>{{peers}}</td>
-                <td id="public-network-{{@index}}">
-                    <span id="public-network-text-{{@index}}">{{#if private}}Yes{{else}}No{{/if}}</span>
-                    <button on-click="toggle_public:{{@index}}" style="visibility:hidden" class="button big_button" id="public-network-button-{{@index}}">
-                        {{#if private}}Private{{else}}Public{{/if}}
+                <td id="private-network-{{@index}}">
+                    <span id="private-network-text-{{@index}}">{{#if private}}Yes{{else}}No{{/if}}</span>
+                    <button on-click="toggle_private:{{@index}}" style="display:none" class="button big_button" id="private-network-button-{{@index}}">
+                        {{#if private}}Public{{else}}Private{{/if}}
                     </button>
                 </td>
             </tr>
