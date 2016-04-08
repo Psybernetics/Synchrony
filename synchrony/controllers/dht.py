@@ -1372,6 +1372,12 @@ class SynchronyProtocol(object):
             log("\"%s\" is using an incorrect node ID." % data['node'][1], "warning")
             return
 
+        valid_signature = utils.validate_signature(data)
+        log("Received %s signature from %s." % \
+            ("valid" if valid_signature else "invalid", data['node'][0]))
+        if not valid_signature:
+            return
+
         # Learn of peers
         #  TODO: Spawn coroutines to ping these nodes.
         if 'peers' in data:
