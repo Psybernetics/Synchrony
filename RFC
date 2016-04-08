@@ -46,8 +46,8 @@ Abstract
    on Kademlia with free node ID generation seeded by the nodes' IP
    address, port number and public RSA key.
 
-   All revisions objects have an associated SHA1
-   hash associated with them to be used as their identifier.
+   All revision objects have an associated SHA1 hash to be used as
+   their identifier.
    
    Stored resources may optionally be made public where their original
    URL is SHA1 hashed and used as a Kademlia node ID. The corresponding
@@ -76,7 +76,7 @@ Table of Contents
 1.1 Purpose
 
    Distributed HTTP is set of fundamental principles for peer-to-peer
-   networks sharing Hyptertext resources amongst nodes engaging in
+   networks sharing Hyptermedia resources amongst nodes engaging in
    shared overlay network namespaces, making HTTP resistant to server
    downtime, domain name forfeiture and optionally, dedicated servers.
 
@@ -144,7 +144,7 @@ Table of Contents
 
         Secure Node ID generation
         Kademlia via JSON over HTTP/1.1
-        Kademlia via HTTP/2, QUIC or Protocol Buffers
+        Kademlia with ProtoBufs over HTTP/2 or QUIC. Bytestreams.
         Routing table reinforcement
         Multiple routing tables
         Trust-based table selection
