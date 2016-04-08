@@ -308,6 +308,7 @@ class RoutingTable(object):
         """
         network = Network.query.filter(Network.name == self.network).first()
         if network:
+            self.private = network.private
             for peer in network.peers:
                 if peer.ip == self.node.ip and peer.port == self.node.port:
                     continue
