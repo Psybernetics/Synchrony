@@ -607,7 +607,12 @@ class Network(db.Model):
     name      = db.Column(db.String())
     peers     = db.relationship("Peer", backref="network")
     revisions = db.relationship("Revision", backref="network")
+    private   = db.Column(db.Boolean(), default=False)
     created   = db.Column(db.DateTime, default=db.func.now())
+
+    def load(self, network):
+        self.name    = network.network
+        self.private = network.private
 
     def delete(self):
         for peer in self.peers:
@@ -623,6 +628,7 @@ class Network(db.Model):
     def jsonify(self, with_peers=False):
         response = {}
         response['name']       = self.name
+        response['private']    = self.private
         response['peer_count'] = len(self.peers)
         if with_peers:
             response['peers']  = [p.jsonify() for p in self.peers]
