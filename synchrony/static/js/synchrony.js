@@ -2195,9 +2195,13 @@ function settingsView() {
                         }
                     }
                 } else if (type === "network") {
-                    console.log(type);
-                    console.log(index);
-//                    var row = $('#' + type + '-' + index);
+                    if ($('#private-network-button-' + index).css("display") == "none") {
+                        $('#private-network-button-' + index).css("display", "initial");
+                        $('#private-network-text-' + index).css("display", "none");
+                    } else {
+                        $('#private-network-button-' + index).css("display", "none");
+                        $('#private-network-text-' + index).css("display", "initial");
+                    }
                 } else if (type == "user") {
                     // If the button's hidden, show the button and hide the text in the
                     // column reporting whether the user account at this index is active
@@ -2281,6 +2285,36 @@ function settingsView() {
                             var groups = upDate(groups);
                             App.Views.settings.set("groups", groups);
                             App.Views.settings.set("group_name", "");
+                        },
+                        error: function(response){}
+                    });
+                }
+            },
+            toggle_private: function(event, index){
+                var networks = App.Views.settings.get("networks");
+                var network  = networks[index];
+                if (network.private) {
+                    $.ajax({
+                        url: "/v1/networks/" + network.name,
+                        type: "POST",
+                        data: {private: null},
+                        success: function(response) {
+                            console.log(response);
+                            networks[index] = response;
+                            App.Views.settings.set("networks", networks);
+                        },
+                        error: function(response){}
+                    });
+                    network.private = false;
+                } else {
+                    $.ajax({
+                        url: "/v1/networks/" + network.name,
+                        type: "POST",
+                        data: {private: true},
+                        success: function(response) {
+                            console.log(response);
+                            networks[index] = response;
+                            App.Views.settings.set("networks", networks);
                         },
                         error: function(response){}
                     });

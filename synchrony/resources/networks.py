@@ -79,18 +79,20 @@ class NetworkResource(restful.Resource):
         """
         user   = auth(session, required=True)
         parser = restful.reqparse.RequestParser()
-        parser.add_argument("public", type=bool, required=True)
+        parser.add_argument("private", type=bool, default=None)
         args = parser.parse_args()
 
-        routes = app.routes.get(network, None)
-        if routes == None:
+        router = app.routes.get(network, None)
+        if router == None:
             return {}, 404
 
         if not user.can("manage_networks"):
             return {}, 403
 
-        routes.public = args.bool
-        return routes.jsonify()
+        if args.private != None:
+            router.toggle_private(args.private)
+
+        return router.jsonify()
 
     def delete(self, network):
         """

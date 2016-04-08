@@ -308,6 +308,7 @@ class RoutingTable(object):
         """
         network = Network.query.filter(Network.name == self.network).first()
         if network:
+            self.private = network.private
             for peer in network.peers:
                 if peer.ip == self.node.ip and peer.port == self.node.port:
                     continue
@@ -321,7 +322,8 @@ class RoutingTable(object):
         """
         network = Network.query.filter(Network.name == self.network).first()
         if network == None:
-            network = Network(name=self.network)
+            network = Network()
+            network.load(self)
 
         # Persist our peers
         for node in self:
@@ -377,6 +379,9 @@ class RoutingTable(object):
             return
         if node.id == self.node.id:
             return
+
+        if self.private and node.pubkey != self.node.pubkey:
+            return
 #        if node.id == self.node.id or node.id in [n.id  for n in self]:
 #            return
         # Validate node ID
@@ -427,6 +432,20 @@ class RoutingTable(object):
             if len(nodes) == k:
                 break
         return map(operator.itemgetter(1), heapq.nsmallest(k, nodes))
+
+    def toggle_private(self, go_private):
+        """
+        Set the routing table to admit peers who share our public key.
+        """
+        if go_private:
+            log("%s: Setting network to private." % self.network)
+            if self.private:
+                return
+            self.private = True
+            [self.remove_node(n) for n in self if n.pubkey != self.node.pubkey]
+        else:
+            log("%s: Setting network to public." % self.network)
+            self.private = False
 
     def __getitem__(self, key):
         """
@@ -1351,6 +1370,12 @@ class SynchronyProtocol(object):
         seed = "%s:%i:%s" % (data['node'][1],data['node'][2],data['pubkey'])
         if data['node'][0] != long(utils.generate_node_id(seed).encode('hex'), 16):
             log("\"%s\" is using an incorrect node ID." % data['node'][1], "warning")
+            return
+
+        valid_signature = utils.validate_signature(data)
+        log("Received %s signature from %s." % \
+            ("valid" if valid_signature else "invalid", data['node'][0]))
+        if not valid_signature:
             return
 
         # Learn of peers
