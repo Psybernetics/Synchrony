@@ -99,7 +99,7 @@ if __name__ == "__main__":
     parser.add_option("--restart",        dest="restart", action="store_true", default=False)
     parser.add_option("--test-suite",     dest="test_suite", action="store", default=False)
     parser.add_option("--debug",          dest="debug", action="store_true", default=False, help="Enable debugging output.")
-#    parser.add_option("--autoreplicate", dest="autoreplicate", action="store", default="2G", help="Automatically replicate peer data.")
+    parser.add_option("--autoreplicate",  dest="autoreplicate", action="store", default="2G", help="Automatically replicate peer data.")
     parser.add_option("-w", "--write",    dest="write", action="store", default=None, help="Write a revision object (by content hash) to disk. [TEMPERAMENTAL]")
     parser.add_option("-o", "--out",      dest="out", action="store", default=None, help="Output path for --write")
     parser.add_option("--pidfile",        dest="pidfile", action="store", default='synchrony.pid', help="(defaults to ./synchrony.pid)")
@@ -209,8 +209,8 @@ if __name__ == "__main__":
 
     httpd = SocketIOServer(sock, app, resource="stream", policy_server=False)
 
-    # Create a portmapping with UPnP so other nodes can initiate
-    # connections to us, then bootstrap and bind to a network interface
+    # Create a port mapping with UPnP so other nodes can initiate
+    # connections to us, then bootstrap and bind to a network interface.
     try:
         portmap_success, upnp = utils.forward_port(options.port)
     except:
@@ -238,7 +238,8 @@ if __name__ == "__main__":
                 app.key.publickey().exportKey(),
                 httpd,
                 nodes=app.bootstrap_nodes,
-                network=app.default_network
+                network=app.default_network,
+                autoreplicate=options.autoreplicate
         )
         app.routes.append(router)
 
