@@ -1188,11 +1188,16 @@ class SynchronyProtocol(object):
         self.storage[url_hash] = (content_hash, node)
         if self.router.autoreplicate:
             if not Revision.query.filter(Revision.hash == content_hash).first():
-                revision = self.fetch_revision(content_hash, [source])
-                if revision:
-                    log(revision.size, "debug")
+                revision = self.fetch_revision(content_hash, content_hash, [node.threeple])
+                if revision and within_autoreplication_bounds(revision, self.router.autoreplicate):
                     db.session.add(revision)
                     db.session.commit()
+                    log("%s: Autoreplicated %s (%s bytes)." % \
+                        (self.router.network, content_hash, "{:,}".format(revision.size)))
+                else:
+                    log("%s: Not replicating %s." % (self.router.network, content_hash), "warning")
+                    log("%s: Object couldn't be retrieved or is beyond size for replication (--autoreplicate=%s for object of %s bytes). " %\
+                            (self.router.network, self.router.autoreplicate, "{:,}".format(revision.size)), "warning")
             else:
                 log("%s: Not replicating stored object." % self.router.network)
         return True
@@ -1246,10 +1251,12 @@ class SynchronyProtocol(object):
 
     def fetch_revision(self, url, content_hash, nodeples):
         """
-        Return a revision object for a content hash given a list of peers.
+        Return a models.Revision for content_hash, given a list of peers.
 
-        Called from ValueSpider._handle_found_values.
         nodeples is a list of node triples [long_id, ip, port].
+        
+        Called from ValueSpider._handle_found_values or
+        SynchronyProtocol.handle_append if --autoreplicate is in use.
         """
         urls  = []
         nodes = []
@@ -2853,3 +2860,29 @@ def sort_nodes_by_trust(nodes):
         lesser  = sort_nodes_by_trust([x for x in nodes[1:] if x.trust < pivot.trust])
         greater = sort_nodes_by_trust([x for x in nodes[1:] if x.trust >= pivot.trust])
         return greater + [pivot] + lesser
+
+def within_autoreplication_bounds(revision, ceil):
+    """
+    Takes a models.Revision and a string such as "512mb" or "512m" and returns
+    a boolean for whether the Revision.size is beneath that figure.
+    """
+    if ceil.isdigit():
+        return revision.size < int(ceil)
+    if ceil.endswith("b") and not ceil[-1].isalpha():
+        return revision.size < int(ceil[:-1])
+
+    if ceil.endswith("b") and ceil[-2].isalpha():
+        mag  = ceil[-2]
+        ceil = int(ceil[:-2])
+    elif ceil[-1] in ['k','m','g']:
+        mag  = ceil[-1]
+        ceil = int(ceil[:-1])
+
+    if mag   == 'k':
+        ceil = ceil * 1000
+    elif mag == 'm':
+        ceil = ceil * 1000000
+    elif mag == 'g':
+        ceil = ceil * 1000000000
+    
+    return revision.size < ceil
