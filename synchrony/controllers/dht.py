@@ -178,7 +178,8 @@ class RoutingTable(object):
 
     Every hour we check for dead nodes and republish keys.
     """
-    def __init__(self, addr, port, pubkey, httpd, ksize=20, alpha=3, id=None, nodes=[], network=None):
+    def __init__(self, addr, port, pubkey, httpd, ksize=20, alpha=3, id=None,
+                       nodes=[], network=None, autoreplicate=False):
         """
         The first three options can be set to None.
         This is useful for testing from a live interpreter session.
@@ -197,13 +198,14 @@ class RoutingTable(object):
         """
         if not network:
             network = "Test Network"
-        self.network = network
-        self.httpd   = httpd
-        self.ksize   = ksize
-        self.alpha   = alpha
-        self.private = None  # Private networks are ones in which
-                             # we only accept peers who can also sign
-                             # data using the same public key as ours.
+        self.network       = network
+        self.httpd         = httpd
+        self.ksize         = ksize
+        self.alpha         = alpha
+        self.autoreplicate = autoreplicate
+        self.private       = None  # Private networks are ones in which
+                                   # we only accept peers who can also sign
+                                   # data using the same public key as ours.
 
         seed      = "%s:%i:%s" % (addr, port, pubkey)
         self.node = Node(id or utils.generate_node_id(seed),
@@ -1181,15 +1183,18 @@ class SynchronyProtocol(object):
             log("%s with negative trust rating tried to append." % node, "warning")
             return False
         url_hash, content_hash = data['rpc_append'].items()[0]
-        log("Received rpc_append request from %s." % node)
-        log("Adjusting known peers for %s." % url_hash)
+        log("%s: Received rpc_append request from %s." % (self.router.network, node))
+        log("%s: Adjusting known peers for %s [%s]." % (self.router.network, url_hash, content_hash))
         self.storage[url_hash] = (content_hash, node)
-#        if self.router.options and self.router.options.autoreplicate:
-#            if not Revision.query.filter(Revision.hash == content_hash).first():
-#                revision = self.fetch_revision(content_hash, [source])
-#                if revision:
-#                    db.session.add(revision)
-#                    db.session.commit()
+        if self.router.autoreplicate:
+            if not Revision.query.filter(Revision.hash == content_hash).first():
+                revision = self.fetch_revision(content_hash, [source])
+                if revision:
+                    log(revision.size, "debug")
+                    db.session.add(revision)
+                    db.session.commit()
+            else:
+                log("%s: Not replicating stored object." % self.router.network)
         return True
 
     def handle_republish(self, data):
