@@ -634,11 +634,15 @@ class SynchronyProtocol(object):
                             pubkey=peer['pubkey'],
                             router=self.router)
                 self.router.add_contact(peer)
-#                self.rpc_ping(node)
         return node
 
     def rpc_friend(self, message_body):
         """
+
+        On success, return the the response from the remote side and
+        the node object representing the remote side.
+
+        rpc_friend messages can be batched together like this, currently:
         {"rpc_friend":
             [
                 {"add": {"from": "uid", "to": "addr"}},
@@ -650,7 +654,6 @@ class SynchronyProtocol(object):
         }
 
         addr is of the form "network_name/node_id/remote_user_id".
-        RPC_FRIEND messages can be batched together.
         
         see models.User.states for the meaning of values for the "type" field
         in status update messages.
@@ -697,13 +700,13 @@ class SynchronyProtocol(object):
             node    = None
 
             if len(nodes) > 1:
-                for _ in nodes:
-                    if str(_.long_id) == node_id:
-                        node = _
+                for node in nodes:
+                    if str(node.long_id) == node_id:
+                        node = node
 
             # Check who we already know:
-            if node == None and long(node_id) != self.router.node.long_id:
-                nodes = [n for n in self.router if str(n.long_id) == node_id]
+            if node == None and unicode(node_id) != unicode(self.router.node.long_id):
+                nodes = [n for n in self.router if unicode(n.long_id) == unicode(node_id)]
                 if not len(nodes) >= 1:
                     log("Node %s not found via spidering." % node_id, "warning")
                 else:
@@ -714,11 +717,11 @@ class SynchronyProtocol(object):
                     node_id)
                 return False, None
 
-            log("Found remote instance %s." % node)
-
         if not node:
-            log("No peer node found for RPC_FRIEND:%s." % message_type.upper())
+            log("No peer node found for rpc_friend (%s)." % message_type)
             return False, None
+        
+        log("Found remote instance %s." % node)
         
         # Don't send network calls to ourselves: Avoids waiting for the httpd
         # to yeild.
@@ -746,17 +749,15 @@ class SynchronyProtocol(object):
         }
         """
         # Worth retaining this ping call for the routing information we get.
-        node     = self.rpc_ping(nodeple)
-        
+        node = self.rpc_ping(nodeple)
         if node == None:
             return
 
-        data     = base64.b64encode(json.dumps(data))
         key      = RSA.importKey(node.pubkey)
+        data     = base64.b64encode(json.dumps(data))
         data     = key.encrypt(data, 32)
         data     = base64.b64encode(data[0])
         response = transmit(self.router, node, {'rpc_chat': data})
-        log(response, "debug")
         return response
 
     def rpc_edit(self, data):
@@ -991,17 +992,15 @@ class SynchronyProtocol(object):
         Move a message from a remote node up to the UI if the recipient
         UID has an active connection to the chat stream.
         """
-        # TODO(ljb): Ensure this conforms to the channel system and rethink
-        #            this in terms of group chats where users are subscribed
-        #            to a shared name with a minimum of 3 delivery retries.
+        # TODO: rethink this in terms of group chats where users are subscribed
+        #       to a shared name with a minimum of 3 delivery retries.
 
-        node            = self.read_envelope(data)
-        # With the ciphertext being a binary string we also b64encode it
-        message_content = base64.b64decode(data['rpc_chat'])
-        message_content = app.key.decrypt((message_content,))
-        data            = json.loads(base64.b64decode(message_content))
-        log(message_content, "debug")
-        log(data, "debug")
+        # With the ciphertext being a binary string we also base64 en/decode it
+        node = self.read_envelope(data)
+        data = base64.b64decode(data['rpc_chat'])
+        data = app.key.decrypt((data,))
+        data = base64.b64decode(data)
+        data = json.loads(data)
 
         user = User.query.filter(User.uid == data['to']).first()
         if user == None:
@@ -1009,12 +1008,14 @@ class SynchronyProtocol(object):
 
         friend = Friend.query.filter(and_(Friend.user    == user,
                                           Friend.network == self.router.network,
-                                          Friend.node_id == str(node.long_id),
+                                          # Removed the following since we began associating
+                                          # friends by the public key they're most seen by.
+                                          #Friend.node_id == str(node.long_id),
                                           Friend.uid     == data['from'][0])
                                     ).first()
         if friend:
 
-            available = check_availability(self.router.httpd, "chat", user)
+            available = check_availability(self.router.httpd, "events", user)
             if not available:
                 return {"error": "The intended recipient isn't connected to chat."}
 
@@ -1186,6 +1187,7 @@ class SynchronyProtocol(object):
         log("%s: Received rpc_append request from %s." % (self.router.network, node))
         log("%s: Adjusting known peers for %s [%s]." % (self.router.network, url_hash, content_hash))
         self.storage[url_hash] = (content_hash, node)
+        
         if self.router.autoreplicate:
             if not Revision.query.filter(Revision.hash == content_hash).first():
                 revision = self.fetch_revision(content_hash, content_hash, [node.threeple])
@@ -1995,6 +1997,7 @@ class Node(object):
         Through persisting this to the database we can infer which node
         to visit when a Friends' pubkey is associated with multiple peers.
         """
+        log("Updating seen time for %s" % self, "debug")
         self.last_seen = time.time()
         if not self.router: return
         
@@ -2008,9 +2011,15 @@ class Node(object):
                                  Peer.ip      == self.ip,
                                  Peer.port    == self.port)
                         ).first()
-            if peer:
-                peer.load_node(self)
-                db.session.commit()
+
+            peer.load_node(self)
+            
+            if not peer:
+                network.peers.append(peer)
+
+            db.session.add(peer)
+            db.session.add(network)
+            db.session.commit()
 
     def same_home(self, node):
         return self.ip == node.ip and self.port == node.port

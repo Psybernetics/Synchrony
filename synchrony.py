@@ -208,6 +208,9 @@ if __name__ == "__main__":
         daemon(options.pidfile)
 
     httpd = SocketIOServer(sock, app, resource="stream", policy_server=False)
+    # We would do the following if SocketIOServer had wrap_socket:
+    #if options.ssl_key and options.ssl_cert:
+    #    httpd.ssl_args = {"keyfile": options.ssl_key, "certfile": options.ssl_cert}
 
     # Create a port mapping with UPnP so other nodes can initiate
     # connections to us, then bootstrap and bind to a network interface.
@@ -258,7 +261,6 @@ if __name__ == "__main__":
         # Write any specific revisions to disk now that we have some peers:
         if options.write:
             write_revision_to_disk(options)
-
 
         def remind():
             for router in app.routes.values():
