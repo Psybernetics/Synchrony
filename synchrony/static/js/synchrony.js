@@ -17,7 +17,6 @@
 TODO:
 /#request/:url     JavaScript to load /request/:url into .content
 
-the /request/:url endpoint merely needs to remove javascript so as not to interfere with the window object.
  Global stream [Notify of remote sign-ins]
  localStorage controls
  Administrative chat controls.
@@ -28,7 +27,6 @@ the /request/:url endpoint merely needs to remove javascript so as not to interf
  formatted JSON event messages,
  {d:title, +chr@46,r:hash,s:[usernames]}
  OT or differential sync
- Undo/Redo
  Reduce the amount of objects used
  Account View (sessions, bio, undelete)
  Account Pages View (search, histories)
@@ -421,7 +419,6 @@ function Friends(){
         this.stream.emit("join", "events");
         // With the activity stream, joining a shared channel is taken care of
         // for us automatically.
-//        this.global_stream.emit('join', "global");
    
         // Results of polling everyone for friend state
         this.stream.on("friend_state", function(data){
@@ -493,7 +490,7 @@ function Friends(){
         this.poll();
     }
 
-    // Ask relevant nodes about relevant user accounts.
+    // Ask relevant nodes about user accounts.
     this.poll = function(){
         if (!this.stream) { this.connect(); }
         this.stream.emit("poll_friends");
@@ -510,7 +507,7 @@ function Friends(){
         list.push.apply(list, replacement_data);
     }
 
-    // Filter a list in place with Underscore.
+    // Filter a list in place.
     this.filter = function(query){
         if (query.length < 2) {
             this.repopulate_list(this.visible_list, this.list);
@@ -1767,7 +1764,7 @@ Ractive.load({
             // Demo implementation for the time being
             // Assumes the remote side wants to edit
             if (!App.history.length){
-                renderError("Unable to discern current URL from App.history");
+                renderError("Error: Can't send invite for empty page.");
                 return;
             }
             var attr = $(".iframe").contents().find("body")
@@ -1791,6 +1788,7 @@ Ractive.load({
         },
         chat_with: function(event, friend){
             console.log(friend);
+            App.Friends.stream.emit("join", friend.address);
         },
         block:     function(event, friend){
             console.log(friend);
@@ -1872,7 +1870,7 @@ function chatView() {
         // We've connected to chat before authenticating and the
         // server is telling us to reconnect.
         App.Friends.stream.on("reconnect", function(data){
-            $('.chat-messages').append('<br />Reconnecting . . .');
+            $('.chat-messages').append('<br />Reconnecting . . .<br />');
             $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
             App.Friends.connect();
             console.log(data.m);
@@ -2334,7 +2332,7 @@ function settingsView() {
                             App.Views.settings.set("networks", networks);
                             App.Views.settings.set("network_name", "");
                         },
-                        error:   function(response){}
+                        error: function(response){}
                     });
                 }
             },

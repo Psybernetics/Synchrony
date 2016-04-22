@@ -188,7 +188,6 @@ class UserResource(restful.Resource):
         db.session.commit()
         return {}, 204
 
-
 class UserSessionsResource(restful.Resource):
     """
     Implements /v1/user/:username/sessions
@@ -266,7 +265,6 @@ class UserSessionsResource(restful.Resource):
                 db.session.commit()
         log("%s deleted a session for %s." % (user.username, target.username))
         return {}, 204
-
 
 class UserRevisionCollection(restful.Resource):
     def get(self, username):
