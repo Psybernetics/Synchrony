@@ -77,6 +77,8 @@ def broadcast(httpd, socket_type, message_type, message, user=None, priv=None):
     for connection in httpd.sockets.values():
         if connection.connected:
             for c in connection.active_ns.values():
+                if not c:
+                    continue
                 if not hasattr(c, "socket_type") or c.socket_type != socket_type:
                     continue
                 if not hasattr(c, "user"):
@@ -94,9 +96,8 @@ def check_availability(httpd, socket_type, user):
     Return True if the specified user has an active connection to the specified
     socket type, False otherwise.
     """
-    
     for connection in httpd.sockets.values():
-        if connection.connected and connection.socket_type == socket_type:
+        if connection.connected: # and connection.socket_type == socket_type:
             for c in connection.active_ns.values():
                 if not hasattr(c, "socket_type") or c.socket_type != socket_type:
                     continue
@@ -112,9 +113,8 @@ def change_channel(httpd, socket_type, user, channel):
     Force a stream user to join an in-stream channel.
     Useful for enabling people to reply to RPC_CHAT messages.
     """
-    
     for connection in httpd.sockets.values():
-        if connection.connected and connection.socket_type == socket_type:
+        if connection.connected: # and connection.socket_type == socket_type:
             for c in connection.active_ns.values():
                 if not hasattr(c, "socket_type") or c.socket_type != socket_type:
                     continue

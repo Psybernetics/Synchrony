@@ -212,9 +212,6 @@ class Revision(db.Model):
         if user.public == True:
             self.public = True
 
-        print user.public
-        print self.public
-
         if not path:
             path = '/'
 
@@ -249,7 +246,6 @@ class Revision(db.Model):
         db.session.add(resource)
         db.session.add(self)
         db.session.commit()
-        print self.public
 
 class Acl(db.Model):
     """
@@ -498,7 +494,8 @@ class Friend(db.Model):
     pubkey_id     = db.Column(db.Integer(), db.ForeignKey('pubkeys.id'))
     avatar        = db.relationship("Revision", uselist=False)
     name          = db.Column(db.String())
-    received      = db.Column(db.Boolean(), default=None) # Can we set state to "Added"?
+    # Answers whether we can we set state to "Added".
+    received      = db.Column(db.Boolean(), default=None)
     state         = db.Column(db.Integer(), default=0)
     address       = db.Column(db.String())  # TODO: Can remove with in-instance friendships?
     network       = db.Column(db.String())
@@ -526,17 +523,21 @@ class Friend(db.Model):
 
         return '/'.join([self.network, node.node_id, self.uid])
 
-    @property
-    def most_recent_peer_node(self):
+    def most_recent_peer_node(self, router=None):
         """
-        Return the Peer instance associated with this Friend that was seen the
-        most recently.
+        Return the Peer instance associated with this Friend by last_seen time,
+        excluding Peers corresponding with `router`.
         """
         if not self.pubkey or not self.pubkey.peers:
             return
+       
+        if not router:
+            for node in reversed(sorted([_ for _ in self.pubkey.peers], key=lambda _: _.last_seen)):
+                return node
 
-        return sorted([_ for _ in self.pubkey.peers],
-                      key=lambda _: _.last_seen)[-1]
+        for node in reversed(sorted([_ for _ in self.pubkey.peers], key=lambda _: _.last_seen)):
+            if node.ip != router.node.ip or node.port != router.node.port:
+                return node
 
     def parse_status(self):
         if not self.state:
@@ -684,7 +685,7 @@ class Peer(db.Model):
         self.ip        = node.ip
         self.port      = node.port
         self.trust     = node.trust
-        self.long_id   = str(node.long_id)
+        self.node_id   = str(node.long_id)
         self.last_seen = datetime.datetime.now()
         pubkey = Pubkey.query.filter(Pubkey.string == node.pubkey).first()
         if pubkey:
@@ -705,7 +706,9 @@ class Peer(db.Model):
         return response
 
     def __repr__(self):
-        return "<Peer %s %.2fT>" % \
-                (self.name if self.name else self.ip+':'+str(self.port), self.trust)
+        return "<Peer %s%s %.2fT>" % \
+                (self.name if self.name else self.ip+':'+str(self.port),
+                "" if not self.network else " [on "+self.network.name+"]",
+                self.trust)
  
 local_subnets = ['127', '10.', '192.168', '172']

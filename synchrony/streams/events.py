@@ -6,6 +6,9 @@ Consider also WebRTC session initiation.
 """
 from cgi import escape
 from synchrony import app, log, db
+
+from synchrony.models import Peer
+from synchrony.controllers.dht import log
 from synchrony.controllers.auth import auth
 from synchrony.streams.utils import Stream, require_auth
 
@@ -54,7 +57,7 @@ class EventStream(Stream):
     d_init             {"c": "addr", "u": u.jsonify()}
     d_close            {"c": "addr", "u": u.jsonify()}
     """
-
+    socket_type = "events"
     def initialize(self):
         log("Event stream init")
         self.user     = None
@@ -77,7 +80,7 @@ class EventStream(Stream):
         if not user:
             self.request_reconnect()
         else:
-            log("Received chat connection from %s" % user.username)
+            log("Received presence connection from %s" % user.username)
             self.user = user
             if not user.can("chat"):
                 body = {"message":"You don't have permission to chat."}
@@ -113,6 +116,7 @@ class EventStream(Stream):
                 channel = Channel(name=channel_name)
                 channel.clients.add(self)
                 self.channels[channel_name] = channel
+                self.channel = channel
                 self.join(channel_name)
 
                 # Send an "init" message via RPC_CHAT to the remote host
@@ -123,15 +127,18 @@ class EventStream(Stream):
                     friend = [f for f in self.user.friends if f.address == channel_name]
                     if not friend: return
                     friend = friend[0]
-                    if not friend.peer: # Return if no known pubkey
-                        return
+#                    if not friend.peer: # Return if no known pubkey
+#                        return
                     data         = {}
                     data['to']   = friend.uid
                     data['from'] = [self.user.uid, self.user.username]
                     data['type'] = "init"
                     data['body'] = ""
 
-                    peer_node = friend.most_recent_peer_node
+                    peer_node = friend.most_recent_peer_node(router)
+                    #peer_node = Peer.query.filter(Peer.node_id == node_id).first()
+                    print peer_node
+
                     if not peer_node:
                         log("No peer node associated with %s." % friend, "error")
                         return
@@ -229,7 +236,7 @@ class EventStream(Stream):
                 body = {"u":self.user.username,"m":escape(msg)}
             else:
                 body = {"u":self.user.username,"m":escape(msg),"a": True}
-            channel = self.channel[1]
+            channel = self.channel
             # Send message via RPC_CHAT to a remote host
             if channel.count("/") == 2:
                 network, node_id, uid = channel.split("/")
@@ -238,18 +245,29 @@ class EventStream(Stream):
                 friend = [f for f in self.user.friends if f.address == channel]
                 if not friend: return
                 friend = friend[0]
-                if not friend.peer: # Return if no known pubkey
-                    return
-
+#                if not friend.peer: # Return if no known pubkey
+#                    return
                 data         = {}
                 data['to']   = friend.uid
                 data['from'] = [self.user.uid, self.user.username]
                 data['type'] = "message"
                 data['body'] = msg
+                
+                # We use the peer node we know this friend to connect from but
+                # it's best to let the user select which specific node to use.
+                # For the time being we just go with whoever corresponds to the
+                # node ID section of Friend.address or the Friend.most_recent_*
+                # implementation.
+                peer_node = friend.most_recent_peer_node(router)
+                print peer_node
 
-                peer_node = friend.most_recent_peer_node
+
                 if not peer_node:
                     log("No peer node associated with %s." % friend, "error")
+                    return
+                
+                if peer_node.ip == router.node.ip and peer_node.port == router.node.port:
+                    log("Cannot transmit message to ourselves.", "error")
                     return
 
                 resp = router.protocol.rpc_chat((peer_node.ip, peer_node.port), data)
