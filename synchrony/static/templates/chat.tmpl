@@ -1,5 +1,9 @@
 <div class="chat-container">
   <div class="chat">
+    <div class="video-container">
+        <video id="local-video" style="display: none; float: left;" autoplay></video>
+        <video id="remote-video" style="display: none; float: right;" autoplay></video>
+    </div>
     {{#chat_available}}
 <!--
     <i class="material-icons md-18 chat-settings chat-settings-hidden" on-click="chat_settings">settings</i>
@@ -19,7 +23,10 @@
         <h5 class="chat-error">{{chat_error}}</h5>
         {{/chat_available}}
         {{#chat_available}}
-        <form on-submit="privmsg" on-keydown="doskeys"><input id="chat-input" value="{{message}}" autocomplete="off"></input></form>
+        <form on-submit="privmsg" on-keydown="doskeys">
+            <input id="chat-input" value="{{message}}" autocomplete="off"></input>
+            <span on-click="toggle_video" class="clickable light rtc-icon fa fa-video-camera" aria-hidden="true"></span>
+        </form>
         {{/chat_available}}
     </div>
   </div>

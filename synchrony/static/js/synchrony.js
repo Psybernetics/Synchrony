@@ -1975,7 +1975,28 @@ function chatView() {
                     $('.chat-messages').show();
                 }
             },
-
+            toggle_video: function(event){
+                var localVideo  = document.getElementById("local-video");
+                var remoteVideo = document.getElementById("remote-video");
+                if (localVideo.style.display == "none") {
+                    $(".chat-messages").addClass("light");
+                    localVideo.style.display = "inherit";
+                    remoteVideo.style.display = "inherit";
+                    var gotStream = function(stream) {
+                        console.log(stream);
+                        localVideo.src = URL.createObjectURL(stream);
+                        App.Views.chat.stream = stream;
+                    }
+                    navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+                    navigator.getUserMedia({audio: true, video: true}, gotStream, function(error) {console.log(error);});
+                } else {
+                    $(".chat-messages").removeClass("light");
+                    localVideo.style.display = "none";
+                    localVideo.src = "";
+                    remoteVideo.style.display = "none";
+                    remoteVideo.src = "";
+                }
+            },
         });
     });
 }

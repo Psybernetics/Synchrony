@@ -8,7 +8,6 @@ from cgi import escape
 from synchrony import app, log, db
 
 from synchrony.models import Peer
-from synchrony.controllers.dht import log
 from synchrony.controllers.auth import auth
 from synchrony.streams.utils import Stream, require_auth
 

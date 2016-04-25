@@ -842,6 +842,10 @@ a {
 	position: absolute;
 }
 
+.light {
+    color: #ccc;
+}
+
 .invisible {
 	visibility: hidden;
 }

@@ -23,7 +23,8 @@ class Stream(BaseNamespace):
         self.authenticate()
 
     def join(self, channel):
-        self.session['channels'].add(self.get_channel_name(channel))
+        channel_name = self.get_channel_name(channel)
+        self.session['channels'].add(channel_name)
         self.channel = channel
        
     def leave(self, channel):
@@ -97,7 +98,7 @@ def check_availability(httpd, socket_type, user):
     socket type, False otherwise.
     """
     for connection in httpd.sockets.values():
-        if connection.connected: # and connection.socket_type == socket_type:
+        if connection.connected:
             for c in connection.active_ns.values():
                 if not hasattr(c, "socket_type") or c.socket_type != socket_type:
                     continue
@@ -114,7 +115,7 @@ def change_channel(httpd, socket_type, user, channel):
     Useful for enabling people to reply to RPC_CHAT messages.
     """
     for connection in httpd.sockets.values():
-        if connection.connected: # and connection.socket_type == socket_type:
+        if connection.connected:
             for c in connection.active_ns.values():
                 if not hasattr(c, "socket_type") or c.socket_type != socket_type:
                     continue
