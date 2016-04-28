@@ -10,8 +10,8 @@
 	position:absolute;
 	top: 10%;
 	left: 25%;
-	height: 70%;
-	width: 50%;
+	height: 80%;
+	width: 70%;
 	overflow: auto;
 /*
 	position: fixed;
@@ -27,6 +27,15 @@
 	border: none;
 	outline: 0px solid transparent;
 	display: inline-block;
+}
+
+.chat-messages-container {
+    overflow: auto;
+    height: calc(100% - 25px);
+}
+
+.fa-video-camera:hover {
+    color: #eee;
 }
 
 .video-container {

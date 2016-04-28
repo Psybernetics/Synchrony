@@ -313,6 +313,13 @@ class EventStream(Stream):
         else:
             self.request_reconnect()
 
+    @require_auth
+    def on_rtc(self, msg):
+        print message
+        if self.user and self.channels.values():
+            body = {"u":self.user.username,"m":escape(msg)}
+            self.emit("rtc", body)
+
     def recv_disconnect(self):
 #        print "received disconnect"
         pass
