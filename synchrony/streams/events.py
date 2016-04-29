@@ -8,7 +8,6 @@ from cgi import escape
 from synchrony import app, log, db
 
 from synchrony.models import Peer
-from synchrony.controllers.dht import log
 from synchrony.controllers.auth import auth
 from synchrony.streams.utils import Stream, require_auth
 
@@ -313,6 +312,13 @@ class EventStream(Stream):
 #            self.emit("response", body)
         else:
             self.request_reconnect()
+
+    @require_auth
+    def on_rtc(self, msg):
+        print message
+        if self.user and self.channels.values():
+            body = {"u":self.user.username,"m":escape(msg)}
+            self.emit("rtc", body)
 
     def recv_disconnect(self):
 #        print "received disconnect"
