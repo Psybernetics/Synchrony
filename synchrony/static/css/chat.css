@@ -10,8 +10,8 @@
 	position:absolute;
 	top: 10%;
 	left: 25%;
-	height: 70%;
-	width: 50%;
+	height: 80%;
+	width: 70%;
 	overflow: auto;
 /*
 	position: fixed;
@@ -27,6 +27,28 @@
 	border: none;
 	outline: 0px solid transparent;
 	display: inline-block;
+}
+
+.chat-messages-container {
+    overflow: auto;
+    height: calc(100% - 25px);
+}
+
+.fa-video-camera:hover {
+    color: #eee;
+}
+
+.video-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
+.video-container > video {
+    width: 50%;
+    height: 100%;
+    background-color: #292929;
+    z-index: 10;
 }
 
 .chat::after {
@@ -73,5 +95,12 @@
 	border: 0px none;
 	width: 100%;
 	outline: 0px solid transparent;
+}
+.rtc-icon {
+    float: right;
+    margin-right: 6px;
+    margin-top: -20px;
+    position: relative;
+    z-index: 2;
 }
 

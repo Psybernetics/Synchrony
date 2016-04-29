@@ -122,6 +122,32 @@ App.Router = Backbone.Router.extend({
 new App.Router();
 Backbone.history.start();
 
+// RTC preamble
+navigator.getUserMedia   = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+
+var ICE_SERVERS = {"iceServers": [
+    { 'url': 'stun:stun01.sipphone.com' },
+    { 'url': 'stun:stun.ekiga.net' },
+    { 'url': 'stun:stun.fwdnet.net' },
+    { 'url': 'stun:stun.ideasip.com' },
+    { 'url': 'stun:stun.iptel.org' },
+    { 'url': 'stun:stun.rixtelecom.se' },
+    { 'url': 'stun:stun.schlund.de' },
+    { 'url': 'stun:stun.l.google.com:19302' },
+    { 'url': 'stun:stun1.l.google.com:19302' },
+    { 'url': 'stun:stun2.l.google.com:19302' },
+    { 'url': 'stun:stun3.l.google.com:19302' },
+    { 'url': 'stun:stun4.l.google.com:19302' },
+    { 'url': 'stun:stunserver.org' },
+    { 'url': 'stun:stun.softjoys.com' },
+    { 'url': 'stun:stun.voiparound.com' },
+    { 'url': 'stun:stun.voipbuster.com' },
+    { 'url': 'stun:stun.voipstunt.com' },
+    { 'url': 'stun:stun.voxgratia.org' },
+    { 'url': 'stun:stun.xten.com' }
+]};
+
 // Our error handler prints to the stream for ten seconds
 function renderError(statement) {
     console.log('Error: ' + statement);
@@ -1839,7 +1865,55 @@ function chatView() {
         var welcome_message = "Use <em>/help</em> for a list of commands.<br />";
         $('.chat-messages').append(welcome_message);
 
-        App.Views.chat.visible = false;
+        // RTC configuration
+        App.Views.chat.localVideo  = document.getElementById("local-video");
+        App.Views.chat.remoteVideo = document.getElementById("remote-video");
+
+        App.Views.chat.localStream          = null;
+        App.Views.chat.remoteStream         = null;
+        App.Views.chat.localPeerConnection  = null;
+        App.Views.chat.remotePeerConnection = null;
+
+        // Callback for displaying local video stream
+        App.Views.chat.gotLocalStream = function(stream) {
+            console.log(stream);
+            App.Views.chat.localStream = stream;
+            if (window.URL) {
+                App.Views.chat.localVideo.src = URL.createObjectURL(stream);
+            } else {
+                App.Views.chat.localVideo.src = stream;
+            }
+        }
+        App.Views.chat.gotLocalIceCandidate = function(event) {
+          if (event.candidate) {
+            App.Views.chat.remotePeerConnection.addIceCandidate(
+                new RTCIceCandidate(event.candidate)
+            );
+            console.log('Local ICE candidate: \n' + event.candidate.candidate);
+          }
+        }
+        App.Views.chat.gotLocalDescription = function(description) {
+          localPeerConnection.setLocalDescription(description);
+          trace('Offer from localPeerConnection: \n' + description.sdp);
+          remotePeerConnection.setRemoteDescription(description);
+          remotePeerConnection.createAnswer(gotRemoteDescription);
+        }
+        App.Views.chat.gotRemoteIceCandidate = function(event) {
+          if (event.candidate) {
+            App.Views.chat.localPeerConnection.addIceCandidate(
+                new RTCIceCandidate(event.candidate)
+            );
+            console.log('Remote ICE candidate: \n ' + event.candidate.candidate);
+          }
+        }
+        App.Views.chat.gotRemoteDescription = function(description) {
+          remotePeerConnection.setLocalDescription(description);
+          trace('Answer from remotePeerConnection: \n' + description.sdp);
+          localPeerConnection.setRemoteDescription(description);
+        }
+        App.Views.chat.gotRemoteStream = function(event) {
+            App.Views.chat.remoteVideo.src = URL.createObjectURL(event.stream);
+        }
 
         // An array of messages typed into the input field.
         App.Views.chat.doskeys = [];
@@ -1848,41 +1922,48 @@ function chatView() {
         // Join channel "main" and listen for messages
         if (!App.Friends.stream) { App.Friends.connect(); }
 
-        // Recieve chat messages.
-        App.Friends.stream.on("privmsg", function(data){
+        // Receive chat messages.
+        App.Friends.stream.on("privmsg", function(data) {
             console.log(data);
 //            if (!App.Views.sidebar.visible){ pulseSidebar(); }
 //            The anonymous flag is for if you've permitted unsigned-up users to chat
 //            via the auth server.
 //            data = {m:message, u:username, a:anonymous_flag}
             $('.chat-messages').append('&lt;' + linkUser(data.u) + '&gt; ' + data.m + "<br />");
-            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+            $(".chat").animate({scrollTop: $('.chat-messages-container').height()}, "fast");
         });
 
-        // Recieve the responses from commands
-        App.Friends.stream.on("response", function(data){
+        App.Friends.stream.on("rtc", function(data) {
             console.log(data);
+            $('.chat-messages').append(JSON.stringify(data));
+            $(".chat-messages-container").animate({scrollTop: $('.chat-messages-container').height()}, "fast");
+        });
+
+        // Receive the responses from commands
+        App.Friends.stream.on("response", function(data) {
+            console.log(data);
+//          TODO: Some sort of pulse for new messages using $('.chat').is(':visible')
 //            if (!App.Views.chat.visible){ pulseChat(); }
             $('.chat-messages').append('<br />' + data.r);
-            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+            $(".chat-messages-container").animate({scrollTop: $('.chat-messages-container').height()}, "fast");
         });
 
         // We've connected to chat before authenticating and the
         // server is telling us to reconnect.
-        App.Friends.stream.on("reconnect", function(data){
+        App.Friends.stream.on("reconnect", function(data) {
             $('.chat-messages').append('<br />Reconnecting . . .<br />');
-            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+            $(".chat-messages-container").animate({ scrollTop: $('.chat-messages-container').height() }, "fast");
             App.Friends.connect();
             console.log(data.m);
        });
 
         // RPC_CHAT event listeners for messages from remote Synchrony instances.
-        App.Friends.stream.on("rpc_chat_init", function(data){
+        App.Friends.stream.on("rpc_chat_init", function(data) {
             console.log(data);
             if (data.state == "delivered") {
                 var message = "The remote side has been notified and is available to chat.<br />";
-                $('.chat-messages').append(message);
-                $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+                $('.chat-messages-container').append(message);
+                $(".chat-messages-container").animate({scrollTop: $('.chat-messages-container').height()}, "fast");
             } else {
                 notify(data[1] + " wants to chat");
                 // App.Views.chat.socket.emit("join", friend.address);
@@ -1891,8 +1972,8 @@ function chatView() {
         App.Friends.stream.on("rpc_chat", function(data){
             console.log(data);
             var message = "&lt;" + data.from[1] + "&gt; " + data.body + "<br />";
-            $('.chat-messages').append(message);
-            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+            $('.chat-messages-container').append(message);
+            $(".chat-messages-container").animate({scrollTop: $('.chat-messages-container').height()}, "fast");
         });
         App.Friends.stream.on("rpc_chat_close", function(data){
             console.log(data);
@@ -1926,7 +2007,7 @@ function chatView() {
                         var response = App.Friends.stream.emit('msg', message);
                         if (!response.socket.connected) {
                             $('.chat-messages').append("No connection . . .");
-                            $(".chat").animate({ scrollTop: $('.chat-messages').height() }, "slow");
+                            $(".chat-messages-container").animate({scrollTop: $('.chat-messages-container').height()}, "fast")
                         }
                         console.log(this.get("message"));
                         $('#chat-input').val('');
@@ -1952,8 +2033,7 @@ function chatView() {
                         App.Views.chat.current_doskey += 1;
                     }
 
-                } 
-                else if (event.original.keyCode == 40){
+                } else if (event.original.keyCode == 40){
                 // If down arrow
                     var doskeys = App.Views.chat.doskeys;
                     if (doskeys.length && App.Views.chat.current_doskey != 1){
@@ -1975,7 +2055,71 @@ function chatView() {
                     $('.chat-messages').show();
                 }
             },
+            toggle_video: function(event){
+                var localVideo  = App.Views.chat.localVideo;
+                var remoteVideo = App.Views.chat.remoteVideo;
+                // Grab a webcam/mic stream and ready ourselves for calls.
+                if (localVideo.style.display == "none") {
+                    
+                    // Flip the colour of chat messages.
+                    $(".chat-messages").addClass("light");
+                    // Make <video> elements visible.
+                    localVideo.style.display  = "inherit";
+                    remoteVideo.style.display = "inherit";
 
+
+                    // Finally, request camera and mic streams.
+                    navigator.getUserMedia({audio: true, video: true},
+                        App.Views.chat.gotLocalStream,
+                        function(error) {
+                            $('.chat-messages').append(error.name + '<br />');
+                            $('.chat-messages').append(error.message + '<br />');
+                        }
+                    );
+
+                    //App.Views.chat.localPeerConnection =
+                    //   new RTCPeerConnection(ICE_SERVERS);  // eslint-disable-line new-cap
+                    //console.log('Created local peer connection object localPeerConnection');
+                    //App.Views.chat.localPeerConnection.onicecandidate = App.Views.chat.gotLocalIceCandidate;
+
+                    //App.Views.chat.remotePeerConnection =
+                    //  new webkitRTCPeerConnection(ICE_SERVERS);  // eslint-disable-line new-cap
+                    //console.log('Created remote peer connection object remotePeerConnection');
+                    //App.Views.chat.remotePeerConnection.onicecandidate = App.Views.chat.gotRemoteIceCandidate;
+                    //App.Views.chat.remotePeerConnection.onaddstream    = App.Views.chat.gotRemoteStream;
+
+                    //App.Views.chat.localPeerConnection.addStream(App.Views.chat.localStream);
+                    //console.log('Added localStream to localPeerConnection');
+                    //App.Views.chat.localPeerConnection.setLocalDescription(
+                    //    App.Views.chat.localPeerConnection.createOffer(
+                    //        App.Views.chat.gotLocalDescription
+                    //    )
+                    //);
+                    //
+                    //setTimeout(function(){
+                    //    var signal = {sdp: App.Views.chat.localStream.localDescription};
+                    //    App.Friends.stream.emit("rtc", signal);
+                    //}, 5000);
+                    
+                    
+
+                    // $('.chat-messages').append(   );
+                    // $(".chat").animate({scrollTop: $('.chat-messages').height()}, "slow");
+
+                    // var pc = new RTCPeerConnection({ICE_SERVERS);
+                    // App.Views.chat.peerConnection = pc;
+                    // var offer = pc.createOffer(function(e){
+                    //     console.log(e);
+                    // });
+                    // pc.setLocalDescription(new RTCSessionDescription(offer));
+                } else {
+                    $(".chat-messages").removeClass("light");
+                    localVideo.src  = "";
+                    remoteVideo.src = "";
+                    localVideo.style.display  = "none";
+                    remoteVideo.style.display = "none";
+                }
+            },
         });
     });
 }
