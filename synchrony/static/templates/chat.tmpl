@@ -26,7 +26,7 @@
         {{#chat_available}}
         <form on-submit="privmsg" on-keydown="doskeys">
             <input id="chat-input" value="{{message}}" autocomplete="off"></input>
-            <span on-click="toggle_video" class="clickable light rtc-icon fa fa-video-camera" aria-hidden="true"></span>
+            <span on-click="toggle_video" class="clickable light rtc-icon fa fa-video-camera" aria-hidden="true" style="display:none;"></span>
         </form>
         {{/chat_available}}
     </div>

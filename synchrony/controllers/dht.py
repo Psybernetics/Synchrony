@@ -2011,7 +2011,9 @@ class Node(object):
                                  Peer.ip      == self.ip,
                                  Peer.port    == self.port)
                         ).first()
-
+            if not peer:
+                peer = Peer()
+            
             peer.load_node(self)
             
             if not peer:
