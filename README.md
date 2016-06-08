@@ -25,6 +25,9 @@ If you repeat this process from another browser window you should be able to edi
 
 #####Pulling a resource from a peer
 
+The DHT is automatically queried when resources can't be retrieved from their canonical URL.
+
+
 Visit :8080/v1/peers/test to tell peers you're serving whatever revision is found first.
 
 Visit :8090/v1/peers/url_for_revision to pull the resource through the first peer and serve with the second peer.
