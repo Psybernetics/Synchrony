@@ -15,6 +15,11 @@
     initiation.
 
 TODO:
+    Identity is an opt-in first-class principle in distributed HTTP.
+
+    What /must/ be revealed to developers is a peer-to-peer contacts list API
+    that can be coupled to the data siloed with existing entities.
+
 /#request/:url     JavaScript to load /request/:url into .content
 
  Global stream [Notify of remote sign-ins]
