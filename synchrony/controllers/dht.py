@@ -38,6 +38,8 @@ TODO/NOTES:
  Invite-only private networks based on FOAF public keys.
  Tag documents as edits or originals in rpc_append.
  Let users select whether they will accept edits. Default deny.
+ Use the timing between new locally introduced resources and their
+ collective KL divergence to prevent remote JS from spamming overlay networks.
 
  A public revision is a public revision.
 
