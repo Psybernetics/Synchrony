@@ -140,7 +140,7 @@ from copy import deepcopy
 from sqlalchemy import and_
 from gevent import Greenlet
 from synchrony import app, db
-from gevent.coros import RLock
+from gevent.lock import RLock
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from synchrony import log as _log
