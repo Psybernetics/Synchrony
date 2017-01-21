@@ -38,6 +38,8 @@ TODO/NOTES:
  Invite-only private networks based on FOAF public keys.
  Tag documents as edits or originals in rpc_append.
  Let users select whether they will accept edits. Default deny.
+ Use the timing between new locally introduced resources and their
+ collective KL divergence to prevent remote JS from spamming overlay networks.
 
  A public revision is a public revision.
 
@@ -138,7 +140,7 @@ from copy import deepcopy
 from sqlalchemy import and_
 from gevent import Greenlet
 from synchrony import app, db
-from gevent.coros import RLock
+from gevent.lock import RLock
 from Crypto.Hash import SHA256
 from Crypto.PublicKey import RSA
 from synchrony import log as _log

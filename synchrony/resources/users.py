@@ -291,8 +291,11 @@ class UserRevisionCollection(restful.Resource):
         
         if not 'revision' in request.files:
             return {}, 400
-        
+
         upload = request.files['revision']
+
+        # TODO(ljb): Check the KL divergence with existing files and
+        #            the frequency with which this method is being called.
 
         revision = Revision()
         revision.add(upload)
