@@ -5,8 +5,6 @@
 ![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
 ![Alt text](doc/img/synchrony3.png?raw=true "Distributed HTTP")
 
-##### WARNING: Proof of concept. May permit remote execution of arbitrary JavaScript.
-
 Installation:
 <pre>
 sudo python2 setup.py install
