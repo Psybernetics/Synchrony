@@ -1,5 +1,6 @@
-##Synchrony
-#####A peer-to-peer hyperdocument editor
+Synchrony
+
+A peer-to-peer hyperdocument editor
 
 ![Alt text](doc/img/synchrony1.png?raw=true "Collaborative Editor")
 ![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
@@ -23,7 +24,7 @@ If you repeat this process from another browser window you should be able to edi
 
 ---
 
-#####Pulling a resource from a peer
+Pulling a resource from a peer
 
 The DHT is automatically queried when resources can't be retrieved from their canonical URL.
 
@@ -36,7 +37,7 @@ Currently a work-in-progess as RPCs undergo refinement.
 
 ----
 
-####Running in Docker
+Running in Docker
 
 `git clone https://github.com/psybernetics/synchrony && cd synchrony`
 
@@ -48,6 +49,6 @@ and then visit localhost:8080 in your browser.
 
 ----
 
-#####How you can support this project
+How you can support this project
 
 Suggestions can be made on IRC: irc.psybernetics.org #synchrony
