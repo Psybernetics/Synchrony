@@ -2,9 +2,9 @@ Synchrony
 
 A peer-to-peer caching proxy
 
-![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
 ![Alt text](doc/img/synchrony3.png?raw=true "Distributed HTTP")
 ![Alt text](doc/img/synchrony1.png?raw=true "Collaborative Editor")
+![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
 
 Installation:
 <pre>
