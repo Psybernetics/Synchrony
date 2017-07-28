@@ -4,9 +4,6 @@ A peer-to-peer caching proxy
 
 ![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
 ![Alt text](doc/img/synchrony3.png?raw=true "Distributed HTTP")
-
-With a realtime, peer-to-peer hyperdocument editor:
-
 ![Alt text](doc/img/synchrony1.png?raw=true "Collaborative Editor")
 
 Installation:
@@ -51,8 +48,6 @@ Running in Docker
 and then visit localhost:8080 in your browser.
 
 ----
-
-A C implementation is currently in development with the intention to seperate the editor functionality out by introducing an API for implementing editor functionality as a self-contained distributed JavaScript application.
 
 How you can support this project
 
