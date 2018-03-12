@@ -1,11 +1,10 @@
-##Synchrony
-#####A peer-to-peer hyperdocument editor
+Synchrony
 
+A peer-to-peer caching proxy
+
+![Alt text](doc/img/synchrony3.png?raw=true "Distributed HTTP")
 ![Alt text](doc/img/synchrony1.png?raw=true "Collaborative Editor")
 ![Alt text](doc/img/synchrony2.png?raw=true "Revision Management")
-![Alt text](doc/img/synchrony3.png?raw=true "Distributed HTTP")
-
-##### WARNING: Proof of concept. May permit remote execution of arbitrary JavaScript.
 
 Installation:
 <pre>
@@ -31,7 +30,7 @@ We're currently on the lookout for a way to ascribe trust ratings to content wit
 
 ---
 
-#####Pulling a resource from a peer
+Pulling a resource from a peer
 
 The DHT is automatically queried when resources can't be retrieved from their canonical URL.
 
@@ -44,7 +43,7 @@ Currently a work-in-progess as RPCs undergo refinement.
 
 ----
 
-####Running in Docker
+Running in Docker
 
 `git clone https://github.com/psybernetics/synchrony && cd synchrony`
 
@@ -56,6 +55,7 @@ and then visit localhost:8080 in your browser.
 
 ----
 
-#####How you can support this project
+How you can support this project
 
 Suggestions can be made on IRC: irc.psybernetics.org #synchrony
+
