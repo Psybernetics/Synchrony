@@ -21,11 +21,17 @@ pull in http://news.ycombinator.com.
 
 If you repeat this process from another browser window you should be able to edit the page collaboratively.
 
-####NOTE
+### NOTE
 
 As of 12/3/18 this project is on haitus due to perceived deficiencies with the proposed protocol.
 
-We're currently on the lookout for a way to ascribe trust ratings to content without stripping ordinary users of their privacy while browsing.
+We're on the lookout for a way to ascribe trust ratings to content without stripping ordinary users of their privacy while browsing.
+
+The risk to minimise is that posed by malicious peers spamming well trafficked overlay networks with links to browser exploits.
+
+We want for Synchrony instances to be able to query their peers about the trustworthiness of a content hash, even if this means putting file content in its own learned vector space in order to compute similarity to known-good content, except that this erodes users privacy.
+
+Suggestions for how to work around this threat model (preventing users from being hit with WebAssembly sandbox escapes when they ask for google.com) are most welcome.
 
 ---
 
