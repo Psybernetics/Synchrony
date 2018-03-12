@@ -106,7 +106,7 @@ if __name__ == "__main__":
     parser.add_option("--logfile",        dest="logfile", action="store", default='synchrony.log', help="(defaults to ./synchrony.log)")
     parser.add_option("--run-as",         dest="run_as", action="store", default=None, help="(defaults to the invoking user)")
     parser.add_option("--network",        dest="network", action="store", default=None, help="(defaults to \"%s\")" % app.default_network)
-    parser.add_option("--bootstrap",      dest="bootstrap", action="store", default="synchrony.link:80", help="(defaults to synchrony.link:80)")
+    parser.add_option("--bootstrap",      dest="bootstrap", action="store", default="psybernetics:8080", help="(defaults to psybernetics.org:8080)")
     parser.add_option("--dont-bootstrap", dest="dont_bootstrap", action="store_true", default=False, help="(don't try to add peers on startup)")
     (options, args) = parser.parse_args()
     options.port    = int(options.port)

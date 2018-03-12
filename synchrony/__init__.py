@@ -149,6 +149,14 @@ def init():
 
     api.add_resource(config.ConfigCollection,               "/config")
 
+    @app.route('/', defaults={'path': ''}, methods=["GET", "CONNECT"])
+    @app.route('/<path:path>', methods=["GET", "CONNECT"])
+    def index(path):
+        import pprint
+	print pprint.pformat(request.headers)
+	return ""
+
+
 # /users/username/revisions
 # /domains/domain/resources
 # /peers/peerid/revisions
