@@ -24,7 +24,7 @@ If you repeat this process from another browser window you should be able to edi
 
 ### NOTE
 
-As of 12/3/18 this project is on haitus due to perceived deficiencies with the proposed protocol.
+As of 12/3/18 this project is on haitus due to a perceived deficiency in the proposed protocol.
 
 We're on the lookout for a way to ascribe trust ratings to content without stripping ordinary users of their privacy while browsing.
 
