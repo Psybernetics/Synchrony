@@ -45,7 +45,7 @@ def fence_internet_hosts():
     """
     Relegate hosts connecting over the internet to the /v1/peers endpoint.
     """
-    if not request.path.startswith('/v1/peers') and not request.remote_addr[:3] in ['127', '10.', '192']:
+    if not request.path.startswith('/v1/peers') and not request.remote_addr[:3] in ['127', '10.', '192', '172']:
         log("%s tried to retrieve %s" % (request.remote_addr, request.path), "warning")
         return make_response("Forbidden.",403)    
 
@@ -148,6 +148,14 @@ def init():
     api.add_resource(peers.PeerTestGet,                     "/peers/test/<path:url>")
 
     api.add_resource(config.ConfigCollection,               "/config")
+
+    @app.route('/', defaults={'path': ''}, methods=["GET", "CONNECT"])
+    @app.route('/<path:path>', methods=["GET", "CONNECT"])
+    def index(path):
+        import pprint
+	print pprint.pformat(request.headers)
+	return ""
+
 
 # /users/username/revisions
 # /domains/domain/resources

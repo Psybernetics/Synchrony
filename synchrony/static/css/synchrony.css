@@ -751,6 +751,7 @@ hr {
 
 .main_background {
 /*    background: url('/static/img/use_your_illusion.png'); */
+    height: 240px;
     background: url('/static/img/diagmonds.png');
     background-repeat: repeat;
     color: #222;
@@ -774,7 +775,7 @@ hr {
 }
 
 .main_inner {
-    color: #D7D8D5;
+    color: #e6e6e6;
     margin: 0 auto;
     width: 50%;
     margin-top: 3%;
@@ -899,7 +900,7 @@ a {
 /* Index page links to revisions */
 .index_overview {
     position: absolute;
-    margin: 48px 0px;
+    top: 240px;
     width: 50%;
     padding: 15px 10px;
     background-color: rgba(255,255,255, 0.9);

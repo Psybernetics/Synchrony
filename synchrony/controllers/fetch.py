@@ -44,7 +44,7 @@ def get(url, user_agent, user=None):
     response = None
     try:
         log("Fetching %s from the original domain." % url.geturl())
-        response = requests.get(url.geturl(), headers={'User-Agent': user_agent}, 
+        response = requests.get(url.geturl(), headers={'User-Agent': str(user_agent)},
             timeout=app.config['HTTP_TIMEOUT'])
     except Exception, e:
         log("Error retrieving %s: %s" % (url.geturl(), e.message))
